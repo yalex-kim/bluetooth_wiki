@@ -42,25 +42,34 @@ bluetooth_wiki/
 │   │   ├── core-spec-5.2.md
 │   │   ├── core-spec-5.3.md
 │   │   ├── core-spec-5.4.md
-│   │   └── core-spec-6.0.md
+│   │   ├── core-spec-6.0.md
+│   │   ├── core-spec-6.1.md
+│   │   └── core-spec-6.2.md
 │   ├── version-diff/
 │   │   ├── diff-5.0-to-5.1.md         ← Pre-indexed version differences
 │   │   ├── diff-5.1-to-5.2.md
 │   │   ├── diff-5.2-to-5.3.md
 │   │   ├── diff-5.3-to-5.4.md
-│   │   └── diff-5.4-to-6.0.md
+│   │   ├── diff-5.4-to-6.0.md
+│   │   ├── diff-6.0-to-6.1.md
+│   │   └── diff-6.1-to-6.2.md
 │   └── concepts/
 │       ├── ble-architecture.md
 │       ├── classic-bluetooth.md
 │       ├── security.md
-│       └── profiles-and-services.md
+│       ├── profiles-and-services.md
+│       ├── le-audio.md
+│       ├── direction-finding.md
+│       └── channel-sounding.md
 ├── sources/
 │   ├── README.md                      ← How to download spec PDFs
-│   └── specs/                         ← Downloaded PDFs + converted markdown
-│       └── (core-spec-X.Y.pdf / core-spec-X.Y.md)
+│   └── specs/
+│       └── X.Y/
+│           ├── Core_vX.Y.md           ← Full spec text converted via PyMuPDF
+│           └── Core_vX.Y_images/      ← Extracted figure PNGs (Vol{N}_Part{P}_Figure{X_Y}.png)
 ├── scripts/
-│   ├── download_specs.sh              ← Downloads PDFs from bluetooth.com
-│   ├── convert_to_md.py               ← Converts PDFs → markdown via OpenDataLoader
+│   ├── download_spec_documents.py     ← Downloads PDFs from bluetooth.com
+│   ├── convert_to_md.py               ← Converts PDFs → markdown + figure PNGs via PyMuPDF
 │   └── ingest.py                      ← Ingests new source docs into the wiki
 └── guide/
     └── claude-code-integration.md     ← How to use this wiki with Claude Code
@@ -198,15 +207,19 @@ For feature enhancement documents:
 
 ## 7. Ingesting Full Spec PDFs
 
-When the full spec PDF has been converted to markdown via OpenDataLoader,
-the LLM should process it section by section:
+Spec PDFs are converted to markdown using `scripts/convert_to_md.py` (PyMuPDF-based).
+Each version produces:
+- `sources/specs/X.Y/Core_vX.Y.md` — full spec text with headings, inline tables, and figure references
+- `sources/specs/X.Y/Core_vX.Y_images/Vol{N}_Part{P}_Figure{X_Y}.png` — extracted figure images
 
-1. Parse the Table of Contents to map volumes and parts.
+The LLM should process the source markdown section by section:
+
+1. Parse the document structure to identify volumes and parts (marked by headings like `## 1 ARCHITECTURE`).
 2. For each Part, extract: purpose, key definitions, protocol descriptions.
 3. Build the version wiki page from this structured reading.
 4. Update concept pages where the spec introduces or modifies a concept.
 
-Large specs (5.0 is ~2800 pages) should be processed in chunks by volume:
+Large specs (5.0 is ~2800 pages, 6.2 is ~3900 pages) should be processed in chunks by volume:
 - Vol 1: Architecture & Overview
 - Vol 2: BR/EDR Controller
 - Vol 3: Host
@@ -220,7 +233,7 @@ Large specs (5.0 is ~2800 pages) should be processed in chunks by volume:
 ## 8. Source of Truth Priority
 
 When information conflicts between pages:
-1. `sources/specs/core-spec-X.Y.md` (converted PDF) — highest authority
+1. `sources/specs/X.Y/Core_vX.Y.md` (converted PDF) — highest authority
 2. `wiki/versions/core-spec-X.Y.md` — authoritative summary
 3. `wiki/version-diff/` pages — derived from version pages
 4. `wiki/concepts/` pages — synthesized across versions
@@ -254,3 +267,5 @@ Resolve conflicts by re-reading the source spec, then updating wiki pages accord
 | 5.3     | 2021-07     | Connection Subrating, PAwR prep |
 | 5.4     | 2023-02     | PAwR, Encrypted Advertising Data |
 | 6.0     | 2024-08     | Channel Sounding, DBAF |
+| 6.1     | 2025-04     | Randomized RPA Updates, privacy enhancements |
+| 6.2     | 2025-11     | Shorter Connection Intervals (375 µs), LE UTP, CS security hardening |

@@ -20,8 +20,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Generated figure image directories (large binary output — run convert_to_md.py to regenerate)
-sources/specs/*/*_images/
+# Spec PDF files (large binaries — download via download_specs.sh / download_spec_documents.py)
+sources/specs/**/*.pdf
 
 # Temp / debug files
 convert_log.txt

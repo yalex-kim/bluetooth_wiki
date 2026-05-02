@@ -14,7 +14,6 @@
       "Bash(bash scripts/download_specs.sh*)"
     ],
     "deny": [
-      "Edit(CLAUDE.md)",
       "Edit(sources/specs/*)"
     ]
   }

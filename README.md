@@ -35,18 +35,21 @@ bluetooth_wiki/
 │
 ├── wiki/
 │   ├── overview.md              ← Bluetooth 기술 개요
-│   ├── versions/                ← Core Spec 버전별 요약 (5.0–6.0)
+│   ├── versions/                ← Core Spec 버전별 요약 (5.0–6.2)
 │   ├── version-diff/            ← 버전 간 차이점 사전 인덱싱
-│   └── concepts/                ← BLE 아키텍처, 보안, 프로파일 등 개념 페이지
+│   └── concepts/                ← BLE 아키텍처, 보안, LE Audio, Direction Finding 등 개념 페이지
 │
 ├── sources/
 │   ├── README.md                ← PDF 다운로드 방법
-│   └── specs/                   ← bluetooth.com PDF + 변환된 .md 저장 위치
+│   └── specs/
+│       └── X.Y/
+│           ├── Core_vX.Y.md             ← PyMuPDF로 변환된 전문 마크다운
+│           └── Core_vX.Y_images/        ← 추출된 Figure PNG들 (Vol{N}_Part{P}_Figure{X_Y}.png)
 │
 ├── scripts/
-│   ├── download_specs.sh        ← bluetooth.com에서 PDF 자동 다운로드
-│   ├── convert_to_md.py         ← OpenDataLoader로 PDF → Markdown 변환
-│   └── ingest.py                ← 변환된 spec을 wiki에 반영하는 워크플로우
+│   ├── download_spec_documents.py  ← bluetooth.com에서 PDF 다운로드
+│   ├── convert_to_md.py            ← PyMuPDF로 PDF → Markdown + Figure PNG 변환
+│   └── ingest.py                   ← 변환된 spec을 wiki에 반영하는 워크플로우
 │
 └── guide/
     └── claude-code-integration.md  ← Claude Code 연결 가이드
@@ -77,17 +80,20 @@ bluetooth_wiki/
 
 ```bash
 # 1. bluetooth.com에서 PDF 다운로드 후 sources/specs/X.Y/ 폴더에 정리
+python scripts/download_spec_documents.py
 
-# 2. OpenDataLoader로 Markdown 변환 (Java 필요)
-pip install -U opendataloader-pdf
+# 2. PyMuPDF로 Markdown + Figure PNG 변환
+pip install PyMuPDF
 python scripts/convert_to_md.py X.Y
+# → sources/specs/X.Y/Core_vX.Y.md  (전체 본문)
+# → sources/specs/X.Y/Core_vX.Y_images/*.png  (Figure 이미지)
 
 # 3. 상태 확인
 python scripts/ingest.py --status
 
 # 4. Claude Code에서 INGEST 실행
 claude
-> Core Spec X.Y를 sources/specs/core-spec-X.Y.md 기반으로 wiki에 ingest해줘
+> Core Spec X.Y를 sources/specs/X.Y/Core_vX.Y.md 기반으로 wiki에 ingest해줘
 ```
 
 ---
@@ -116,10 +122,15 @@ claude
 [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 패턴의 3계층 구조:
 
 ```
-Layer 1  sources/specs/   원본 PDF + 변환된 .md (읽기 전용, LLM이 수정 불가)
-Layer 2  wiki/            LLM이 유지하는 요약/분석 마크다운 페이지
-Layer 3  CLAUDE.md        스키마: LLM이 wiki를 어떻게 관리할지 정의
+Layer 1  sources/specs/X.Y/   원본 PDF 변환 결과 (.md + _images/) — 읽기 전용
+Layer 2  wiki/                LLM이 유지하는 요약/분석 마크다운 페이지
+Layer 3  CLAUDE.md            스키마: LLM이 wiki를 어떻게 관리할지 정의
 ```
+
+`scripts/convert_to_md.py` (PyMuPDF 기반)가 PDF에서 다음을 추출합니다:
+- 본문 텍스트 (올바른 헤딩 깊이, 인라인 테이블)
+- Figure PNG 이미지 (`Vol{N}_Part{P}_Figure{X_Y}.png` 명명)
+- 다이어그램 내부 텍스트/격자선 자동 억제
 
 `CLAUDE.md`는 Claude에게 3가지 오퍼레이션을 지시합니다:
 - **INGEST**: 새 spec을 읽고 wiki 페이지들을 업데이트
