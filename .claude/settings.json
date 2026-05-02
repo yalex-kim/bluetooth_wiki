@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(sources/specs/*)",
+      "Read(wiki/**)",
+      "Read(index.md)",
+      "Read(CLAUDE.md)",
+      "Read(log.md)",
+      "Edit(wiki/**)",
+      "Edit(index.md)",
+      "Edit(log.md)",
+      "Bash(python scripts/ingest.py*)",
+      "Bash(python scripts/convert_to_md.py*)",
+      "Bash(bash scripts/download_specs.sh*)"
+    ],
+    "deny": [
+      "Edit(CLAUDE.md)",
+      "Edit(sources/specs/*)"
+    ]
+  }
+}
