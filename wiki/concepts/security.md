@@ -1,7 +1,7 @@
 # Bluetooth Security
 
 **Last updated**: 2026-05-02
-**Covers**: Security mechanisms across Core Spec 4.0–6.0
+**Covers**: Security mechanisms across Core Spec 4.0–6.2
 
 ---
 
@@ -41,6 +41,9 @@ The Security Manager (SM) defines **Security Modes** and **Levels**:
 | 1 | No security |
 | 2 | Use of Broadcast Code with authenticated encryption |
 | 3 | Use of Broadcast Code with Bluetooth LE Secure Connections pairing |
+
+### LE GATT Security Levels Characteristic (5.4+)
+GATT 서버는 자신의 보안 요구 사항을 클라이언트에게 알리기 위해 **LE GATT Security Levels** 특성(UUID `0x2BF5`)을 노출할 수 있습니다. 이는 클라이언트가 서비스를 이용하기 전에 필요한 보안 수준(Mode 1 Level 1~4)을 미리 파악하고 적절한 페어링 절차를 시작할 수 있게 돕습니다. `[Core 5.4, Vol 3, Part C, §12.7]`
 
 ---
 
@@ -85,6 +88,12 @@ The pairing method is determined by the combination of both devices' IO capabili
 - **Immune to passive eavesdropping** (DHKey not derivable from observed public keys)
 - **Numeric Comparison** method added (requires displays on both devices for MITM protection)
 - Provides 128-bit security
+
+### Security Errata and Hardening (6.2)
+Core Spec 6.2는 페어링 및 키 생성 과정의 취약점을 해결하기 위해 12개의 보안 에라타를 반영했습니다:
+- **Passkey Entry Vulnerability (Errata 24489-24491)**: 페어링 중 Passkey 정보가 유출될 수 있는 설계 결함을 수정했습니다.
+- **Minimum Encryption Key Size (Errata 26039)**: 모든 암호화된 LE 연결에서 최소 키 크기를 **7옥텟**으로 강제하여 낮은 복잡도의 키 공격을 방지합니다. `[Core 6.2, Vol 3, Part H, §3.2]`
+- **RNG & DHKey Quality**: 무작위 수 생성기(RNG)와 DHKey 유효성 검사 로직을 강화하여 암호학적 공격에 대비했습니다. (Errata 24557, 24558)
 
 ---
 
@@ -158,11 +167,12 @@ See: [Core Spec 5.4](../versions/core-spec-5.4.md), [diff-5.3-to-5.4](../version
 
 ## Channel Sounding Security (6.0+)
 
-Channel Sounding includes built-in **anti-relay attack** protections:
+Channel Sounding(CS)은 릴레이 공격(Relay Attack) 방지를 위한 다층 보안을 제공합니다:
 
 - CS procedures exchange random nonces during ranging
 - Relay attacks introduce measurable signal path delays
 - Both sides verify timing consistency — inconsistency = relay detected
+- **Amplitude-based Attack Resilience (6.2)**: 6.2에서는 신호의 진폭(Amplitude) 변화를 분석하여, 시간이나 위상을 조작하는 정교한 릴레이 기기를 감지하는 기능을 추가했습니다. `[Core 6.2, Vol 6, Part H, §5]`
 - Critical for **PACS (Physical Access Control)**: car keys, door locks
 
 See: [Core Spec 6.0](../versions/core-spec-6.0.md)

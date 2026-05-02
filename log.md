@@ -5,6 +5,83 @@
 
 ---
 
+## [2026-05-02] ANALYZE — Integrated Profile & Transport specs into core concepts
+
+**Operation**: ANALYZE / CONSOLIDATE
+**By**: Gemini Code Assist
+**Summary**: Instead of creating dozens of small files, integrated LE Audio Profiles (BAP, CAP, TMAP, HAP) into `le-audio.md` and HCI Transport (UART, USB) specs into `ble-architecture.md`.
+**Citations**: Integrated BAP v1.0.1, CAP v1.0, TMAP v1.0, and Core 6.2 Vol 4 (Transport).
+
+## [2026-05-02] ANALYZE — Consolidated Profile & Service specs from sources/specs/
+
+**Operation**: ANALYZE / INGEST
+**By**: Gemini Code Assist
+**Summary**: Analyzed multiple profile PDFs (A2DP, HFP, AVRCP, HID, etc.) in `sources/specs/`. Decided to consolidate them into a unified concept page rather than creating per-version pages to avoid fragmentation.
+**Citations**: Integrated HFP v1.8, A2DP v1.4, AVRCP v1.6.2, and standard GATT services (DIS, BAS) into `wiki/concepts/profiles-and-services.md`.
+
+## [2026-05-02] INGEST — Added HCI command sequences to LE Audio
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Added CIS and BIS setup HCI command sequences to `wiki/concepts/le-audio.md` to provide practical developer guidance.
+**Citations**: Core Spec 6.2 Vol 4 Part E (§7.8.97, §7.8.103).
+
+## [2026-05-02] INGEST — Detailed expansion of LC3 codec section
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Expanded `wiki/concepts/le-audio.md` with technical details of the LC3 codec, including sampling rates, frame duration trade-offs, and PLC features.
+**Citations**: LC3 Profile Specification v1.0, Core Spec 5.2 Vol 6 Part G.
+
+## [2026-05-02] INGEST — Reinforced Profiles and Services concept page
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Updated `wiki/concepts/profiles-and-services.md` with detailed spec citations for GATT hierarchy, attribute permissions, service discovery, and 5.1/5.2 optimizations (Caching, EATT).
+**Citations**: Integrated Core Spec 6.2 references for Vol 3 Part G (GATT) and Part F (ATT).
+
+## [2026-05-02] INGEST — Reinforced Classic Bluetooth concept page
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Updated `wiki/concepts/classic-bluetooth.md` with detailed spec citations for FHSS, Piconets, ACL/SCO links, and SSP security levels. Updated terminology to Primary/Secondary.
+**Citations**: Integrated Core Spec 6.2 references for Vol 2 (Baseband/LMP) and Vol 3 (L2CAP/SDP).
+
+## [2026-05-02] INGEST — Reinforced Security concept page for Core 6.1/6.2
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Updated `wiki/concepts/security.md` with 6.1 Randomized RPA Updates, 6.2 Security Errata (Passkey, 7-octet key), and 6.2 CS Amplitude-based resilience.
+**Citations**: Integrated Core Spec 6.1/6.2 references for SM and LL security procedures.
+
+## [2026-05-02] ANALYZE — Reinforced diff pages using "Changes since" redlined PDFs
+
+**Operation**: ANALYZE / REINFORCE
+**By**: Gemini Code Assist
+**Summary**: Analyzed `CS_6.2_showing_changes_from_CS_6.1.pdf` and related redlined sources. Reinforced version-diff pages with low-level errata and precise unit changes (e.g., 125 µs timing model in 6.2).
+**Citations**: Integrated 12 security errata (24489, 26039, etc.) and ISOAL framing refinements from Core 6.2 Vol 0, Part C.
+
+## [2026-05-02] INGEST — Created Direction Finding concept page
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Created `wiki/concepts/direction-finding.md` covering AoA, AoD, CTE, and IQ sampling. Updated `index.md` for routing.
+**Citations**: Integrated Core Spec 5.1 Vol 6 Part B §6 and PHY §2.5.
+
+## [2026-05-02] INGEST — Created Channel Sounding concept page
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Created `wiki/concepts/channel-sounding.md` covering PBR, RTT, specialized PHY (2M 2BT), and 6.2 amplitude resilience.
+**Citations**: Integrated Core Spec 6.0 Vol 1 §9 and Vol 6 Part H.
+
+## [2026-05-02] INGEST — Created LE Audio concept page
+
+**Operation**: INGEST
+**By**: Gemini Code Assist
+**Summary**: Created `wiki/concepts/le-audio.md` covering LC3, CIS/BIS, BAP, and Auracast. Updated `index.md` to reflect the new concept page.
+**Citations**: Integrated Core Spec 6.2 references for ISOAL and USB ISO support.
+
 ## [2026-05-02] INGEST — Core Spec 6.1 and 6.2 written from scratch from source markdown
 
 **Operation**: INGEST

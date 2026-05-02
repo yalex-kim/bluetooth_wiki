@@ -1,7 +1,7 @@
 # Bluetooth Profiles and Services
 
 **Last updated**: 2026-05-02
-**Covers**: GATT-based profiles and key BR/EDR profiles
+**Covers**: GATT-based profiles and key BR/EDR profiles through Core Spec 6.2
 
 ---
 
@@ -18,7 +18,9 @@ Two profile systems exist in parallel:
 
 ## GATT Service/Characteristic Model
 
-Every GATT server exposes a hierarchy of **Services** containing **Characteristics**.
+GATT(Generic Attribute Profile)는 ATT(Attribute Protocol)를 기반으로 데이터의 구조를 정의합니다. GATT 서버는 **Service**, **Characteristic**, **Descriptor**로 구성된 계층적 구조를 노출합니다. `[Core 6.2, Vol 3, Part G, §2]`
+
+### Hierarchy structure
 
 ```
 GATT Server
@@ -112,33 +114,62 @@ Bitmask in the Characteristic Declaration:
 
 ---
 
-## Key BR/EDR Profiles
+## Unified Profile Deep-Dive (BR/EDR)
+
+`sources/specs/`의 프로파일 명세서들을 통합 분석한 결과입니다. 버전별 파편화를 방지하기 위해 최신 사양을 기준으로 기술합니다.
 
 ### Audio
 
-| Profile | Acronym | Function |
-|---------|---------|---------|
-| Advanced Audio Distribution | A2DP | Stereo audio streaming (SBC, AAC, aptX) |
-| Audio/Video Remote Control | AVRCP | Play, pause, skip, volume control |
-| Hands-Free | HFP | Calls via headset/speakerphone (SCO audio) |
-| Headset | HSP | Legacy headset (superseded by HFP) |
+#### A2DP (Advanced Audio Distribution Profile) v1.4
+- **Role**: Source (Phone) / Sink (Headset)
+- **Transport**: AVDTP (Audio/Video Distribution Transport Protocol) over ACL.
+- **Codec Negotiation**: SBC (Mandatory), AAC, aptX, LDAC.
+- **Evolution**: v1.3.2에서 v1.4로 넘어오며 상호운용성(Interoperability) 테스트 케이스와 지연 시간 제어 메커니즘이 강화되었습니다.
+
+#### HFP (Hands-Free Profile) v1.8
+- **Role**: Audio Gateway (AG) / Hands-Free Unit (HF)
+- **Audio**: SCO/eSCO 링크 사용. 
+- **Wideband Speech**: mSBC 코덱(16kHz) 지원 필수 (v1.6+).
+- **v1.8 Update**: 배터리 레벨 보고 및 향상된 음성 인식 제어 기능이 표준화되었습니다.
+
+#### AVRCP (Audio/Video Remote Control Profile) v1.6.2
+- **Role**: Target / Controller
+- **Features**: Metadata (제목/가수), Playback status, **Absolute Volume** (v1.4+ 필수), Browsing (v1.5+).
+- **v1.6.2**: 커버 아트 전송(BIP 연동) 및 검색 효율성이 개선되었습니다.
 
 ### Data / HID
 
-| Profile | Acronym | Function |
-|---------|---------|---------|
-| Human Interface Device | HID | Keyboards, mice, gamepads over Bluetooth |
-| Serial Port | SPP | RS-232 serial cable replacement |
-| Personal Area Network | PAN | IP networking (NAP, GN, PANU roles) |
-| Object Push | OPP | File/vCard push (used in NFC handover) |
+#### HID (Human Interface Device) v1.1.1
+- **Stack**: L2CAP (PSM 0x0011/0x0013) 위에서 동작.
+- **Protocol**: USB HID 클래스 사양을 블루투스로 확장.
+- **Report Map**: 기기의 버튼/축 구성을 정의하는 기술서(Descriptor).
+
+#### SPP (Serial Port Profile) v1.2
+- **Stack**: RFCOMM 기반.
+- **Legacy**: 가장 단순한 형태의 데이터 전송으로, 현대에는 대부분 BLE 전용 커스텀 서비스로 대체되는 추세입니다.
 
 ### Automotive / Phone
 
-| Profile | Acronym | Function |
-|---------|---------|---------|
-| Phone Book Access | PBAP | Phone book sync for car kits |
-| Message Access | MAP | SMS/MMS access from car kit |
-| Car Connectivity | CCP | Generic Car Connectivity Consortium access |
+#### PBAP (Phone Book Access Profile) v1.2.3
+- **Function**: 연락처 및 통화 내역 동기화.
+- **Object**: vCard 2.1/3.0 포맷 사용.
+
+#### MAP (Message Access Profile) v1.4.2
+- **Function**: SMS/MMS 및 이메일 접근.
+- **v1.4 Update**: 인스턴트 메시징(IM) 서비스 지원이 추가되었습니다.
+
+---
+
+## Standard GATT Services (BLE)
+
+버전별 차이가 거의 없는 핵심 서비스들의 통합 데이터 모델입니다.
+
+| Service | UUID | Key Attributes | Version Note |
+|---------|------|----------------|--------------|
+| **Device Information (DIS)** | 0x180A | Model, Serial, Manufacturer, Firmware | 정적 데이터, 변화 없음 |
+| **Battery Service (BAS)** | 0x180F | Battery Level (0~100) | v1.1에서 다중 배터리 지원 추가 |
+| **Heart Rate (HRS)** | 0x180D | HR Measurement, Sensor Location | v1.0 이후 표준으로 고착 |
+| **Human Interface (HOGP)** | 0x1812 | HID Information, Report, Protocol Mode | BLE용 HID (Core 4.0+) |
 
 ---
 

@@ -1,175 +1,498 @@
 #!/usr/bin/env python3
 """
-Convert Bluetooth Core Spec PDFs to Markdown using OpenDataLoader PDF.
+Convert Bluetooth Core Spec PDFs to Markdown.
+
+Extracts:
+  - Text with correct heading depths (## for Vol sections → ###### for 4-dot levels)
+  - Tables as inline Markdown tables (positioned where they appear in the page)
+  - Figures as PNG images named Vol{N}_Part{P}_Figure{X_Y}.png, inserted inline
 
 Usage:
-    python scripts/convert_to_md.py                     # Convert all PDFs in sources/specs/
-    python scripts/convert_to_md.py 6.0                 # Convert specific version
-    python scripts/convert_to_md.py 5.2 5.4 6.0         # Convert multiple versions
+    python scripts/convert_to_md.py              # Convert all unconverted PDFs
+    python scripts/convert_to_md.py 6.0          # Single version
+    python scripts/convert_to_md.py 5.2 6.0      # Multiple versions
 
 Requirements:
-    pip install -U opendataloader-pdf
+    pip install PyMuPDF
 
-    For better table extraction (recommended for spec PDFs):
-    pip install -U "opendataloader-pdf[hybrid]"
-
-Output:
-    sources/specs/core-spec-X.Y.md  (Markdown)
-    sources/specs/core-spec-X.Y.json (structured JSON with metadata, optional)
+Output per version:
+    sources/specs/{ver}/Core_v{ver}.md
+    sources/specs/{ver}/Core_v{ver}_images/Vol{N}_Part{P}_Figure{X_Y}.png  (one per figure)
 """
 
+import re
 import sys
-import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 SPECS_DIR = REPO_ROOT / "sources" / "specs"
 
+# Matches blocks that open with a section number followed by a title.
+# Limit to 150 chars total so body sentences starting with numerals don't match.
+_SEC_RE = re.compile(r"^(\d+(?:\.\d+)*)\s+(.{1,140})$")
 
-def check_dependencies():
+# Figure caption: block must start with "Figure N.M:" or "Figure N.M –".
+# Colon/dash is REQUIRED to distinguish captions from in-text references
+# like "see Figure 3.2 for details".
+_FIG_RE = re.compile(r"^Figure\s+(\d+\.\d+)\s*[:\-–]", re.IGNORECASE)
+
+# TOC leader pattern: 4+ consecutive dots (e.g. "Introduction ......... 78").
+# These are Table-of-Contents entries and should be skipped entirely.
+_TOC_RE = re.compile(r"\.{4,}")
+
+# Running headers / footers to discard
+_SKIP_RE = re.compile(
+    r"^(BLUETOOTH\s+(CORE\s+)?SPEC(IFICATION)?|"
+    r"Host Controller Interface|HCI Commands|Bluetooth SIG Proprietary|"
+    r"\d{1,2}\s+\w{3,9}\s+\d{4}$|page\s+\d+$)",
+    re.IGNORECASE,
+)
+
+
+# ─── Dependency check ────────────────────────────────────────────────────────
+
+def check_fitz():
     try:
-        import opendataloader_pdf
-        return opendataloader_pdf
+        import fitz
+        return fitz
     except ImportError:
-        print("ERROR: opendataloader-pdf not installed.")
-        print("")
-        print("Install with:")
-        print("  pip install -U opendataloader-pdf")
-        print("")
-        print("For better table extraction (recommended):")
-        print('  pip install -U "opendataloader-pdf[hybrid]"')
+        print("ERROR: PyMuPDF is not installed.\n  pip install PyMuPDF")
         sys.exit(1)
 
 
-def convert_spec(version: str, odl, hybrid: bool = False, json_output: bool = False) -> bool:
-    pdf_path = SPECS_DIR / f"core-spec-{version}.pdf"
-    md_path = SPECS_DIR / f"core-spec-{version}.md"
+# ─── Heading depth ───────────────────────────────────────────────────────────
 
-    if not pdf_path.exists():
-        print(f"  [SKIP] {pdf_path.name} not found. Run download_specs.sh first.")
+def heading_prefix(num_str: str) -> str:
+    """
+    Map section-number depth to a markdown heading level.
+      "4"       → ##      (h2)
+      "4.1"     → ###     (h3)
+      "4.1.1"   → ####    (h4)
+      "4.1.1.1" → #####   (h5)
+      deeper    → ######  (h6)
+    """
+    return "#" * min(num_str.count(".") + 2, 6)
+
+
+# ─── Volume / Part map from PDF bookmarks ────────────────────────────────────
+
+def build_vol_part_map(doc) -> dict:
+    """
+    Return {page_idx (0-based): (vol_num: int|None, part_str: str|None)}
+    by walking the PDF table of contents (bookmarks).
+    """
+    toc = doc.get_toc()          # [(level, title, 1-based page), ...]
+    raw: dict = {}
+    cv, cp = None, None
+
+    for _lvl, title, page in toc:
+        vm = re.search(r"\bVol(?:ume)?\s*(\d+)\b", title, re.I)
+        pm = re.search(r"\bPart\s+([A-Z])\b", title, re.I)
+        if vm:
+            cv = int(vm.group(1))
+            cp = None            # reset Part when Volume changes
+        if pm:
+            cp = pm.group(1).upper()
+        raw[page - 1] = (cv, cp)
+
+    # Fill forward so every page inherits the last known Vol/Part
+    filled: dict = {}
+    cv2, cp2 = None, None
+    for i in range(len(doc)):
+        if i in raw:
+            cv2, cp2 = raw[i]
+        filled[i] = (cv2, cp2)
+    return filled
+
+
+# ─── Figure region detection & rendering ─────────────────────────────────────
+
+def _r(v, attr, idx):
+    """Extract a float coord from a fitz.Rect or sequence."""
+    try:
+        return float(getattr(v, attr))
+    except AttributeError:
+        return float(v[idx])
+
+
+def find_figure_bounds(page, caption_y0: float, min_y: float, fitz,
+                       drawings=None):
+    """
+    Return (x0, y0, x1, y1) of the tightest bounding box around the figure
+    (vector-drawing cluster) that sits above *caption_y0*.
+
+    Strategy:
+    - Collect all drawings above the caption within [min_y, caption_y0].
+      *min_y* is normally HEADER_Y for the first figure on a page, or the
+      bottom of the previous figure's caption for subsequent figures — this
+      prevents the cluster from reaching into the area of the figure above.
+    - Walk downward from the drawing with the highest bottom (closest to caption),
+      accumulating a cluster until a vertical gap > 50 pt is seen.
+    - Use the cluster's union bbox for both x and y bounds (tight crop).
+    - Falls back to full content width if no drawings are found.
+
+    The x bounds eliminate the wide blank margins that surround the figure
+    on a standard letter/A4 page.
+
+    Pass *drawings* (from page.get_drawings()) to reuse a cached result
+    when this function is called multiple times on the same page.
+    """
+    pw = page.rect.width
+
+    if drawings is None:
+        try:
+            drawings = page.get_drawings()
+        except Exception:
+            return (0.0, header_y, pw, caption_y0 - 2)
+
+    above = []
+    for d in drawings:
+        r = d.get("rect")
+        if r is None:
+            continue
+        try:
+            rx0 = _r(r, "x0", 0)
+            ry0 = _r(r, "y0", 1)
+            rx1 = _r(r, "x1", 2)
+            ry1 = _r(r, "y1", 3)
+        except (IndexError, TypeError, ValueError):
+            continue
+        # Only drawings strictly above the caption and within the content zone.
+        # Do NOT filter by prev_text_y — figure labels (text blocks) inside
+        # the diagram would otherwise push prev_text_y into the figure area.
+        if ry1 <= caption_y0 and ry0 >= min_y:
+            above.append((rx0, ry0, rx1, ry1))
+
+    if not above:
+        return (0.0, min_y, pw, caption_y0 - 2)
+
+    # Sort by y1 descending: drawing closest to caption comes first.
+    above.sort(key=lambda r: r[3], reverse=True)
+
+    GAP = 50  # pt — gap larger than this means a separate figure above
+    cluster = [above[0]]
+    walk_top = above[0][1]   # y0 of the topmost rect in the cluster so far
+
+    for i in range(1, len(above)):
+        cx0, cy0, cx1, cy1 = above[i]
+        if walk_top - cy1 > GAP:
+            break
+        cluster.append(above[i])
+        walk_top = min(walk_top, cy0)
+
+    MARGIN = 8   # pt padding around the tight bbox (sides + bottom only)
+    bx0 = max(min(r[0] for r in cluster) - MARGIN, 0.0)
+    by0 = max(min(r[1] for r in cluster), min_y)   # clamp to min_y to avoid overlap with previous figure
+    bx1 = min(max(r[2] for r in cluster) + MARGIN, pw)
+    by1 = caption_y0 - 2
+
+    return (bx0, by0, bx1, by1)
+
+
+def render_region(page, x0: float, y0: float, x1: float, y1: float,
+                  img_path: Path, fitz) -> bool:
+    """
+    Render the clipped rectangle (x0,y0)–(x1,y1) of *page* as a 2× PNG.
+    Returns False and saves nothing if the region is trivially small or
+    entirely white (no actual figure content).
+    """
+    if (y1 - y0) < 20 or (x1 - x0) < 20:
         return False
 
+    clip = fitz.Rect(x0, y0, x1, y1)
+    mat = fitz.Matrix(2.0, 2.0)
+    pix = page.get_pixmap(matrix=mat, clip=clip, colorspace=fitz.csRGB)
+
+    # Skip if >97 % of pixels are white (blank / empty region)
+    samp = pix.samples
+    n = pix.width * pix.height
+    if n > 0:
+        white = sum(
+            1 for i in range(0, len(samp), 3)
+            if samp[i] > 245 and samp[i + 1] > 245 and samp[i + 2] > 245
+        )
+        if white / n > 0.97:
+            return False
+
+    img_path.parent.mkdir(parents=True, exist_ok=True)
+    pix.save(str(img_path))
+    return True
+
+
+# ─── Per-page conversion ─────────────────────────────────────────────────────
+
+def _bbox_overlaps(a, b) -> bool:
+    return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
+
+
+def _block_text(b) -> str:
+    """Join all span texts within a block into a single stripped string."""
+    return " ".join(
+        "".join(s["text"] for s in ln["spans"]).strip()
+        for ln in b["lines"]
+        if "".join(s["text"] for s in ln["spans"]).strip()
+    ).strip()
+
+
+def _fmt_row(row, ncols: int) -> str:
+    cells = [
+        ("" if c is None else str(c).replace("|", "\\|").replace("\n", " ").strip())
+        for c in row
+    ]
+    while len(cells) < ncols:
+        cells.append("")
+    return "| " + " | ".join(cells) + " |"
+
+
+def process_page(page, p_idx: int, vol_part_map: dict,
+                 version: str, img_dir: Path, fitz) -> list:
+    """Return a list of markdown strings for one PDF page."""
+    ph = page.rect.height
+    HEADER_Y = ph * 0.09   # 9%: safely below the running header (title + logo band)
+    FOOTER_Y = ph * 0.91
+    vol_num, part_str = vol_part_map.get(p_idx, (None, None))
+
+    # ── Pass 1: scan ALL text blocks to find figure captions ─────────────
+    # Must happen before table extraction so that grid lines drawn inside
+    # architecture/timing diagrams are not mistaken for real data tables.
+    _all_text = [
+        b for b in page.get_text("dict")["blocks"]
+        if b["type"] == 0
+        and b["bbox"][1] < FOOTER_Y
+        and b["bbox"][3] > HEADER_Y
+    ]
+    _all_text.sort(key=lambda b: (b["bbox"][1], b["bbox"][0]))
+
+    # Collect figure captions sorted top-to-bottom.  For each caption the
+    # upper drawing-search limit is the bottom of the previous caption
+    # (HEADER_Y for the first one).  This prevents Figure N+1's cluster
+    # from reaching into Figure N's drawing area when both appear on the
+    # same page and their drawings are less than GAP=50 pt apart.
+    _cap_blocks = []
+    for b in _all_text:
+        bt = _block_text(b)
+        if not _TOC_RE.search(bt) and _FIG_RE.match(bt):
+            _cap_blocks.append(b)
+    _cap_blocks.sort(key=lambda b: b["bbox"][1])
+
+    # (caption_y0, min_y) — min_y is the lower bound for drawing search
+    _cap_info = [
+        (b["bbox"][1], (_cap_blocks[i - 1]["bbox"][3] if i > 0 else HEADER_Y))
+        for i, b in enumerate(_cap_blocks)
+    ]
+
+    _page_drawings = None
+    _fig_zones = []   # list of (y0, y1) bands to suppress content inside
+    if vol_num is not None and part_str is not None:
+        for cap_y0, min_y in _cap_info:
+            if _page_drawings is None:
+                try:
+                    _page_drawings = page.get_drawings()
+                except Exception:
+                    _page_drawings = []
+            _, fy0, _, fy1 = find_figure_bounds(
+                page, cap_y0, min_y, fitz, _page_drawings)
+            _fig_zones.append((fy0, fy1))
+
+    def _in_figure(by0, by1):
+        """True if the block [by0, by1] sits entirely inside a figure zone."""
+        return any(fz0 <= by0 and by1 <= fz1 for fz0, fz1 in _fig_zones)
+
+    # ── Tables (skip those whose top falls inside a figure zone) ─────────
+    table_bboxes = []
+    table_items = []        # (y_top, md_rows, y_bot)
+
+    try:
+        tf = page.find_tables()
+        for tab in (tf.tables if hasattr(tf, "tables") else list(tf)):
+            if _in_figure(tab.bbox[1], tab.bbox[3]):
+                continue   # grid lines inside a diagram — not a real table
+            grid = tab.extract()
+            if not grid or len(grid) < 2:
+                continue
+            ncols = max(len(r) for r in grid)
+            rows = [
+                "",
+                _fmt_row(grid[0], ncols),
+                "| " + " | ".join("---" for _ in range(ncols)) + " |",
+            ]
+            rows += [_fmt_row(r, ncols) for r in grid[1:]]
+            rows.append("")
+            table_bboxes.append(tab.bbox)
+            table_items.append((tab.bbox[1], rows, tab.bbox[3]))
+    except Exception:
+        pass
+
+    # ── Text blocks (skip those inside real table bounding boxes) ─────────
+    text_blocks = [
+        b for b in _all_text
+        if not any(_bbox_overlaps(b["bbox"], tb) for tb in table_bboxes)
+    ]
+
+    # ── Unified reading-order stream ─────────────────────────────────────
+    stream = [(b["bbox"][1], "text", b) for b in text_blocks]
+    stream += [(y, "table", (rows, yb)) for y, rows, yb in table_items]
+    stream.sort(key=lambda x: x[0])
+
+    md = []
+    prev_text_y = HEADER_Y  # bottom of the last non-figure text / table block
+
+    for _y, kind, data in stream:
+
+        # ── Table element ────────────────────────────────────────────────
+        if kind == "table":
+            rows, yb = data
+            md.extend(rows)
+            prev_text_y = yb
+            continue
+
+        # ── Text block ───────────────────────────────────────────────────
+        b = data
+        by0 = b["bbox"][1]
+        by1 = b["bbox"][3]
+        all_spans = [s for ln in b["lines"] for s in ln["spans"]]
+
+        block_text = _block_text(b)
+        if not block_text or _SKIP_RE.match(block_text):
+            continue
+
+        # ── Skip TOC entries (leader dots like "Section .......... 42") ──
+        if _TOC_RE.search(block_text):
+            continue
+
+        # ── Skip diagram labels (text inside a figure region) ────────────
+        if _in_figure(by0, by1):
+            continue
+
+        # ── Figure caption? ───────────────────────────────────────────────
+        fig_m = _FIG_RE.match(block_text)
+        if fig_m:
+            fig_num = fig_m.group(1)
+            if vol_num is not None and part_str is not None:
+                safe_num = fig_num.replace(".", "_")
+                fname = f"Vol{vol_num}_Part{part_str}_Figure{safe_num}.png"
+                img_path = img_dir / fname
+                if not img_path.exists():
+                    # Use the per-caption min_y so we don't overlap the figure above
+                    min_y = next(
+                        (my for cy, my in _cap_info if abs(cy - by0) < 2),
+                        HEADER_Y,
+                    )
+                    bx0, fy0, bx1, fy1 = find_figure_bounds(
+                        page, by0, min_y, fitz, _page_drawings)
+                    if render_region(page, bx0, fy0, bx1, fy1, img_path, fitz):
+                        rel = f"Core_v{version}_images/{fname}"
+                        md.append(f"\n![Figure {fig_num}]({rel})\n")
+            md.append(f"\n**{block_text}**\n")
+            prev_text_y = by1   # advance past caption; next figure search starts here
+            continue
+
+        # ── Section heading? ──────────────────────────────────────────────
+        sec_m = _SEC_RE.match(block_text)
+        if sec_m:
+            num_str = sec_m.group(1)
+            depth = num_str.count(".")
+            is_bold = any(s.get("flags", 0) & 16 for s in all_spans)
+            max_font = max((s.get("size", 0) for s in all_spans), default=0)
+            # Accept as heading when: shallow depth, or bold, or large font
+            if depth <= 1 or is_bold or max_font >= 11:
+                md.append(f"\n{heading_prefix(num_str)} {block_text}\n")
+                prev_text_y = by1
+                continue
+
+        # ── Body text ─────────────────────────────────────────────────────
+        md.append(block_text)
+        prev_text_y = by1
+
+    return md
+
+
+# ─── Top-level converter ─────────────────────────────────────────────────────
+
+def convert_spec(version: str, fitz) -> bool:
+    pdf_path = SPECS_DIR / version / f"Core_v{version}.pdf"
+    md_path = SPECS_DIR / version / f"Core_v{version}.md"
+    img_dir = SPECS_DIR / version / f"Core_v{version}_images"
+
+    if not pdf_path.exists():
+        print(f"  [SKIP] {pdf_path} — PDF not found.")
+        return False
     if md_path.exists():
         print(f"  [SKIP] {md_path.name} already exists. Delete to reconvert.")
         return True
 
-    print(f"  Converting core-spec-{version}.pdf → core-spec-{version}.md ...")
+    size_mb = pdf_path.stat().st_size // (1024 * 1024)
+    print(f"  Opening {pdf_path.name} ({size_mb} MB) ...")
+    doc = fitz.open(str(pdf_path))
+    img_dir.mkdir(exist_ok=True)
 
-    formats = "markdown,json" if json_output else "markdown"
-    kwargs = {
-        "input_path": [str(pdf_path)],
-        "output_dir": str(SPECS_DIR),
-        "format": formats,
-        "image_output": "off",  # Skip images for wiki use — reduces noise
-        "use_struct_tree": True,  # Use PDF structure tags for better heading detection
-        "sanitize": True,        # Filter potential prompt injections from spec PDFs
-    }
+    vol_part_map = build_vol_part_map(doc)
 
-    # Hybrid mode uses AI for complex table extraction — recommended for spec PDFs
-    # Start hybrid server first: opendataloader-pdf-hybrid --port 5002
-    if hybrid:
-        kwargs["hybrid"] = "docling-fast"
-        print("  Using hybrid AI mode for better table extraction")
+    all_lines = [
+        f"# Bluetooth Core Specification {version} — Full Text",
+        "",
+        f"> Source: PDF converted via PyMuPDF.",
+        f"> Wiki summary: [core-spec-{version}](../../wiki/versions/core-spec-{version}.md)",
+        "",
+        "---",
+        "",
+    ]
 
-    try:
-        odl.convert(**kwargs)
-        print(f"  [OK] Saved: {md_path.name}")
-        if json_output:
-            print(f"  [OK] Saved: core-spec-{version}.json")
-        return True
-    except Exception as e:
-        print(f"  [ERROR] Conversion failed: {e}")
-        return False
+    total = len(doc)
+    for p in range(total):
+        if p % 200 == 0 and p > 0:
+            print(f"    {p:,}/{total:,} pages ...")
+        all_lines.extend(
+            process_page(doc[p], p, vol_part_map, version, img_dir, fitz)
+        )
+
+    doc.close()
+
+    content = "\n".join(all_lines)
+    md_path.write_text(content, encoding="utf-8")
+    n_imgs = len(list(img_dir.glob("*.png")))
+    print(f"  [OK] {md_path.name}: {len(all_lines):,} lines | {n_imgs} figures extracted")
+    return True
 
 
-def post_process_markdown(version: str):
-    """Clean up common issues in converted spec PDFs."""
-    md_path = SPECS_DIR / f"core-spec-{version}.md"
-    if not md_path.exists():
-        return
-
-    print(f"  Post-processing core-spec-{version}.md ...")
-    text = md_path.read_text(encoding="utf-8")
-
-    # Add wiki header if not present
-    header = f"""# Bluetooth Core Specification {version} — Full Text
-
-> **Source**: Converted from official Bluetooth SIG PDF via OpenDataLoader PDF.
-> **Note**: This is machine-converted text. Some tables and figures may be imperfect.
->           Refer to the original PDF for definitive spec language.
-> **Wiki pages**: See [core-spec-{version}](../../wiki/versions/core-spec-{version}.md) for the curated summary.
-
----
-
-"""
-    if not text.startswith("# Bluetooth"):
-        text = header + text
-        md_path.write_text(text, encoding="utf-8")
-        print(f"  [OK] Header added")
-    else:
-        print(f"  [OK] No changes needed")
-
+# ─── Entry point ─────────────────────────────────────────────────────────────
 
 def main():
-    odl = check_dependencies()
+    fitz = check_fitz()
 
-    # Parse arguments
-    if len(sys.argv) > 1:
-        versions = sys.argv[1:]
-        # Filter out flags
-        hybrid = "--hybrid" in versions
-        json_output = "--json" in versions
-        versions = [v for v in versions if not v.startswith("--")]
+    given = [v for v in sys.argv[1:] if not v.startswith("--")]
+    if given:
+        versions = given
     else:
-        # Auto-detect: convert all PDFs that don't have a .md counterpart
-        versions = []
-        for pdf in sorted(SPECS_DIR.glob("core-spec-*.pdf")):
-            version = pdf.stem.replace("core-spec-", "")
-            md_file = SPECS_DIR / f"{pdf.stem}.md"
-            if not md_file.exists():
-                versions.append(version)
-        hybrid = False
-        json_output = False
+        versions = [
+            pdf.parent.name
+            for pdf in sorted(SPECS_DIR.glob("*/Core_v*.pdf"))
+            if not (pdf.parent / f"Core_v{pdf.parent.name}.md").exists()
+        ]
 
     if not versions:
-        print("No PDFs to convert. Either:")
-        print("  - Run ./scripts/download_specs.sh to download PDFs first")
-        print("  - Specify versions: python scripts/convert_to_md.py 6.0")
+        print("Nothing to convert — all PDFs already have .md counterparts.")
         sys.exit(0)
 
-    print("=== Bluetooth Spec PDF → Markdown Converter ===")
-    print(f"Input directory : {SPECS_DIR}")
-    print(f"Versions        : {', '.join(versions)}")
-    print(f"Hybrid mode     : {'ON (make sure hybrid server is running)' if hybrid else 'OFF'}")
-    print(f"JSON output     : {'ON' if json_output else 'OFF'}")
-    print("")
+    print("=== Bluetooth Spec PDF → Markdown ===")
+    print(f"Versions : {', '.join(versions)}\n")
 
-    if hybrid:
-        print("NOTE: Hybrid mode requires the hybrid server to be running:")
-        print("  Terminal 1: opendataloader-pdf-hybrid --port 5002")
-        print("  Terminal 2: python scripts/convert_to_md.py --hybrid")
-        print("")
-
-    failed = []
-    for version in versions:
-        print(f"--- Version {version} ---")
-        if convert_spec(version, odl, hybrid=hybrid, json_output=json_output):
-            post_process_markdown(version)
+    ok, failed = [], []
+    for v in versions:
+        print(f"--- {v} ---")
+        if convert_spec(v, fitz):
+            ok.append(v)
         else:
-            failed.append(version)
-        print("")
+            failed.append(v)
+        print()
 
-    print("=== Summary ===")
-    converted = [v for v in versions if v not in failed]
-    if converted:
-        print(f"Converted: {', '.join(converted)}")
+    print("=== Done ===")
+    if ok:
+        print(f"  Converted : {', '.join(ok)}")
     if failed:
-        print(f"Failed   : {', '.join(failed)}")
-
-    print("")
-    print("Next step: Use INGEST operation in CLAUDE.md to update wiki pages from converted markdown")
-    print("  Open Claude Code in this repo and run:")
-    print("  > Ingest the converted Bluetooth Core Spec markdown files into the wiki")
+        print(f"  Skipped   : {', '.join(failed)}")
+    print()
+    print("Next: run `python scripts/ingest.py --status` to check wiki coverage.")
 
 
 if __name__ == "__main__":

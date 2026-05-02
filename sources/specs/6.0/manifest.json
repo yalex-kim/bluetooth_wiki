@@ -1,0 +1,260 @@
+[
+  {
+    "title": "Core Specification 6.0 (HTML)",
+    "url": "https://www.bluetooth.org/DocMan/handlers/DownloadDoc.ashx?doc_id=588232",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\Core_v6.0.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "Changes since previous version",
+    "url": "https://www.bluetooth.org/DocMan/handlers/DownloadDoc.ashx?doc_id=588930",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\Core_6.0_showing_changes_since_Core_5.4.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "802.11 MAC-PHY Test Suite (TS)",
+    "url": "https://files.bluetooth.com/download/80211mp-ts-p7-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\80211MP.TS.p7.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "802.11 MAC-PHY Implementation Conformance Statement (ICS)",
+    "url": "https://files.bluetooth.com/download/80211mp-ics-p7-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\80211MP.ICS.p7.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "802.11 PAL Test Suite",
+    "url": "https://files.bluetooth.com/download/80211pal-ts-p13-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\80211PAL.TS.p13.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "802.11 PAL ICS",
+    "url": "https://files.bluetooth.com/download/80211pal-ics-p9-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\80211PAL.ICS.p9.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "ATT Test Suite",
+    "url": "https://files.bluetooth.com/download/gatt-ts-p26-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\GATT.TS.p26.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "ATT ICS",
+    "url": "https://files.bluetooth.com/download/att-ics-p13-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\ATT.ICS.p13.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "BB Test Suite",
+    "url": "https://files.bluetooth.com/download/bb-ts-p36-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\BB.TS.p36.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "BB ICS",
+    "url": "https://files.bluetooth.com/download/bb-ics-p27-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\BB.ICS.p27.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "CS Test Suite",
+    "url": "https://files.bluetooth.com/download/cs-ts-p0-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\CS.TS.p3.pdf",
+    "status": "downloaded"
+  },
+  {
+    "title": "CS ICS",
+    "url": "https://files.bluetooth.com/download/cs-ics-p0-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\CS.ICS.p3.pdf",
+    "status": "downloaded"
+  },
+  {
+    "title": "GAP Test Suite",
+    "url": "https://files.bluetooth.com/download/gap-ts-p46-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\GAP.TS.p46.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "GAP ICS",
+    "url": "https://files.bluetooth.com/download/gap-ics-p42-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\GAP.ICS.p42.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "GATT Test Suite",
+    "url": "https://files.bluetooth.com/download/gatt-ts-p26-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\GATT.TS.p26.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "GATT ICS",
+    "url": "https://files.bluetooth.com/download/gatt-ics-p19-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\GATT.ICS.p19.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "HCI Test Suite",
+    "url": "https://files.bluetooth.com/download/hci-ts-p35-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\HCI.TS.p35.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "HCI ICS",
+    "url": "https://files.bluetooth.com/download/hci-ics-p30-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\HCI.ICS.p30.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "UHCI ICS",
+    "url": "https://files.bluetooth.com/download/uhci-ics-p1-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\UHCI.ICS.p1.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "IAL Test Suite",
+    "url": "https://files.bluetooth.com/download/ial-ts-p7-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\IAL.TS.p10.pdf",
+    "status": "downloaded"
+  },
+  {
+    "title": "IAL ICS",
+    "url": "https://files.bluetooth.com/download/ial-ics-p2-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\IAL.ICS.p3.pdf",
+    "status": "downloaded"
+  },
+  {
+    "title": "L2CAP Test Suite",
+    "url": "https://files.bluetooth.com/download/l2cap-ts-p38-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\L2CAP.TS.p38.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "L2CAP ICS",
+    "url": "https://files.bluetooth.com/download/l2cap-ics-p26-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\L2CAP.ICS.p26.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "LL Test Suite",
+    "url": "https://files.bluetooth.com/download/ll-ts-p24-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\LL.TS.p24.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "LL ICS",
+    "url": "https://files.bluetooth.com/download/ll-ics-p22-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\LL.ICS.p22.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "LESEC ICS",
+    "url": "https://files.bluetooth.com/download/lesec-ics-p0-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\LESEC.ICS.p0.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "LMP Test Suite",
+    "url": "https://files.bluetooth.com/download/lmp-ts-p46-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\LMP.TS.p46.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "LMP ICS",
+    "url": "https://files.bluetooth.com/download/lmp-ics-p38-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\LMP.ICS.p38.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "SEC ICS",
+    "url": "https://files.bluetooth.com/download/sec-ics-p0-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\SEC.ICS.p0.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "RF Test Suite",
+    "url": "https://files.bluetooth.com/download/rf-ts-p34-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\RF.TS.p34.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "RF ICS",
+    "url": "https://files.bluetooth.com/download/rf-ics-p22-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\RF.ICS.p22.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "RFPHY Test Suite",
+    "url": "https://files.bluetooth.com/download/rfphy-ts-p22-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\RFPHY.TS.p22.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "RFPHY ICS",
+    "url": "https://files.bluetooth.com/download/rfphy-ics-p10-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\RFPHY.ICS.p10.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "SDP Test Suite",
+    "url": "https://files.bluetooth.com/download/sdp-ts-p24-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\SDP.TS.p24.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "SDP ICS",
+    "url": "https://files.bluetooth.com/download/sdp-ics-p24-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\SDP.ICS.p24.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "SM Test Suite",
+    "url": "https://files.bluetooth.com/download/sm-ts-p26-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\SM.TS.p26.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "SM ICS",
+    "url": "https://files.bluetooth.com/download/sm-ics-p12-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\SM.ICS.p12.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "CORE ICS",
+    "url": "https://files.bluetooth.com/download/core-ics-p1-pdf/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\CORE.ICS.p1.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "Errata Correction 25800: Expedited Fixes to Frame Space Update and Channel Sounding",
+    "url": "https://www.bluetooth.org/docman/handlers/DownloadDoc.ashx?doc_id=588251",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\Erratum_25800_Expedited_Fixes_to_Frame_Space_Update_and_Channel_Sounding.pdf",
+    "status": "copied"
+  },
+  {
+    "title": "Errata Correction 27096: Pause Encryption should be mandatory to support with encryption",
+    "url": "https://files.bluetooth.com/download/erratum_27096_pause_encryption/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\Erratum_27096_Pause_Encryption.pdf",
+    "status": "downloaded"
+  },
+  {
+    "title": "Erratum 27195: Pausing of encryption (AESCCM) uses incorrect PDU",
+    "url": "https://files.bluetooth.com/download/erratum_27195_pausing_of_encryption_aes-ccm_uses_incorrect_pdu/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\Erratum_27195_Pausing_Of_Encryption_AES-CCM_Uses_Incorrect_PDU.pdf",
+    "status": "downloaded"
+  },
+  {
+    "title": "Erratum 28108: Alignment of BR/EDR with LE ACP and C/I Requirements",
+    "url": "https://files.bluetooth.com/download/erratum-28108-alignment-of-br-edr-with-le-acp-and-c-i-requirements/",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\ESU_28108_v1.pdf",
+    "status": "downloaded"
+  },
+  {
+    "title": "Core Deprecation and Withdrawal Policy",
+    "url": "https://btprodspecificationrefs.blob.core.windows.net/policy-documents/Core%20D&W%20policy%20statement.pdf",
+    "path": "C:\\Workspace\\bluetooth_wiki\\sources\\specs\\6.0\\Core_20D_W_20policy_20statement.pdf",
+    "status": "copied"
+  }
+]

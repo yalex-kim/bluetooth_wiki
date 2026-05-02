@@ -29,10 +29,10 @@
 | [diff-5.0-to-5.1](wiki/version-diff/diff-5.0-to-5.1.md) | 5.0 → 5.1 | Direction Finding, GATT caching |
 | [diff-5.1-to-5.2](wiki/version-diff/diff-5.1-to-5.2.md) | 5.1 → 5.2 | LE Audio, Isochronous Channels, EATT |
 | [diff-5.2-to-5.3](wiki/version-diff/diff-5.2-to-5.3.md) | 5.2 → 5.3 | Connection Subrating, Advertising Coding |
-| [diff-5.3-to-5.4](wiki/version-diff/diff-5.3-to-5.4.md) | 5.3 → 5.4 | PAwR, Encrypted Advertising Data |
-| [diff-5.4-to-6.0](wiki/version-diff/diff-5.4-to-6.0.md) | 5.4 → 6.0 | Channel Sounding, DBAF, Frame Space |
-| [diff-6.0-to-6.1](wiki/version-diff/diff-6.0-to-6.1.md) | 6.0 → 6.1 | Randomized RPA Updates, errata batch |
-| [diff-6.1-to-6.2](wiki/version-diff/diff-6.1-to-6.2.md) | 6.1 → 6.2 | Shorter Connection Intervals, LE UTP, CS amplitude resilience, security errata |
+| [diff-5.3-to-5.4](wiki/version-diff/diff-5.3-to-5.4.md) | 5.3 → 5.4 | PAwR, EAD, Adv Coding Selection (Verified via Redlines) |
+| [diff-5.4-to-6.0](wiki/version-diff/diff-5.4-to-6.0.md) | 5.4 → 6.0 | Channel Sounding, DBAF, Frame Space, ISOAL Updates |
+| [diff-6.0-to-6.1](wiki/version-diff/diff-6.0-to-6.1.md) | 6.0 → 6.1 | Randomized RPA Updates, Errata Batch 6.1 |
+| [diff-6.1-to-6.2](wiki/version-diff/diff-6.1-to-6.2.md) | 6.1 → 6.2 | Shorter Connection Intervals (125µs units), 12 Security Errata, CS Resilience |
 
 ---
 
@@ -73,9 +73,9 @@
 | A specific version's features | `wiki/versions/core-spec-X.Y.md` |
 | What changed between versions | `wiki/version-diff/diff-X.W-to-X.Y.md` |
 | A specific protocol concept | `wiki/concepts/<concept>.md` |
-| LE Audio / LC3 / Isochronous | `core-spec-5.2.md`, `ble-architecture.md` |
-| Direction Finding / AoA / AoD | `core-spec-5.1.md`, `diff-5.0-to-5.1.md` |
-| Channel Sounding / ranging | `core-spec-6.0.md`, `diff-5.4-to-6.0.md`, `diff-6.1-to-6.2.md` (CS amplitude resilience) |
+| LE Audio / LC3 / Isochronous | `le-audio.md`, `core-spec-5.2.md`, `ble-architecture.md` |
+| Direction Finding / AoA / AoD | `direction-finding.md`, `core-spec-5.1.md`, `diff-5.0-to-5.1.md` |
+| Channel Sounding / ranging | `channel-sounding.md`, `core-spec-6.0.md`, `diff-5.4-to-6.0.md`, `diff-6.1-to-6.2.md` |
 | Encrypted Advertising / EAD | `core-spec-5.4.md`, `security.md` |
 | Short / ultra-low-latency BLE connections | `core-spec-6.2.md`, `diff-6.1-to-6.2.md` |
 | RPA / BLE privacy / address rotation | `core-spec-6.1.md`, `diff-6.0-to-6.1.md`, `security.md` |

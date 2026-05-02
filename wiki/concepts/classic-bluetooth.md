@@ -1,7 +1,7 @@
 # Classic Bluetooth (BR/EDR)
 
 **Last updated**: 2026-05-02
-**Covers**: BR/EDR as defined in Bluetooth Core Spec (all versions)
+**Covers**: BR/EDR as defined in Bluetooth Core Spec through 6.2
 
 ---
 
@@ -19,11 +19,13 @@ BR/EDR remains widely deployed for:
 
 ## Radio Technology
 
-- **Frequency**: 2.4 GHz ISM band (2402–2480 MHz)
-- **Channeling**: 79 channels, 1 MHz spacing
-- **Access method**: Frequency Hopping Spread Spectrum (FHSS): 1600 hops/second
-- **Range**: Typically 10–100 m (Class 1: 100 mW / Class 2: 2.5 mW / Class 3: 1 mW)
-
+Classic Bluetooth는 **FHSS(Frequency Hopping Spread Spectrum)**를 사용하여 2.4 GHz 대역의 간섭을 최소화합니다.
+- **Frequency & Channeling**: 2402 MHz부터 2480 MHz까지 1 MHz 간격으로 배치된 79개의 RF 채널을 사용합니다. `[Core 6.2, Vol 2, Part A, §2]`
+- **Hopping**: 초당 1600번 채널을 전환하며, 이는 Primary 기기의 클럭에 의해 결정됩니다.
+- **Modulation**: 
+  - **Basic Rate (BR)**: GFSK (1 Mbps)
+  - **Enhanced Data Rate (EDR)**: π/4-DQPSK (2 Mbps) 및 8DPSK (3 Mbps) `[Core 6.2, Vol 2, Part A, §3]`
+  
 ### Data Rates
 
 | Mode | Rate | Introduced |
@@ -32,20 +34,18 @@ BR/EDR remains widely deployed for:
 | EDR 2 Mbps | 2 Mbps | 2.0+EDR |
 | EDR 3 Mbps | 3 Mbps | 2.0+EDR |
 
-BR uses GFSK modulation. EDR uses DQPSK (2 Mbps) and 8DPSK (3 Mbps).
-
 ---
 
 ## Network Topology
 
-### Piconet
-- 1 **Primary** (formerly "master") + up to 7 active **Secondaries** (formerly "slaves")
-- Primary controls channel hopping sequence and timing
-- All secondaries synchronize to primary's clock
-- Up to 255 additional **parked** secondaries (inactive but synchronized)
+### Piconet (피코넷)
+피코넷은 공유 채널을 사용하는 기기들의 집합입니다. `[Core 6.2, Vol 1, Part A, §3.2.1]`
+- **Primary/Secondary**: 1개의 Primary 기기가 홉 시퀀스와 타이밍을 결정하며, 최대 7개의 활성 Secondary 기기가 참여할 수 있습니다. (Core 5.3부터 Master/Slave 용어가 Primary/Secondary로 공식 변경됨)
+- **Clock Synchronization**: 모든 Secondary 기기는 Primary의 클럭($CLK$)에 자신의 오프셋을 더해 동기화합니다. `[Core 6.2, Vol 2, Part B, §8.1]`
+- **Physical Channel**: 피코넷 내의 통신은 Primary의 Bluetooth 기기 주소(BD_ADDR)에 의해 정의된 고유한 홉 시퀀스를 따릅니다.
 
 ### Scatternet
-- A device can be Primary in one piconet and Secondary in another
+- 한 기기가 여러 피코넷에 참여하여 데이터를 중계할 수 있는 구조입니다. `[Core 6.2, Vol 2, Part B, §8.5]`
 - Enables multi-hop networking (rarely used in practice)
 
 ---
@@ -73,25 +73,26 @@ BR uses GFSK modulation. EDR uses DQPSK (2 Mbps) and 8DPSK (3 Mbps).
 
 ### Key Protocol Layers
 
-**Baseband**: Packet format, frequency hopping, link establishment, power control.
-Defines two link types:
-- **ACL** (Asynchronous Connection-Less): Best-effort data; used for all non-audio traffic
-- **SCO/eSCO** (Synchronous Connection-Oriented): Circuit-switched audio; reserved bandwidth
+**Baseband (베이시밴드)**: 물리 채널 관리 및 링크 제어를 담당합니다. `[Core 6.2, Vol 2, Part B]`
+- **ACL (Asynchronous Connection-Oriented)**: 패킷 재전송을 지원하는 데이터 링크입니다. 비대칭 대역폭을 지원하며 일반적인 데이터 통신에 사용됩니다. `[Core 6.2, Vol 2, Part B, §3.1.2]`
+- **SCO/eSCO (Synchronous Connection-Oriented)**: 대칭형, 서킷 스위칭 방식의 포인트 투 포인트 링크입니다. 주로 음성 데이터 전송에 사용되며, eSCO는 재전송 윈도우를 지원하여 품질이 더 높습니다. `[Core 6.2, Vol 2, Part B, §3.1.1]`
 
-**LMP (Link Manager Protocol)**: Authentication, encryption, power management, role switching, QoS.
+**LMP (Link Manager Protocol)**: 기기 간의 링크 설정, 보안(인증/암호화), 전력 제어 및 역할 전환(Role Switch)을 제어하는 프로토콜입니다. `[Core 6.2, Vol 2, Part C]`
 
-**L2CAP**: Channel multiplexing, segmentation. PSMs (Protocol/Service Multiplexers) route to:
-- RFCOMM (serial), SDP (discovery), AVDTP (audio), AVCTP (audio/video control), HID
+**L2CAP (Logical Link Control and Adaptation Protocol)**: 상위 프로토콜로의 데이터 멀티플렉싱과 세그멘테이션을 담당합니다. `[Core 6.2, Vol 3, Part A]`
 
-**SDP (Service Discovery Protocol)**: Discovers services on a remote device.
-Each service has a Service Record with attributes (UUIDs, names, parameters).
-Replaced by GATT in BLE devices.
+**SDP (Service Discovery Protocol)**: 상대 기기가 제공하는 서비스(프로파일)와 그 속성(UUID, 프로토콜 파라미터 등)을 검색하는 데 사용됩니다. `[Core 6.2, Vol 3, Part B]`
 
-**RFCOMM**: Emulates RS-232 serial ports over L2CAP. Used by HSP, HFP, SPP, DUN.
+**RFCOMM**: L2CAP 위에서 RS-232 시리얼 포트를 에뮬레이션합니다. HFP, SPP 등 전통적인 시리얼 기반 프로파일의 기반이 됩니다.
 
 ---
 
 ## Audio in BR/EDR
+Classic Bluetooth 오디오는 엄격한 타이밍과 예약된 대역폭을 보장하는 동기식 링크를 사용합니다.
+
+### CVSD & mSBC Codecs
+- **CVSD**: 8 kHz 샘플링의 표준 텔레포니 코덱입니다.
+- **mSBC**: 16 kHz 샘플링의 와이드밴드 음성을 지원하며, HFP 1.6 이상의 Hands-Free 기기에서 사용됩니다. `[HFP 1.6+ Spec]`
 
 ### SCO (Synchronous Connection-Oriented)
 - Circuit-switched, 64 kbps, fixed slot allocation
@@ -106,19 +107,6 @@ Replaced by GATT in BLE devices.
 ### A2DP (Advanced Audio Distribution Profile)
 - Uses ACL (not SCO), transported via AVDTP over L2CAP
 - Codec negotiation: SBC (mandatory), AAC, aptX, LDAC (optional)
-- One-way (source → sink); control via AVCTP + AVRCP
-- SBC: up to 328 kbps (stereo, 44.1 kHz, bitpool 53)
-
-### LE Audio vs BR/EDR Audio
-
-| | BR/EDR (A2DP/HFP) | LE Audio (5.2+) |
-|--|---|---|
-| Codec | SBC, AAC, aptX | LC3 |
-| Latency | 100–200 ms (SBC) | 20–40 ms |
-| Quality at low bitrate | Poor (SBC at 128 kbps) | Good (LC3 at 80 kbps) |
-| Multi-stream sync | Limited | Native (CIG/BIG) |
-| Broadcast | No | Yes (BIS/Auracast) |
-| Power | High | Low |
 
 ---
 
@@ -141,16 +129,23 @@ Replaced by GATT in BLE devices.
 
 ## BR/EDR Security
 
-**Pairing methods** (pre-4.0, "Legacy Pairing"):
-- PIN-based (4- or 16-digit)
-- Vulnerable to brute-force and eavesdropping
-
-**Secure Simple Pairing (SSP, introduced in 2.1)**:
-- ECDH-based key exchange
+**Secure Simple Pairing (SSP)**: Core Spec 2.1부터 도입되었으며, ECDH(Elliptic Curve Diffie-Hellman)를 사용하여 수동적 도청(Passive Eavesdropping)을 방지합니다. `[Core 6.2, Vol 2, Part H]`
 - Methods: Just Works, Passkey Entry, Numeric Comparison, OOB
-- Significantly more secure than legacy PIN pairing
 
-**Encryption**: E0 stream cipher (legacy) or AES-CCM (Secure Connections, 4.1+).
+**Security Levels**:
+- **Level 1**: 보안 없음
+- **Level 2**: MITM 보호 없는 암호화 (Just Works)
+- **Level 3**: MITM 보호가 포함된 암호화 (Passkey/Numeric Comparison)
+- **Level 4**: P-256 기반 Secure Connections (Core 4.1+) `[Core 6.2, Vol 3, Part C, §5.2.2]`
+
+**Encryption**: 레거시 연결에서는 E0 스트림 암호를 사용하지만, **Secure Connections**가 활성화되면 AES-CCM을 사용합니다.
+
+---
+
+## See Also
+- BLE Architecture
+- Security
+- LE Audio
 
 ---
 

@@ -34,8 +34,8 @@ def get_wiki_status() -> dict:
     """Return coverage status for each spec version."""
     status = {}
     for version in VERSIONS:
-        pdf_exists = (SPECS_DIR / f"core-spec-{version}.pdf").exists()
-        md_source_exists = (SPECS_DIR / f"core-spec-{version}.md").exists()
+        pdf_exists = (SPECS_DIR / version / f"Core_v{version}.pdf").exists()
+        md_source_exists = (SPECS_DIR / version / f"Core_v{version}.md").exists()
         wiki_exists = (WIKI_DIR / "versions" / f"core-spec-{version}.md").exists()
         status[version] = {
             "pdf": pdf_exists,
@@ -85,7 +85,7 @@ def print_status():
 
 def generate_ingest_prompt(version: str) -> str:
     """Generate a Claude prompt for ingesting a converted spec."""
-    source_md = SPECS_DIR / f"core-spec-{version}.md"
+    source_md = SPECS_DIR / version / f"Core_v{version}.md"
     wiki_page = WIKI_DIR / "versions" / f"core-spec-{version}.md"
 
     if not source_md.exists():
@@ -96,11 +96,11 @@ def generate_ingest_prompt(version: str) -> str:
 Follow the INGEST procedure defined in CLAUDE.md.
 
 ## Source file
-`sources/specs/core-spec-{version}.md`
+`sources/specs/{version}/Core_v{version}.md`
 
 ## Tasks
 
-1. **Read** `sources/specs/core-spec-{version}.md` (the full converted spec text)
+1. **Read** `sources/specs/{version}/Core_v{version}.md` (the full converted spec text)
 2. **Update** `wiki/versions/core-spec-{version}.md`:
    - Enrich the Executive Summary with spec-specific language
    - Verify and expand the New Features table with exact spec references (Vol/Part/§)

@@ -131,7 +131,12 @@ from the Filter Accept List; uses the Resolving List for RPA matching.
 ## HCI (Host Controller Interface)
 
 HCI is the standardized API between host and controller.
-Physical transports: UART (H4), USB, SDIO, SPI.
+
+### Physical Transports
+- **UART (H4)**: 가장 일반적인 전송 방식. 1바이트 헤더(Type)를 사용하여 Command(01), ACL(02), SCO(03), Event(04), ISO(05)를 구분합니다. `[Core 6.2, Vol 4, Part A]`
+- **UART (H5 / Three-Wire)**: SLIP 프로토콜 기반으로 에러 복구 및 재전송 기능을 제공합니다.
+- **USB**: 대용량 데이터 전송에 유리하며, 인터페이스 0(Events/Commands)과 엔드포인트(Bulk/Interrupt/Isochronous)를 통해 데이터를 분리합니다.
+  - **6.2 Update**: USB 인터페이스 상에서 LE Isochronous 데이터를 전송하기 위한 전용 엔드포인트 구성이 명시되었습니다. `[Core 6.2, Vol 4, Part B]`
 
 HCI message types:
 - **Commands**: Host → Controller (e.g., `HCI_LE_Set_Advertising_Parameters`)

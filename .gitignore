@@ -1,13 +1,10 @@
-# Downloaded PDF spec files (large binary files)
-sources/specs/*.pdf
-sources/specs/*.PDF
-
-# OpenDataLoader converted files (regeneratable from PDFs)
-sources/specs/*.md
-sources/specs/*.json
 
 # Generated prompt files
 .prompts/
+
+# Local browser session exports
+cookies*.txt
+*-cookies.txt
 
 # Python
 __pycache__/
@@ -22,3 +19,13 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated figure image directories (large binary output — run convert_to_md.py to regenerate)
+sources/specs/*/*_images/
+
+# Temp / debug files
+convert_log.txt
+debug_*.png
+.java/
+jre.zip
+scratch/
