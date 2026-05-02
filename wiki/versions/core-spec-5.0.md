@@ -3,23 +3,19 @@
 **Release Date**: 2016-12-06
 **Status**: Superseded by 5.1
 **Spec Volume**: ~2822 pages
-**Source PDF**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-5-0/) | [Local PDF](../../sources/specs/core-spec-5.0.pdf) | [Local Markdown](../../sources/specs/core-spec-5.0.md)
+**Source**: [Local Markdown](../../sources/specs/core-spec-5.0.md)
 
 ---
 
 ## Executive Summary
 
-Bluetooth 5.0 was the most significant LE update since 4.0 introduced BLE itself.
-Its headline improvements focused on **range**, **speed**, and **broadcast capacity** — each roughly doubling or quadrupling the previous generation.
+Bluetooth 5.0, released December 2016, was the most significant LE update since version 4.0 introduced BLE itself. Its headline improvements focused on **range**, **speed**, and **broadcast capacity** — making Bluetooth a viable option for a broader class of IoT applications.
 
-The **LE 2M PHY** doubled throughput for connected devices (important for wearables and audio accessories).
-The **LE Coded PHY** enabled 4× range by adding forward error correction, opening Bluetooth to long-range IoT
-applications (smart city sensors, building automation, asset tracking).
-**Extended Advertising** allowed 255-byte payloads on secondary channels, enabling 8× more data per broadcast
-and preparing the foundation for Bluetooth Mesh Networking (standardized separately as a profile).
+The **LE 2M PHY** doubled LE throughput to 2 Mbps for connected devices (essential for wearables and audio accessories transferring bulk data). The **LE Coded PHY** enabled 4× or 8× range by adding forward error correction at the physical layer, opening Bluetooth to long-range IoT deployments such as smart city sensors, building automation, and asset tracking over hundreds of meters. **LE Advertising Extensions** offloaded advertising payloads to secondary data channels, allowing up to 255 bytes of advertising data — dramatically expanding use cases for beacons and connectionless broadcast, and laying the foundation for Bluetooth Mesh Networking.
 
-5.0 also introduced **Slot Availability Masks (SAM)** for improved BR/EDR/LE coexistence and a number of
-Link Layer improvements that increased scheduling determinism.
+5.0 also introduced **Slot Availability Mask (SAM)** to improve BR/EDR/LE coexistence scheduling, **Channel Selection Algorithm #2 (CSA#2)** for better channel distribution in connected links, and **Periodic Advertising** for synchronized connectionless broadcasts. Park State — a rarely-used BR/EDR power-saving mode — was deprecated in this version.
+
+[Core 5.0, Vol 1, Part C, §9]
 
 ---
 
@@ -27,75 +23,88 @@ Link Layer improvements that increased scheduling determinism.
 
 | Feature | Brief Description | Spec Reference |
 |---------|------------------|----------------|
-| LE 2M PHY | 2 Mbps symbol rate on LE; doubles throughput for connected links | Vol 6, Part B, §1.2 |
-| LE Coded PHY (S=2, S=8) | FEC-encoded PHY for 4× (S=2) or 8× (S=8) range at reduced data rate | Vol 6, Part B, §1.2 |
-| Extended Advertising | Advertising data offloaded to 37 data channels; payloads up to 255 bytes | Vol 6, Part B, §2.3.4 |
-| Extended Scanning | Scanner can receive extended advertising on secondary channels | Vol 6, Part B, §4.4.3 |
-| Periodic Advertising | Synchronized, connectionless broadcast at precise intervals | Vol 6, Part B, §4.4.2 |
-| Advertising Extension (HCI) | New HCI commands for extended/periodic advertising control | Vol 4, Part E |
-| Slot Availability Mask (SAM) | Mechanism to signal BR/EDR slot availability for LE coexistence | Vol 2, Part B |
-| LE Channel Selection Algorithm #2 | Improved channel selection for better coexistence | Vol 6, Part B, §4.5.8 |
-| High Duty Cycle Non-Connectable Adv | Removed restriction on non-connectable advertising interval | Vol 6, Part B |
+| LE 2M PHY | 2 Msym/s symbol rate on LE; doubles throughput vs. LE 1M; uncoded only | Vol 6, Part B, §2.1 |
+| LE Coded PHY (S=2, S=8) | FEC-encoded PHY at 1 Msym/s; S=2 = 500 kbps; S=8 = 125 kbps (~4–8× range) | Vol 6, Part B, §2.2 |
+| LE Advertising Extensions | New PDU types offloading advertising data to secondary channels; up to 255 bytes | Vol 6, Part B, §2.3.4 |
+| Extended Scanning | Scanner can receive extended advertising PDUs on secondary channels | Vol 6, Part B, §4.4.3 |
+| Periodic Advertising | Synchronized connectionless broadcast at precise intervals; scanners sync via AUX_SYNC_IND | Vol 6, Part B, §4.4.2 |
+| LE Channel Selection Algorithm #2 (CSA#2) | Pseudorandom channel selection with improved distribution across 37 data channels | Vol 6, Part B, §4.5.8 |
+| Slot Availability Mask (SAM) | LMP mechanism to signal BR/EDR slot availability to LE scheduler for coexistence | Vol 2, Part B, §4.1.15; Vol 3, Part C, §4.18 |
+| High Duty Cycle Non-Connectable Advertising | Removed previous minimum interval restriction on non-connectable advertising | Vol 6, Part B, §4.6.12 |
+| HCI Extended Advertising Commands | New HCI commands for extended/periodic advertising set management | Vol 4, Part E, §7.8.52–7.8.69 |
 
 ---
 
 ## Key Changes to Existing Mechanisms
 
-### Physical Layer
-- Added LE 2M PHY (GFSK at 2 Mbps): same channel map as LE 1M, increased throughput
-- Added LE Coded PHY: uses FEC with two coding schemes:
-  - **S=2** (500 kbps effective): 2 symbols per bit — moderate range extension
-  - **S=8** (125 kbps effective): 8 symbols per bit — maximum range (~1 km line of sight)
-- PHY negotiation via **LL_PHY_REQ / LL_PHY_RSP** procedure
-- Both sides independently select TX and RX PHYs
+### Physical Layer (Vol 6, Part A; Vol 6, Part B, §2)
 
-### Advertising
-- **Legacy advertising** (PDU types ADV_IND, ADV_NONCONN_IND, etc.) unchanged for backward compatibility
-- **Extended advertising**: new PDU types with AuxPtr chaining, enabling multi-packet large payloads
-- **Periodic advertising**: advertiser establishes a sync train; scanners can sync without a full connection
+- **LE 1M PHY** (since 4.0): unchanged — 1 Msym/s GFSK, ~1 Mbps effective rate, always mandatory
+- **LE 2M PHY** (new): same 2.4 GHz channel map as 1M, 2 Msym/s GFSK modulation, uncoded only
+- **LE Coded PHY** (new): 1 Msym/s with FEC coding
+  - **S=2** (rate 1/2 FEC): ~500 kbps effective — moderate range extension (~2× vs. 1M)
+  - **S=8** (rate 1/8 FEC): ~125 kbps effective — maximum range (~4× vs. 1M, up to ~1 km line of sight)
+  - Packet structure includes a SYNC word and FEC-encoded payload separated by a coded indicator (CI) field [Vol 6, Part B, §2.2]
+- **PHY negotiation**: new LL procedures `LL_PHY_REQ` / `LL_PHY_RSP` / `LL_PHY_UPDATE_IND`; both ends select TX and RX PHYs independently
 
-### Link Layer
-- Channel Selection Algorithm #2 (CSA#2): pseudorandom with better distribution across channels
-- New LL procedure for PHY update: `LL_PHY_REQ`, `LL_PHY_RSP`, `LL_PHY_UPDATE_IND`
+### Advertising (Vol 6, Part B, §2.3, §4.4)
+
+- **Legacy advertising PDUs** (`ADV_IND`, `ADV_DIRECT_IND`, `ADV_NONCONN_IND`, `ADV_SCAN_IND`, `SCAN_RSP`) remain unchanged for backward compatibility; maximum payload 31 bytes
+- **Extended advertising PDUs** (new): `ADV_EXT_IND` on primary channels carries only an `AuxPtr` + `ADI` field, chaining to secondary channel PDUs (`AUX_ADV_IND`, `AUX_CHAIN_IND`) with up to 255 bytes of actual advertising data [Vol 6, Part B, §2.3.4]
+- **Primary advertising PHY**: can now be LE 1M or LE Coded for extended advertising; secondary channel can be LE 1M, LE 2M, or LE Coded
+- **Periodic advertising** (`AUX_SYNC_IND`): advertiser establishes a sync train with a fixed interval; scanners establish synchronization via `LE Periodic Advertising Create Sync` without forming a connection [Vol 6, Part B, §4.4.2]
+
+### Link Layer (Vol 6, Part B, §4.5)
+
+- **CSA#2**: new pseudorandom channel selection algorithm coexists with CSA#1; connection establishment advertises which algorithm is used via `LE Channel Selection Algorithm` event [Vol 6, Part B, §4.5.8]
+- Advertising extensions add new LL states: `Synchronizing`, `Synchronized` for periodic advertising
+
+### BR/EDR Coexistence (Vol 2, Part B; Vol 3, Part C)
+
+- **Slot Availability Mask (SAM)**: LMP-level mechanism allowing a device to inform its peer which BR/EDR time slots it will or will not use, enabling LE activity to be scheduled in those slots [Vol 2, Part B, §4.1.15]
 
 ---
 
 ## Deprecated / Removed
 
-- None — 5.0 is fully backward compatible with 4.x devices
+| Feature | Reason |
+|---------|--------|
+| Park State (BR/EDR) | Rarely used power-saving mode; superseded by sniff mode [Core 5.0, Vol 1, Part C, §9.2] |
+
+5.0 is fully backward compatible with LE 4.x devices. All 5.0 LE features are optional; 4.x scanners continue to see legacy advertising PDUs normally.
 
 ---
 
 ## Developer Impact
 
-**High impact areas:**
-- **Range-critical applications**: Switch to LE Coded PHY for indoor/outdoor sensors needing >100m range
-- **High-throughput applications**: Use LE 2M PHY to reduce connection time for large data transfers
-- **Beacons and proximity**: Leverage Extended Advertising for richer payloads (no more 31-byte limit)
-- **Asset tracking / location**: Periodic Advertising enables precise synchronization for positioning systems
+**Range-critical applications**: Switch to LE Coded PHY (S=8) for indoor/outdoor sensors requiring >100 m range. Note: S=8 increases on-air time ~8× vs. LE 1M — factor into duty cycle and power budget calculations.
 
-**Backward compatibility:**
-- 5.0 controllers advertise PHY capabilities via `LE Features` bitmask
+**High-throughput applications**: Use LE 2M PHY to reduce connection time for bulk transfers. Negotiate via `LL_PHY_REQ`; fall back to 1M automatically if peer does not support 2M.
+
+**Beacon / proximity advertising**: Leverage Extended Advertising for richer payloads — no more 31-byte limit. Use `ADI` (Advertising Data Information) field to deduplicate scan reports across channels. Legacy beacons continue to work without changes.
+
+**Asset tracking / synchronized sensors**: Periodic Advertising enables precise synchronization without requiring a connection. Combine with Extended Advertising for large sync metadata.
+
+**Backward compatibility**:
+- Controllers advertise PHY and feature support via `LE Features` bitmask (check bits for `LE 2M PHY`, `LE Coded PHY`, `LE Extended Advertising`)
 - Connections with 4.x devices default to LE 1M PHY (always supported)
-- Extended advertising is optional; 4.x scanners only see legacy advertising PDUs
+- Extended advertising requires both advertiser and scanner to be 5.0+
 
 ---
 
 ## Spec Structure (Volumes)
 
-| Volume | Title | Notable Parts |
-|--------|-------|---------------|
-| Vol 1 | Architecture & Terminology | Overview, Profiles |
-| Vol 2 | BR/EDR Controller | Baseband, LMP, Radio |
-| Vol 3 | Host | L2CAP, SDP, GAP, SM, GATT, ATT |
-| Vol 4 | HCI | HCI Commands & Events (incl. new LE extended adv HCI) |
-| Vol 5 | AMP Controller | 802.11 PAL |
-| Vol 6 | LE Controller | PHY, LL, DTM |
+| Volume | Title | Notable Parts for 5.0 |
+|--------|-------|-----------------------|
+| Vol 1 | Architecture & Terminology | Part A (architecture overview incl. SAM §7.7), Part C (change history §9) |
+| Vol 2 | BR/EDR Controller | Part B (Baseband, SAM §4.1.15), Part C (LMP) |
+| Vol 3 | Host | Part C (GAP, SAM §4.18), Part F (ATT), Part G (GATT) |
+| Vol 4 | HCI | Part E (new LE extended adv commands §7.8.52–7.8.69) |
+| Vol 6 | LE Controller | Part A (PHY), Part B (LL: PHY §2.1–2.2, adv ext §2.3.4, periodic adv §4.4.2, CSA#2 §4.5.8) |
 
 ---
 
 ## Cross-References
 
-- Diff from 4.2: [diff-4.2-to-5.0](../version-diff/) _(not yet created — ingest 4.2 spec to generate)_
 - Diff to 5.1: [diff-5.0-to-5.1](../version-diff/diff-5.0-to-5.1.md)
-- Related concepts: [BLE Architecture](../concepts/ble-architecture.md), [Overview](../overview.md)
+- Related concepts: [BLE Architecture](../concepts/ble-architecture.md)

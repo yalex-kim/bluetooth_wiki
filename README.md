@@ -3,7 +3,8 @@
 > Bluetooth Core Specification knowledge base for LLMs — based on [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 
 Claude Code에서 Bluetooth Core Spec 관련 질문에 정확하고 출처 있는 답변을 제공하기 위한 위키입니다.
-Core Spec 5.0부터 6.0까지 버전별 요약, 버전 간 차이점 인덱스, 핵심 개념 페이지를 포함합니다.
+Core Spec 5.0부터 6.2까지 버전별 요약, 버전 간 차이점 인덱스, 핵심 개념 페이지를 포함합니다.
+모든 버전의 공식 PDF와 변환된 마크다운 소스가 포함되어 있으며, 실제 스펙 문서에서 추출한 정확한 인용(`[Core 6.2, Vol 6, Part B, §4.6.50]`)을 제공합니다.
 
 ---
 
@@ -55,39 +56,38 @@ bluetooth_wiki/
 
 ## 커버리지
 
-| 버전 | 출시일 | 핵심 기능 |
-|------|--------|----------|
-| [5.0](wiki/versions/core-spec-5.0.md) | 2016-12 | 2× 속도, 4× 범위, 8× 브로드캐스트 |
-| [5.1](wiki/versions/core-spec-5.1.md) | 2019-01 | Direction Finding (AoA/AoD) |
-| [5.2](wiki/versions/core-spec-5.2.md) | 2019-12 | LE Audio, LC3 코덱, Isochronous Channels |
-| [5.3](wiki/versions/core-spec-5.3.md) | 2021-07 | Connection Subrating |
-| [5.4](wiki/versions/core-spec-5.4.md) | 2023-02 | PAwR, Encrypted Advertising Data |
-| [6.0](wiki/versions/core-spec-6.0.md) | 2024-08 | Channel Sounding (정밀 거리측정) |
+| 버전 | 출시일 | 핵심 기능 | 소스 |
+|------|--------|----------|------|
+| [5.0](wiki/versions/core-spec-5.0.md) | 2016-12 | 2× 속도 (LE 2M PHY), 4× 범위 (Coded PHY), 8× 브로드캐스트 | PDF + MD ✓ |
+| [5.1](wiki/versions/core-spec-5.1.md) | 2019-01 | Direction Finding (AoA/AoD), GATT 캐싱 | PDF + MD ✓ |
+| [5.2](wiki/versions/core-spec-5.2.md) | 2019-12 | LE Audio, LC3 코덱, Isochronous Channels (CIS/BIS), EATT | PDF + MD ✓ |
+| [5.3](wiki/versions/core-spec-5.3.md) | 2021-07 | Connection Subrating, Enhanced Connection Update | PDF + MD ✓ |
+| [5.4](wiki/versions/core-spec-5.4.md) | 2023-02 | PAwR, Encrypted Advertising Data (EAD) | PDF + MD ✓ |
+| [6.0](wiki/versions/core-spec-6.0.md) | 2024-08 | Channel Sounding (정밀 거리측정), DBAF | PDF + MD ✓ |
+| [6.1](wiki/versions/core-spec-6.1.md) | 2025-04 | Randomized RPA Updates (BLE 프라이버시 강화) | PDF + MD ✓ |
+| [6.2](wiki/versions/core-spec-6.2.md) | 2025-11 | Shorter Connection Intervals (375 µs), LE UTP, CS 보안 강화 | PDF + MD ✓ |
 
-버전 간 차이점: [5.0→5.1](wiki/version-diff/diff-5.0-to-5.1.md) · [5.1→5.2](wiki/version-diff/diff-5.1-to-5.2.md) · [5.2→5.3](wiki/version-diff/diff-5.2-to-5.3.md) · [5.3→5.4](wiki/version-diff/diff-5.3-to-5.4.md) · [5.4→6.0](wiki/version-diff/diff-5.4-to-6.0.md)
+버전 간 차이점: [5.0→5.1](wiki/version-diff/diff-5.0-to-5.1.md) · [5.1→5.2](wiki/version-diff/diff-5.1-to-5.2.md) · [5.2→5.3](wiki/version-diff/diff-5.2-to-5.3.md) · [5.3→5.4](wiki/version-diff/diff-5.3-to-5.4.md) · [5.4→6.0](wiki/version-diff/diff-5.4-to-6.0.md) · [6.0→6.1](wiki/version-diff/diff-6.0-to-6.1.md) · [6.1→6.2](wiki/version-diff/diff-6.1-to-6.2.md)
 
 ---
 
-## 전체 Spec PDF로 보강하기
+## 새 버전 추가하기
 
-wiki 페이지는 현재 시드 데이터(공개된 Bluetooth SIG 자료 기반)입니다.
-전체 spec PDF를 인제스트하면 정확한 섹션 참조(`[Core 6.0, Vol 6, Part B, §4.5.22]`)와
-더 세부적인 구현 가이드를 포함한 완전한 wiki가 됩니다.
+새 Core Spec이 출시되면:
 
 ```bash
-# 1. PDF 다운로드 (bluetooth.com, 무료)
-./scripts/download_specs.sh
+# 1. bluetooth.com에서 PDF 다운로드 후 sources/specs/X.Y/ 폴더에 정리
 
-# 2. OpenDataLoader로 Markdown 변환
+# 2. OpenDataLoader로 Markdown 변환 (Java 필요)
 pip install -U opendataloader-pdf
-python scripts/convert_to_md.py
+python scripts/convert_to_md.py X.Y
 
 # 3. 상태 확인
 python scripts/ingest.py --status
 
 # 4. Claude Code에서 INGEST 실행
 claude
-> wiki/versions/core-spec-6.0.md 를 sources/specs/core-spec-6.0.md 기반으로 보강해줘
+> Core Spec X.Y를 sources/specs/core-spec-X.Y.md 기반으로 wiki에 ingest해줘
 ```
 
 ---

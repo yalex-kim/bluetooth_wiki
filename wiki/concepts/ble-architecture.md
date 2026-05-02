@@ -25,9 +25,9 @@ on a dedicated radio chip (or the two can be integrated into a single SoC).
 │   ATT (Attribute Protocol)                       │
 ├──────────────┬───────────────────────────────────┤
 │   GAP        │   SM (Security Manager)           │
-│ (Generic     │   - Pairing, bonding               │
-│  Access      │   - Key distribution               │
-│  Profile)    │   - LE Secure Connections          │
+│ (Generic     │   - Pairing, bonding              │
+│  Access      │   - Key distribution              │
+│  Profile)    │   - LE Secure Connections         │
 ├──────────────┴───────────────────────────────────┤
 │   L2CAP (Logical Link Control & Adaptation)      │
 │   - Multiplexing                                 │
@@ -45,9 +45,9 @@ on a dedicated radio chip (or the two can be integrated into a single SoC).
 │   - Channel Sounding (6.0+)                      │
 ├──────────────────────────────────────────────────┤
 │   Physical Layer (PHY)                           │
-│   - LE 1M PHY (4.0+)                            │
-│   - LE 2M PHY (5.0+)                            │
-│   - LE Coded PHY S=2 / S=8 (5.0+)              │
+│   - LE 1M PHY (4.0+)                             │
+│   - LE 2M PHY (5.0+)                             │
+│   - LE Coded PHY S=2 / S=8 (5.0+)                │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -68,6 +68,10 @@ Operates in the **2.4 GHz ISM band** using **Gaussian Frequency Shift Keying (GF
 - Channels 37, 38, 39: **Primary advertising channels** (spread across band to avoid Wi-Fi overlap)
 - Channels 0–36: **Data channels** (37 channels for connections and secondary advertising)
 
+**LE 2M 2BT PHY (6.0+)**: Uncoded at 2 Mb/s with BT=2.0 Gaussian filter — used exclusively
+for Channel Sounding tone and RTT packet exchanges. Not usable for general data.
+[Core 6.0, Vol 6, Part A, §3.1.2]
+
 ---
 
 ## Link Layer (LL)
@@ -77,11 +81,11 @@ The Link Layer implements the BLE state machine and all packet-level operations.
 ### LL State Machine
 
 ```
-Standby ──→ Advertising ──→ Connected
+Standby ──→ Advertising ──→ Connected ──→ Channel Sounding (6.0+, over connection)
    │              │               │
    └──→ Scanning  │               │
    │              └──→ Initiating─┘
-   └──→ Synchronizing (Periodic Advertising Sync, 5.0+)
+   └──→ Synchronizing (Periodic Advertising Sync / PAwR, 5.0+/5.4+)
    └──→ Isochronous Broadcasting (5.2+)
 ```
 
@@ -102,6 +106,25 @@ Standby ──→ Advertising ──→ Connected
 - 37 data channels, hopping pattern determined by `hop_increment` and `channel_map`
 - Avoids interference (e.g., with Wi-Fi on 2.4 GHz)
 - Channel map negotiated via `LL_CHANNEL_MAP_IND`
+
+**Channel Sounding (CS, 6.0+)**:
+CS runs over a dedicated **LE Channel Sounding physical channel** established over an existing
+connection. A CS procedure contains CS events → CS subevents → CS steps. Steps use one of
+four modes: calibration (0), RTT (1), PBR tones (2), or combined (3). CS operates on a
+separate physical link alongside the ACL logical transport. [Core 6.0, Vol 1, Part A, §9;
+Vol 6, Part B, §4.6.41; Vol 6, Part H]
+
+**Decision-Based Advertising Filtering (DBAF, 6.0+)**:
+Advertisers include decision data in `ADV_DECISION_IND` PDUs; scanners program decision
+instructions into the controller via HCI. The controller evaluates PDUs against the instructions
+and only wakes the host for matching advertisements. Requires LE Extended Advertising.
+[Core 6.0, Vol 6, Part B, §4.6.43]
+
+**Monitoring Advertisers (6.0+)**:
+The controller tracks appearance/disappearance of specific advertiser addresses and notifies
+the host on change, without requiring continuous host-level scanning. Operates independently
+from the Filter Accept List; uses the Resolving List for RPA matching.
+[Core 6.0, Vol 6, Part B, §4.6.45]
 
 ---
 

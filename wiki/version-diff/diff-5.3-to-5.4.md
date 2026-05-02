@@ -21,13 +21,13 @@ for medical, enterprise, and access control applications.
 
 | What | Description | Reference |
 |------|-------------|-----------|
-| **Periodic Advertising with Responses (PAwR)** | Response slots in periodic advertising; coordinator-to-many bidirectional | Vol 6, Part B, §4.4.2.7 |
-| **PAwR Subevent structure** | Up to 128 subevents × 128 response slots = 16,384 devices per coordinator | Vol 6, Part B |
-| **LL_PERIODIC_SYNC_WITH_RESPONSE** | New LL PDU for PAwR synchronization | Vol 6, Part B |
-| **Encrypted Advertising Data (EAD)** | AES-128-CCM encryption of advertising payload (AD type 0x31) | Vol 3, Part C, §11.8 |
-| **EAD Key Distribution** | Session key and IV derivation over SM for shared advertising encryption | Vol 3, Part H |
-| **LE GATT Security Levels** | New GATT characteristic to expose current LE security level | Vol 3, Part G |
-| **AD Types for PAwR** | New Advertising Data types for ESL profile coordination | Bluetooth Assigned Numbers |
+| **Periodic Advertising with Responses (PAwR)** | Bidirectional periodic advertising with subevent + response slot structure; uses AUX_SYNC_SUBEVENT_IND/RSP PDUs | [Core 5.4, Vol 6, Part B, §4.6.38–4.6.39] |
+| **PAwR Subevent structure** | Up to 0x80 (128) subevents per PA event; up to 0xFF (255) response slots per subevent | [Core 5.4, Vol 4, Part E — HCI_LE_Set_Periodic_Advertising_Parameters_v2] |
+| **LL_PERIODIC_SYNC_WR_IND** | New LL PDU for transferring PAwR sync info to a connected peer (WR = With Responses) | [Core 5.4, Vol 6, Part B, §4.6.38] |
+| **AUX_SYNC_SUBEVENT_IND / RSP** | New advertising PDU types for PAwR subevent broadcast and device responses | [Core 5.4, Vol 6, Part B, §2] |
+| **Encrypted Advertising Data (EAD)** | Pre-shared session key encrypts advertising payload; prevents fingerprinting of devices via advertising data content | [Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10] |
+| **LE GATT Security Levels Characteristic** | New GATT characteristic (UUID 0x2BF5) exposing highest LE security requirement of GATT server | [Core 5.4, Vol 3, Part C, §12.7] |
+| **Advertising Coding Selection** | Host selects S=2 or S=8 data coding for LE Coded PHY advertising | [Core 5.4, Vol 6, Part B, §4.6.37] |
 
 ---
 
@@ -35,11 +35,11 @@ for medical, enterprise, and access control applications.
 
 | What | Change |
 |------|--------|
-| **Periodic Advertising** | Extended with response slot mechanism (PAwR is a superset) |
-| **HCI LE Meta events** | New subevents: LE_Periodic_Advertising_Subevent_Data_Request, LE_Periodic_Advertising_Response |
-| **HCI commands** | LE_Set_Periodic_Advertising_Parameters_v2, LE_Set_Periodic_Advertising_Subevent_Data, LE_Set_Periodic_Advertising_Response_Data |
-| **SM (Security Manager)** | Key distribution extended for EAD session key / IV |
-| **LE Features** | New bits: PAwR Advertiser, PAwR Scanner, Encrypted Advertising Data |
+| **Periodic Advertising** | Extended with subevent + response slot mechanism; PAwR is a new logical transport type alongside periodic advertising |
+| **HCI LE Meta events** | New: `HCI_LE_Periodic_Advertising_Subevent_Data_Request` (controller requests subevent data from host), `HCI_LE_Periodic_Advertising_Response_Report` (reports device responses) |
+| **HCI commands** | New: `HCI_LE_Set_Periodic_Advertising_Parameters_v2`, `HCI_LE_Set_Periodic_Advertising_Subevent_Data`, `HCI_LE_Set_Periodic_Advertising_Response_Data`, `HCI_LE_Set_Periodic_Sync_Subevent` |
+| **HCI_LE_Periodic_Advertising_Report event** | Extended: new `Subevent` parameter (0xFF = no subevents); new `Data_Status` value 0x02 (failed to receive AUX_SYNC_SUBEVENT_IND) |
+| **LE Features (Vol 6, Part B)** | New bits: Bit 40 Advertising Coding Selection; Bit 41 Advertising Coding Selection (Host Support); Bit 43 PAwR Advertiser; Bit 44 PAwR Scanner |
 
 ---
 
@@ -71,11 +71,15 @@ Key implementation considerations:
 ### Encrypted Advertising Data (EAD)
 
 EAD is for scenarios where advertising content must be confidential:
-1. Establish a connection first (for SM key distribution)
-2. Exchange Session Key (SK) and IV via SM procedures
-3. Advertiser encrypts payload with AES-128-CCM using SK + IV + randomizer
-4. Randomizer is included in the advertising PDU (so authorized scanners can decrypt)
-5. Unauthorized scanners receive AD type 0x31 blob — unreadable without SK
+[Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10]
 
-**Note**: EAD protects payload privacy, not device identity. Address randomization (from 4.2)
-is still required for full device privacy.
+1. Establish a connection first (for Security Manager key distribution)
+2. Exchange session key (SK) and nonce components via SM procedures
+3. Advertiser encrypts payload; the pre-shared session key is communicated only to
+   authorized peer devices
+4. Encrypted payload uses the AD type **Encrypted Data** to wrap the advertising data
+5. Unauthorized scanners receive only the encrypted blob — unreadable without the session key
+
+**Note**: EAD protects payload privacy, not device identity. EAD is a **Type 4 feature**
+(Host-only; does not involve the Controller directly). Address randomization (from 4.2)
+is still required for full device identity privacy. [Core 5.4, Vol 0, Part D, Table 4.2]

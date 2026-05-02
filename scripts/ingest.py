@@ -27,7 +27,7 @@ from datetime import datetime
 REPO_ROOT = Path(__file__).parent.parent
 SPECS_DIR = REPO_ROOT / "sources" / "specs"
 WIKI_DIR = REPO_ROOT / "wiki"
-VERSIONS = ["5.0", "5.1", "5.2", "5.3", "5.4", "6.0"]
+VERSIONS = ["5.0", "5.1", "5.2", "5.3", "5.4", "6.0", "6.1", "6.2"]
 
 
 def get_wiki_status() -> dict:
