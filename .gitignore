@@ -1,0 +1,24 @@
+# Downloaded PDF spec files (large binary files)
+sources/specs/*.pdf
+sources/specs/*.PDF
+
+# OpenDataLoader converted files (regeneratable from PDFs)
+sources/specs/*.md
+sources/specs/*.json
+
+# Generated prompt files
+.prompts/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node (for MCP server)
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
