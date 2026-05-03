@@ -63,6 +63,14 @@
 
 ---
 
+## Reference Pages
+
+| Page | Summary |
+|------|---------|
+| [hci-commands](wiki/reference/hci-commands.md) | HCI command lookup: opcodes, key parameters, events, version introduced — LE + BR/EDR |
+
+---
+
 ## Maintenance
 
 | File | Description |
@@ -90,6 +98,7 @@
 | Security / pairing / bonding | `wiki/concepts/security.md` |
 | GATT / ATT / services | `wiki/concepts/profiles-and-services.md` |
 | A2DP / HFP / AVRCP / HID profiles | `wiki/concepts/profiles-and-services.md` |
+| HCI commands / opcodes / parameters | `wiki/reference/hci-commands.md` |
 | MAP / message access / car messaging | `wiki/concepts/profiles-and-services.md` |
 | PBAP / phone book access / contacts | `wiki/concepts/profiles-and-services.md` |
 | BAP / CAP / TMAP / HAP / PBP (LE Audio) | `wiki/concepts/le-audio.md` |

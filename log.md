@@ -5,6 +5,25 @@
 
 ---
 
+## [2026-05-04] CREATE — HCI Command Reference page
+
+**Operation**: CREATE
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Sources read**: `sources/specs/6.2/Core_v6.2.md` (§7 HCI Commands and Events, lines 34242–50000), `sources/specs/conformance-profiles/HCI.ICS.p30.md`
+
+### Pages created
+- `wiki/reference/hci-commands.md` (473 lines) — Developer-oriented HCI command reference:
+  - ~150 commands across 16 functional sections
+  - Controller Initialization, LE Advertising (legacy + extended), LE Periodic Advertising (incl. PAwR 5.4), LE Scanning, LE Connection Management (incl. 6.2 rate commands), LE Filter Accept List, LE PHY Management, LE Data Length Extension, LE Security & Privacy (incl. 6.1 randomized RPA), LE Audio/ISO (CIS, BIS, ISO Data Path, ISO Test), LE Power Control, Direction Finding/CTE, Channel Sounding (12 CS commands), LE Monitored Advertisers, LE UTP, BR/EDR Connection Management, Key HCI Events (~50 events with subevent codes), Common Parameter Reference table (13 parameters with ranges and 6.2 notes), OGF summary table
+  - All opcodes verified against Core 6.2 Vol 4, Part E
+  - Version "Since" column covering 4.0 through 6.2
+
+### Index updates
+- `index.md`: Added "Reference Pages" section with hci-commands.md entry; added HCI routing entry in Query Routing Guide
+
+---
+
 ## [2026-05-03] INGEST — 10 new profile specs ingested (BAP, CAP, VCP, MCP, CCP, HAP, PBP, TMAP, MAP, PBAP)
 
 **Operation**: INGEST
