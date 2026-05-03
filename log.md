@@ -5,6 +5,43 @@
 
 ---
 
+## [2026-05-04] CREATE — att-gatt.md and assigned-numbers.md
+
+**Operation**: CREATE
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Sources read**: `sources/specs/6.2/Core_v6.2.md` (Vol 3, Part F §3–§5 ATT lines 27302–28370; Vol 3, Part G §2–§4 GATT lines 28370–29700), `sources/specs/profiles/BAP_v1.0.2.md`, `wiki/concepts/profiles-and-services.md`
+
+### Pages created
+
+- `wiki/concepts/att-gatt.md` — ATT/GATT protocol deep dive:
+  - ATT bearer vs. EATT bearer (5.2+, PSM 0x0027, min MTU 64 bytes)
+  - Full ATT PDU opcode table (0x01–0xD2) from Core 6.2 Table 3.43
+  - MTU negotiation flow (ATT_EXCHANGE_MTU_REQ/RSP, symmetric min)
+  - ATT permission model (read/write/auth/encrypt) with security error codes
+  - Long Read (ATT_READ_BLOB_REQ) and Long Write (Prepare/Execute queue) flows
+  - Reliable Write two-phase protocol
+  - GATT service/characteristic/descriptor model with CCCD values
+  - Notification vs. Indication comparison
+  - GATT Caching (5.1+): Service Changed (0x2A05), Database Hash (0x2B2A), Robust Caching states
+  - EATT establishment via L2CAP CoC; parallel request/response capability
+  - Version history table (4.0 through 6.2)
+
+- `wiki/reference/assigned-numbers.md` — Bluetooth Assigned Numbers quick reference:
+  - 16-bit Service UUIDs: core (0x1800–0x1801), standard (0x1802–0x1829), LE Audio (0x1843–0x184D)
+  - 16-bit Characteristic UUIDs: GAP (0x2A00–0x2BF5), GATT (0x2A05–0x2B3A), DIS, Battery, Heart Rate, HID, Environmental Sensing, LE Audio (0x2B77–0x2BBA)
+  - 16-bit Descriptor UUIDs (0x2900–0x2905) with CCCD bit values
+  - Appearance values table (0x0000–0x0941)
+  - Company Identifiers: Apple 0x004C, Google 0x00E0, Samsung 0x0075, Microsoft 0x0006, Nordic 0x0059, TI 0x000D, and 8 more
+  - Apple Manufacturer Specific sub-types (iBeacon 0x02, FindMy 0x12, etc.)
+  - Google Fast Pair (Service UUID 0x2CFE) payload format
+  - AD type quick-reference table (0x01–0xFF common values)
+
+### Index updates
+- `index.md`: Added att-gatt.md to Concept Pages; added assigned-numbers.md to Reference Pages; added 6 routing entries in Query Routing Guide
+
+---
+
 ## [2026-05-04] CREATE — Error Code Reference page
 
 **Operation**: CREATE

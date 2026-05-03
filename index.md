@@ -50,6 +50,7 @@
 | [channel-sounding](wiki/concepts/channel-sounding.md) | PBR/RTT ranging, CS step modes 0–3, T_PM, HCI commands, relay attack resilience (6.0+) |
 | [advertising](wiki/concepts/advertising.md) | Legacy vs. Extended advertising, ADV PDU types, AD type table, Periodic Advertising, PAwR (4.0–6.2) |
 | [connection-management](wiki/concepts/connection-management.md) | Connection parameters, subrating, short intervals (6.2), power control, reconnection, DLE, PHY selection |
+| [att-gatt](wiki/concepts/att-gatt.md) | ATT PDU opcodes, MTU negotiation, permissions, Long Read/Write, Reliable Write, EATT (5.2+), GATT caching (5.1+) |
 
 ---
 
@@ -73,6 +74,7 @@
 | [hci-sequences](wiki/reference/hci-sequences.md) | Step-by-step HCI flows: init, connection, pairing/bonding, GATT discovery, CIS/BIS setup |
 | [ble-parameters](wiki/reference/ble-parameters.md) | Quick-reference table of all BLE tunable parameters with ranges, units, typical values, and formulas |
 | [error-codes](wiki/reference/error-codes.md) | HCI status codes (0x00–0x48) and ATT error codes (0x01–0xFF) with names, meanings, and developer notes |
+| [assigned-numbers](wiki/reference/assigned-numbers.md) | 16-bit Service UUIDs (0x1800–), Characteristic UUIDs (0x2A00–), Descriptor UUIDs, Appearance values, Company IDs, AD types |
 
 ---
 
@@ -108,6 +110,11 @@
 | BLE parameter ranges / values / formulas | `wiki/reference/ble-parameters.md` |
 | HCI error codes / status codes | `wiki/reference/error-codes.md` |
 | ATT error codes / GATT errors | `wiki/reference/error-codes.md` |
+| ATT PDUs / MTU / EATT / GATT caching | `wiki/concepts/att-gatt.md` |
+| GATT service UUID / characteristic UUID | `wiki/reference/assigned-numbers.md`, `wiki/concepts/att-gatt.md` |
+| Company ID / Manufacturer Specific Data / iBeacon | `wiki/reference/assigned-numbers.md` |
+| AD type / advertising payload format | `wiki/reference/assigned-numbers.md`, `wiki/concepts/advertising.md` |
+| Appearance / device category | `wiki/reference/assigned-numbers.md` |
 | Advertising / ADV PDU / AD types / PAwR | `wiki/concepts/advertising.md` |
 | Connection parameters / subrating / DLE / PHY | `wiki/concepts/connection-management.md` |
 | MAP / message access / car messaging | `wiki/concepts/profiles-and-services.md` |
