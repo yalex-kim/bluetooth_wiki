@@ -2,13 +2,13 @@
 
 > Bluetooth Core Specification knowledge base for LLMs — based on [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 
-Claude Code에서 Bluetooth Core Spec 관련 질문에 정확하고 출처 있는 답변을 제공하기 위한 위키입니다.
-Core Spec 5.0부터 6.2까지 버전별 요약, 버전 간 차이점 인덱스, 핵심 개념 페이지를 포함합니다.
-모든 버전의 공식 PDF와 변환된 마크다운 소스가 포함되어 있으며, 실제 스펙 문서에서 추출한 정확한 인용(`[Core 6.2, Vol 6, Part B, §4.6.50]`)을 제공합니다.
+A structured, LLM-maintained wiki for Bluetooth Core Specifications (5.0–6.2).
+Provides accurate, source-cited answers to natural-language questions about Bluetooth without reading hundreds of pages of spec PDFs.
+Includes per-version summaries, version-diff indexes, concept pages, developer reference tables, and full converted markdown sources with extracted figures.
 
 ---
 
-## 빠른 시작
+## Quick Start
 
 ```bash
 git clone https://github.com/yalex-kim/bluetooth_wiki.git
@@ -17,90 +17,95 @@ claude
 ```
 
 ```
-> Bluetooth 6.0에서 Channel Sounding이 뭐야?
-> 5.1에서 5.2로 넘어가면서 뭐가 바뀌었어?
-> LE Audio와 Classic Bluetooth 오디오의 차이점은?
-> PAwR은 어떤 용도로 쓰여?
+> What is Channel Sounding in Bluetooth 6.0?
+> What changed between 5.1 and 5.2?
+> What is the difference between LE Audio and Classic Bluetooth audio?
+> What is PAwR used for?
+> Show me the HCI command to set up a CIS.
 ```
 
 ---
 
-## 구조
+## Structure
 
 ```
 bluetooth_wiki/
-├── CLAUDE.md                    ← LLM 동작 방식 정의 (wiki 스키마)
-├── index.md                     ← 전체 페이지 카탈로그 + 쿼리 라우팅 가이드
-├── log.md                       ← append-only 활동 로그
+├── CLAUDE.md                    ← LLM schema: defines how the wiki is maintained
+├── index.md                     ← Full page catalog + query routing guide
+├── log.md                       ← Append-only activity log
 │
 ├── wiki/
-│   ├── overview.md              ← Bluetooth 기술 개요
-│   ├── versions/                ← Core Spec 버전별 요약 (5.0–6.2)
-│   ├── version-diff/            ← 버전 간 차이점 사전 인덱싱
-│   └── concepts/                ← BLE 아키텍처, 보안, LE Audio, Direction Finding 등 개념 페이지
+│   ├── overview.md              ← Bluetooth technology overview
+│   ├── versions/                ← Per-version summaries (Core Spec 5.0–6.2)
+│   ├── version-diff/            ← Pre-indexed version-to-version diffs
+│   ├── concepts/                ← Concept pages (BLE architecture, security, LE Audio, profiles…)
+│   └── reference/               ← Developer reference tables (HCI commands, parameters…)
 │
 ├── sources/
-│   ├── README.md                ← PDF 다운로드 방법
+│   ├── README.md                ← How to download spec PDFs
 │   └── specs/
-│       └── X.Y/
-│           ├── Core_vX.Y.md             ← PyMuPDF로 변환된 전문 마크다운
-│           └── Core_vX.Y_images/        ← 추출된 Figure PNG들 (Vol{N}_Part{P}_Figure{X_Y}.png)
+│       ├── X.Y/                 ← One folder per Core Spec version
+│       │   ├── Core_vX.Y.md             ← Full spec text converted via PyMuPDF
+│       │   └── Core_vX.Y_images/        ← Extracted figure PNGs (Vol{N}_Part{P}_Figure{X_Y}.png)
+│       ├── profiles/            ← Profile spec MDs: A2DP, HFP, AVRCP, HID, BAP, CAP, MAP… (14 profiles)
+│       ├── conformance-profiles/ ← ICS (Implementation Conformance Statement) docs
+│       └── test-suites/         ← TS (Test Suite) docs
 │
 ├── scripts/
-│   ├── download_spec_documents.py  ← bluetooth.com에서 PDF 다운로드
-│   ├── convert_to_md.py            ← PyMuPDF로 PDF → Markdown + Figure PNG 변환
-│   └── ingest.py                   ← 변환된 spec을 wiki에 반영하는 워크플로우
+│   ├── download_spec_documents.py  ← Download PDFs from bluetooth.com
+│   ├── convert_to_md.py            ← Convert PDF → Markdown + figure PNGs via PyMuPDF
+│   └── ingest.py                   ← Workflow for reflecting new specs into the wiki
 │
 └── guide/
-    └── claude-code-integration.md  ← Claude Code 연결 가이드
+    └── claude-code-integration.md  ← Claude Code integration guide
 ```
 
 ---
 
-## 커버리지
+## Coverage
 
-| 버전 | 출시일 | 핵심 기능 | 소스 |
-|------|--------|----------|------|
-| [5.0](wiki/versions/core-spec-5.0.md) | 2016-12 | 2× 속도 (LE 2M PHY), 4× 범위 (Coded PHY), 8× 브로드캐스트 | PDF + MD ✓ |
-| [5.1](wiki/versions/core-spec-5.1.md) | 2019-01 | Direction Finding (AoA/AoD), GATT 캐싱 | PDF + MD ✓ |
-| [5.2](wiki/versions/core-spec-5.2.md) | 2019-12 | LE Audio, LC3 코덱, Isochronous Channels (CIS/BIS), EATT | PDF + MD ✓ |
+| Version | Release | Key Feature | Source |
+|---------|---------|-------------|--------|
+| [5.0](wiki/versions/core-spec-5.0.md) | 2016-12 | 2× speed (LE 2M PHY), 4× range (Coded PHY), 8× broadcast capacity | PDF + MD ✓ |
+| [5.1](wiki/versions/core-spec-5.1.md) | 2019-01 | Direction Finding (AoA/AoD), GATT caching | PDF + MD ✓ |
+| [5.2](wiki/versions/core-spec-5.2.md) | 2019-12 | LE Audio, LC3 codec, Isochronous Channels (CIS/BIS), EATT | PDF + MD ✓ |
 | [5.3](wiki/versions/core-spec-5.3.md) | 2021-07 | Connection Subrating, Enhanced Connection Update | PDF + MD ✓ |
 | [5.4](wiki/versions/core-spec-5.4.md) | 2023-02 | PAwR, Encrypted Advertising Data (EAD) | PDF + MD ✓ |
-| [6.0](wiki/versions/core-spec-6.0.md) | 2024-08 | Channel Sounding (정밀 거리측정), DBAF | PDF + MD ✓ |
-| [6.1](wiki/versions/core-spec-6.1.md) | 2025-04 | Randomized RPA Updates (BLE 프라이버시 강화) | PDF + MD ✓ |
-| [6.2](wiki/versions/core-spec-6.2.md) | 2025-11 | Shorter Connection Intervals (375 µs), LE UTP, CS 보안 강화 | PDF + MD ✓ |
+| [6.0](wiki/versions/core-spec-6.0.md) | 2024-08 | Channel Sounding (sub-meter ranging), DBAF | PDF + MD ✓ |
+| [6.1](wiki/versions/core-spec-6.1.md) | 2025-04 | Randomized RPA Updates (enhanced BLE privacy) | PDF + MD ✓ |
+| [6.2](wiki/versions/core-spec-6.2.md) | 2025-11 | Shorter Connection Intervals (375 µs), LE UTP, CS security hardening | PDF + MD ✓ |
 
-버전 간 차이점: [5.0→5.1](wiki/version-diff/diff-5.0-to-5.1.md) · [5.1→5.2](wiki/version-diff/diff-5.1-to-5.2.md) · [5.2→5.3](wiki/version-diff/diff-5.2-to-5.3.md) · [5.3→5.4](wiki/version-diff/diff-5.3-to-5.4.md) · [5.4→6.0](wiki/version-diff/diff-5.4-to-6.0.md) · [6.0→6.1](wiki/version-diff/diff-6.0-to-6.1.md) · [6.1→6.2](wiki/version-diff/diff-6.1-to-6.2.md)
+Version diffs: [5.0→5.1](wiki/version-diff/diff-5.0-to-5.1.md) · [5.1→5.2](wiki/version-diff/diff-5.1-to-5.2.md) · [5.2→5.3](wiki/version-diff/diff-5.2-to-5.3.md) · [5.3→5.4](wiki/version-diff/diff-5.3-to-5.4.md) · [5.4→6.0](wiki/version-diff/diff-5.4-to-6.0.md) · [6.0→6.1](wiki/version-diff/diff-6.0-to-6.1.md) · [6.1→6.2](wiki/version-diff/diff-6.1-to-6.2.md)
 
 ---
 
-## 새 버전 추가하기
+## Adding a New Version
 
-새 Core Spec이 출시되면:
+When a new Core Spec is released:
 
 ```bash
-# 1. bluetooth.com에서 PDF 다운로드 후 sources/specs/X.Y/ 폴더에 정리
+# 1. Place the PDF in sources/specs/X.Y/
 python scripts/download_spec_documents.py
 
-# 2. PyMuPDF로 Markdown + Figure PNG 변환
+# 2. Convert to Markdown + figure PNGs
 pip install PyMuPDF
 python scripts/convert_to_md.py X.Y
-# → sources/specs/X.Y/Core_vX.Y.md  (전체 본문)
-# → sources/specs/X.Y/Core_vX.Y_images/*.png  (Figure 이미지)
+# → sources/specs/X.Y/Core_vX.Y.md
+# → sources/specs/X.Y/Core_vX.Y_images/*.png
 
-# 3. 상태 확인
+# 3. Check status
 python scripts/ingest.py --status
 
-# 4. Claude Code에서 INGEST 실행
+# 4. Run INGEST in Claude Code
 claude
-> Core Spec X.Y를 sources/specs/X.Y/Core_vX.Y.md 기반으로 wiki에 ingest해줘
+> Ingest Core Spec X.Y from sources/specs/X.Y/Core_vX.Y.md into the wiki
 ```
 
 ---
 
-## 다른 프로젝트에서 연결하기
+## Using from Another Project
 
-`~/.claude/claude.json`에 MCP Filesystem 서버로 등록하면 모든 프로젝트에서 사용 가능합니다:
+Register as an MCP Filesystem server in `~/.claude/claude.json` to use from any project:
 
 ```json
 {
@@ -113,26 +118,80 @@ claude
 }
 ```
 
-자세한 내용: [guide/claude-code-integration.md](guide/claude-code-integration.md)
+See [guide/claude-code-integration.md](guide/claude-code-integration.md) for details.
 
 ---
 
-## 아키텍처
+## Architecture
 
-[Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 패턴의 3계층 구조:
+3-layer structure from [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern:
 
 ```
-Layer 1  sources/specs/X.Y/   원본 PDF 변환 결과 (.md + _images/) — 읽기 전용
-Layer 2  wiki/                LLM이 유지하는 요약/분석 마크다운 페이지
-Layer 3  CLAUDE.md            스키마: LLM이 wiki를 어떻게 관리할지 정의
+Layer 1  sources/specs/   Converted spec PDFs (.md + _images/) — read-only, source of truth
+Layer 2  wiki/            LLM-maintained summaries, diffs, concepts, references — grows with each query
+Layer 3  CLAUDE.md        Schema: defines how the LLM manages the wiki
 ```
 
-`scripts/convert_to_md.py` (PyMuPDF 기반)가 PDF에서 다음을 추출합니다:
-- 본문 텍스트 (올바른 헤딩 깊이, 인라인 테이블)
-- Figure PNG 이미지 (`Vol{N}_Part{P}_Figure{X_Y}.png` 명명)
-- 다이어그램 내부 텍스트/격자선 자동 억제
+### System Concept Diagram
 
-`CLAUDE.md`는 Claude에게 3가지 오퍼레이션을 지시합니다:
-- **INGEST**: 새 spec을 읽고 wiki 페이지들을 업데이트
-- **QUERY**: 질문에 답하고 필요시 새 페이지 생성
-- **LINT**: wiki 일관성 검사 (outdated 정보, broken links, 모순 탐지)
+```
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  Bluetooth SIG                                                   │
+  │  ┌──────────────────────────────────────────────────────────┐    │
+  │  │  Core Spec PDFs  ·  Profile PDFs  ·  ICS / TS Docs       │    │
+  │  └───────────────────────────┬──────────────────────────────┘    │
+  └──────────────────────────────│──────────────────────────────────-┘
+                                 │ scripts/convert_to_md.py
+                                 │ (PyMuPDF: text + figure PNGs)
+                                 ▼
+  ┌────────────────────────────────────────────────┐
+  │  Layer 1 — sources/specs/  (read-only)         │
+  │                                                │
+  │  Core_vX.Y.md  ·  profiles/*.md                │
+  │  conformance-profiles/  ·  test-suites/        │
+  └────────────────────┬───────────────────────────┘
+                       │  reads (source of truth)
+                       │
+         ┌─────────────▼───────────────┐
+         │  LLM  (Claude + CLAUDE.md)  │◀──── Layer 3: CLAUDE.md
+         │                             │      (schema: INGEST /
+         │  INGEST   QUERY   LINT      │       QUERY / LINT rules)
+         └──────┬─────────────┬────────┘
+                │ writes      │ answers
+                ▼             │
+  ┌─────────────────────────────────────────────────────┐
+  │  Layer 2 — wiki/  (LLM-maintained, ever-growing)    │
+  │                                                     │
+  │  versions/     per-version summaries (5.0 – 6.2)    │
+  │  version-diff/ pre-indexed version diffs            │
+  │  concepts/     concept pages (BLE, security, audio) │
+  │  reference/    developer references (HCI commands…) │
+  └──────────────────────────┬──────────────────────────┘
+                             │ reads wiki
+                             ▼
+              ┌──────────────────────────┐
+              │      Developer           │
+              │                          │
+              │  "How does Channel       │
+              │   Sounding work?"        │
+              │                          │
+              │  "Which HCI command      │
+              │   sets up a CIS?"        │
+              └──────────────┬───────────┘
+                             │ query reveals a gap
+                             ▼
+              ┌──────────────────────────────────────┐
+              │  LLM creates a new page or enriches  │  ← Wiki growth loop
+              │  an existing one on the spot         │
+              └──────────────────────────────────────┘
+```
+
+**Wiki growth loop**: When a user asks a question and the LLM finds that the existing wiki pages don't fully cover the topic, it creates a new page or enriches an existing one in the same session. The wiki gets more complete with every query.
+
+### LLM Operations
+
+| Operation | Trigger | Action |
+|-----------|---------|--------|
+| **INGEST** | New spec PDF added | Read sources/ → create/update wiki pages → append to log.md |
+| **QUERY** | User question | Read index.md → load relevant pages → answer → fill any gap found |
+| **LINT** | Periodic health check | Detect contradictions, orphan pages, stale claims, broken links |

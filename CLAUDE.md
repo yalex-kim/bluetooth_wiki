@@ -53,14 +53,16 @@ bluetooth_wiki/
 │   │   ├── diff-5.4-to-6.0.md
 │   │   ├── diff-6.0-to-6.1.md
 │   │   └── diff-6.1-to-6.2.md
-│   └── concepts/
-│       ├── ble-architecture.md
-│       ├── classic-bluetooth.md
-│       ├── security.md
-│       ├── profiles-and-services.md
-│       ├── le-audio.md
-│       ├── direction-finding.md
-│       └── channel-sounding.md
+│   ├── concepts/
+│   │   ├── ble-architecture.md
+│   │   ├── classic-bluetooth.md
+│   │   ├── security.md
+│   │   ├── profiles-and-services.md
+│   │   ├── le-audio.md
+│   │   ├── direction-finding.md
+│   │   └── channel-sounding.md
+│   └── reference/
+│       └── hci-commands.md        ← HCI command lookup table (opcodes, params, events)
 ├── sources/
 │   ├── README.md                      ← How to download spec PDFs
 │   └── specs/
@@ -122,6 +124,30 @@ Periodically run a lint pass to:
 
 ## 5. Writing Conventions
 
+### Language
+
+All wiki pages (`wiki/`) must be written in **English**. This applies to:
+- Page titles, headings, body text, table content, notes
+- Code comments within examples
+- `log.md` entries and `index.md` descriptions
+
+The only exception is content directly quoted or transcribed from a source spec (e.g., a table reproduced verbatim from the PDF), which may retain its original form.
+
+---
+
+### Source Links (all page types)
+
+Every wiki page that was built from one or more source files **must** include a footer line linking back to those files:
+
+```markdown
+*Source: [Core 6.2, Vol 4, Part E, §7](../../sources/specs/6.2/Core_v6.2.md) and [HCI.ICS.p30](../../sources/specs/conformance-profiles/HCI.ICS.p30.md)*
+```
+
+- Use relative paths from the page's location (e.g. `../../sources/specs/…` from `wiki/reference/` or `wiki/concepts/`).
+- For profile spec pages, link to the corresponding `sources/specs/profiles/<Name>.md`.
+- This rule applies to version pages, diff pages, concept pages, and reference pages alike.
+- The version page template already includes a `**Source**` header line — keep that in addition to the footer.
+
 ### Version Pages (`wiki/versions/core-spec-X.Y.md`)
 
 ```markdown
@@ -180,11 +206,22 @@ Periodically run a lint pass to:
 ```markdown
 # [Concept Name]
 
+**Last updated**: YYYY-MM-DD
+**Covers**: Core Spec X.Y – X.Z
+
 ## Overview
 ## How It Works
 ## Version History (which spec version introduced/changed this)
 ## Related Features
-## References
+
+---
+
+## See Also
+- [Related Page](../concepts/related.md)
+
+---
+
+*Source: [Core X.Y, Vol N, Part P](../../sources/specs/X.Y/Core_vX.Y.md)*
 ```
 
 ---
