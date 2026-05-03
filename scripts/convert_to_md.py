@@ -245,7 +245,7 @@ def _fmt_row(row, ncols: int) -> str:
 
 
 def process_page(page, p_idx: int, vol_part_map: dict,
-                 version: str, img_dir: Path, fitz) -> list:
+                 img_dir: Path, fitz) -> list:
     """Return a list of markdown strings for one PDF page."""
     ph = page.rect.height
     HEADER_Y = ph * 0.09   # 9%: safely below the running header (title + logo band)
@@ -283,13 +283,12 @@ def process_page(page, p_idx: int, vol_part_map: dict,
 
     _page_drawings = None
     _fig_zones = []   # list of (y0, y1) bands to suppress content inside
-    if vol_num is not None and part_str is not None:
-        for cap_y0, min_y in _cap_info:
-            if _page_drawings is None:
-                try:
-                    _page_drawings = page.get_drawings()
-                except Exception:
-                    _page_drawings = []
+    for cap_y0, min_y in _cap_info:
+        if _page_drawings is None:
+            try:
+                _page_drawings = page.get_drawings()
+            except Exception:
+                _page_drawings = []
             _, fy0, _, fy1 = find_figure_bounds(
                 page, cap_y0, min_y, fitz, _page_drawings)
             _fig_zones.append((fy0, fy1))
@@ -368,21 +367,23 @@ def process_page(page, p_idx: int, vol_part_map: dict,
         fig_m = _FIG_RE.match(block_text)
         if fig_m:
             fig_num = fig_m.group(1)
+            safe_num = fig_num.replace(".", "_")
             if vol_num is not None and part_str is not None:
-                safe_num = fig_num.replace(".", "_")
                 fname = f"Vol{vol_num}_Part{part_str}_Figure{safe_num}.png"
-                img_path = img_dir / fname
-                if not img_path.exists():
-                    # Use the per-caption min_y so we don't overlap the figure above
-                    min_y = next(
-                        (my for cy, my in _cap_info if abs(cy - by0) < 2),
-                        HEADER_Y,
-                    )
-                    bx0, fy0, bx1, fy1 = find_figure_bounds(
-                        page, by0, min_y, fitz, _page_drawings)
-                    if render_region(page, bx0, fy0, bx1, fy1, img_path, fitz):
-                        rel = f"Core_v{version}_images/{fname}"
-                        md.append(f"\n![Figure {fig_num}]({rel})\n")
+            else:
+                fname = f"Figure{safe_num}.png"
+            img_path = img_dir / fname
+            if not img_path.exists():
+                # Use the per-caption min_y so we don't overlap the figure above
+                min_y = next(
+                    (my for cy, my in _cap_info if abs(cy - by0) < 2),
+                    HEADER_Y,
+                )
+                bx0, fy0, bx1, fy1 = find_figure_bounds(
+                    page, by0, min_y, fitz, _page_drawings)
+                if render_region(page, bx0, fy0, bx1, fy1, img_path, fitz):
+                    rel = f"{img_dir.name}/{fname}"
+                    md.append(f"\n![Figure {fig_num}]({rel})\n")
             md.append(f"\n**{block_text}**\n")
             prev_text_y = by1   # advance past caption; next figure search starts here
             continue
@@ -443,7 +444,51 @@ def convert_spec(version: str, fitz) -> bool:
         if p % 200 == 0 and p > 0:
             print(f"    {p:,}/{total:,} pages ...")
         all_lines.extend(
-            process_page(doc[p], p, vol_part_map, version, img_dir, fitz)
+            process_page(doc[p], p, vol_part_map, img_dir, fitz)
+        )
+
+    doc.close()
+
+    content = "\n".join(all_lines)
+    md_path.write_text(content, encoding="utf-8")
+    n_imgs = len(list(img_dir.glob("*.png")))
+    print(f"  [OK] {md_path.name}: {len(all_lines):,} lines | {n_imgs} figures extracted")
+    return True
+
+
+def convert_pdf_file(pdf_path: Path, fitz) -> bool:
+    """Convert any single Bluetooth spec PDF (Errata, ICS, redlines, etc.)."""
+    stem = pdf_path.stem
+    md_path = pdf_path.parent / f"{stem}.md"
+    img_dir = pdf_path.parent / f"{stem}_images"
+
+    if md_path.exists():
+        print(f"  [SKIP] {md_path.name} already exists. Delete to reconvert.")
+        return True
+
+    size_mb = pdf_path.stat().st_size // (1024 * 1024)
+    size_str = f"{size_mb} MB" if size_mb >= 1 else f"{pdf_path.stat().st_size // 1024} KB"
+    print(f"  Opening {pdf_path.name} ({size_str}) ...")
+    doc = fitz.open(str(pdf_path))
+    img_dir.mkdir(exist_ok=True)
+
+    vol_part_map = build_vol_part_map(doc)
+
+    all_lines = [
+        f"# {stem.replace('_', ' ')}",
+        "",
+        "> Source: PDF converted via PyMuPDF.",
+        "",
+        "---",
+        "",
+    ]
+
+    total = len(doc)
+    for p in range(total):
+        if p % 200 == 0 and p > 0:
+            print(f"    {p:,}/{total:,} pages ...")
+        all_lines.extend(
+            process_page(doc[p], p, vol_part_map, img_dir, fitz)
         )
 
     doc.close()
@@ -460,7 +505,39 @@ def convert_spec(version: str, fitz) -> bool:
 def main():
     fitz = check_fitz()
 
+    all_pdfs_mode = "--all-pdfs" in sys.argv
     given = [v for v in sys.argv[1:] if not v.startswith("--")]
+
+    if all_pdfs_mode:
+        # Convert all non-Core-Spec PDFs in every version subdirectory.
+        # Skip: Core_v*.pdf (handled by convert_spec)
+        # Skip: *showing_changes* / CS_*.pdf (redline diffs — visual markup lost in text extraction)
+        def _is_showing_changes(p: Path) -> bool:
+            s = p.stem.lower()
+            return "showing_changes" in s or s.startswith("cs_")
+
+        pdfs = sorted(
+            p for p in SPECS_DIR.glob("*/*.pdf")
+            if not p.stem.startswith("Core_v") and not _is_showing_changes(p)
+        )
+        print("=== Bluetooth Spec PDF → Markdown (supplemental PDFs) ===")
+        print(f"Found {len(pdfs)} PDFs\n")
+        ok, failed = [], []
+        for pdf in pdfs:
+            print(f"--- {pdf.parent.name}/{pdf.name} ---")
+            if convert_pdf_file(pdf, fitz):
+                ok.append(pdf.name)
+            else:
+                failed.append(pdf.name)
+            print()
+        print("=== Done ===")
+        if ok:
+            print(f"  Converted : {len(ok)} files")
+        if failed:
+            print(f"  Failed    : {', '.join(failed)}")
+        return
+
+    # Default mode: convert Core_v*.pdf by version number
     if given:
         versions = given
     else:

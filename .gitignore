@@ -27,5 +27,4 @@ sources/specs/**/*.pdf
 convert_log.txt
 debug_*.png
 .java/
-jre.zip
 scratch/
