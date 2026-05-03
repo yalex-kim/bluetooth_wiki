@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bluetooth LLM-Wiki — Evaluation Report</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --text: #e2e8f0;
+    --muted: #8892b0;
+    --accent: #64ffda;
+    --blue: #7b8cde;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --purple: #c084fc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+  /* Header */
+  .header { margin-bottom: 40px; }
+  .header h1 { font-size: 26px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .header .meta { color: var(--muted); font-size: 13px; }
+  .header .meta span { margin-right: 20px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(100,255,218,0.1); color: var(--accent); border: 1px solid rgba(100,255,218,0.25); }
+
+  /* Score hero */
+  .hero { display: grid; grid-template-columns: auto 1fr; gap: 32px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; margin-bottom: 32px; }
+  .score-circle { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+  .score-circle svg { transform: rotate(-90deg); }
+  .score-circle .track { fill: none; stroke: var(--surface2); stroke-width: 10; }
+  .score-circle .fill  { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 377; stroke-dashoffset: calc(377 - 377 * 0.958); transition: stroke-dashoffset 1s ease; }
+  .score-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .score-center .num { font-size: 32px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .score-center .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat-box { background: var(--surface2); border-radius: 8px; padding: 16px; }
+  .stat-box .val { font-size: 22px; font-weight: 700; color: var(--text); }
+  .stat-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .stat-box.green .val { color: var(--green); }
+  .stat-box.yellow .val { color: var(--yellow); }
+  .stat-box.red .val { color: var(--red); }
+
+  /* Section headers */
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Category bars */
+  .cat-grid { display: grid; gap: 10px; }
+  .cat-row { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; }
+  .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .cat-name { font-weight: 600; font-size: 13px; }
+  .cat-score { font-weight: 700; font-size: 14px; }
+  .bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+  .cat-meta  { display: flex; gap: 16px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+
+  /* Color helpers */
+  .c-perfect { color: var(--accent); }
+  .c-good    { color: var(--green); }
+  .c-ok      { color: var(--yellow); }
+  .c-low     { color: var(--red); }
+  .bg-perfect { background: var(--accent); }
+  .bg-good    { background: var(--green); }
+  .bg-ok      { background: var(--yellow); }
+  .bg-low     { background: var(--red); }
+
+  /* Dimension summary */
+  .dim-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .dim-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+  .dim-card .dval { font-size: 22px; font-weight: 700; }
+  .dim-card .dmax { font-size: 11px; color: var(--muted); }
+  .dim-card .dlbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .dim-card .dbar { margin-top: 8px; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .dim-card .dbar-fill { height: 100%; border-radius: 2px; }
+
+  /* Question table */
+  .q-table { width: 100%; border-collapse: collapse; }
+  .q-table th { background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 12px; text-align: left; position: sticky; top: 0; }
+  .q-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .q-table tr:last-child td { border-bottom: none; }
+  .q-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .q-id   { font-family: monospace; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .q-text { font-size: 12px; color: var(--text); max-width: 280px; }
+  .q-cat  { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .diff-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+  .diff-easy   { background: rgba(74,222,128,0.1); color: var(--green); }
+  .diff-medium { background: rgba(250,204,21,0.1); color: var(--yellow); }
+  .diff-hard   { background: rgba(251,146,60,0.1); color: var(--orange); }
+  .diff-expert { background: rgba(248,113,113,0.1); color: var(--red); }
+  .score-pill { display: inline-block; width: 30px; height: 20px; line-height: 20px; text-align: center; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  .sp-3 { background: rgba(100,255,218,0.12); color: var(--accent); }
+  .sp-2 { background: rgba(250,204,21,0.12); color: var(--yellow); }
+  .sp-1 { background: rgba(248,113,113,0.12); color: var(--red); }
+  .sp-0 { background: rgba(248,113,113,0.2); color: var(--red); }
+  .sp-n { background: rgba(248,113,113,0.2); color: var(--red); }
+  .raw-total { font-weight: 700; font-size: 13px; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: auto; }
+
+  /* Issues */
+  .issue-list { display: grid; gap: 10px; }
+  .issue-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--yellow); border-radius: 8px; padding: 14px 16px; }
+  .issue-card.critical { border-left-color: var(--red); }
+  .issue-card .issue-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .issue-card .issue-id { font-family: monospace; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .issue-card .issue-title { font-weight: 600; font-size: 13px; }
+  .issue-card .issue-body { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .issue-card .issue-fix { margin-top: 8px; font-size: 12px; color: var(--accent); }
+  .issue-card .issue-fix::before { content: '→ Fix: '; font-weight: 600; }
+
+  /* Insights */
+  .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .insight-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  .insight-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--accent); }
+  .insight-card ul { list-style: none; padding: 0; }
+  .insight-card li { font-size: 12px; color: var(--muted); padding: 3px 0; display: flex; gap: 8px; align-items: flex-start; }
+  .insight-card li::before { content: '•'; color: var(--accent); flex-shrink: 0; }
+
+  /* Footer */
+  .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Bluetooth LLM-Wiki — Evaluation Report</h1>
+    <div class="meta">
+      <span>📅 2026-05-04</span>
+      <span>📋 30 questions · 6 categories</span>
+      <span>🤖 Evaluator: claude-sonnet-4-6 (self-evaluation)</span>
+      <span class="badge">LLM-Wiki v1.0</span>
+    </div>
+  </div>
+
+  <!-- Hero Score -->
+  <div class="hero">
+    <div class="score-circle">
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle class="track" cx="70" cy="70" r="60"/>
+        <circle class="fill"  cx="70" cy="70" r="60"/>
+      </svg>
+      <div class="score-center">
+        <div class="num">95.8%</div>
+        <div class="label">Overall</div>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-box green">
+        <div class="val">521.5</div>
+        <div class="lbl">Weighted Score</div>
+      </div>
+      <div class="stat-box">
+        <div class="val">544.5</div>
+        <div class="lbl">Maximum Possible</div>
+      </div>
+      <div class="stat-box green">
+        <div class="val">25 / 30</div>
+        <div class="lbl">Perfect Scores (11/11)</div>
+      </div>
+      <div class="stat-box yellow">
+        <div class="val">5</div>
+        <div class="lbl">Questions with Gaps</div>
+      </div>
+      <div class="stat-box green">
+        <div class="val">0</div>
+        <div class="lbl">Hallucinations (severe)</div>
+      </div>
+      <div class="stat-box red">
+        <div class="val">1</div>
+        <div class="lbl">Wiki Content Bugs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Scores -->
+  <div class="section">
+    <div class="section-title">Score by Category</div>
+    <div class="cat-grid">
+
+      <div class="cat-row">
+        <div class="cat-header">
+          <span class="cat-name">Version Facts <span style="font-weight:400;color:var(--muted)">(Q001–Q007)</span></span>
+          <span class="cat-score c-perfect">100.0%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:100%"></div></div>
+        <div class="cat-meta"><span>77.0 / 77.0 weighted</span><span>7 questions</span><span>Difficulty: Easy (×1.0)</span><span>All key facts found</span></div>
+      </div>
+
+      <div class="cat-row">
+        <div class="cat-header">
+          <span class="cat-name">Version Comparison <span style="font-weight:400;color:var(--muted)">(Q014–Q018)</span></span>
+          <span class="cat-score c-perfect">100.0%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:100%"></div></div>
+        <div class="cat-meta"><span>82.5 / 82.5 weighted</span><span>5 questions</span><span>Difficulty: Medium (×1.5)</span><span>Strong diff-page coverage</span></div>
+      </div>
+
+      <div class="cat-row">
+        <div class="cat-header">
+          <span class="cat-name">Feature Explanation <span style="font-weight:400;color:var(--muted)">(Q008–Q013)</span></span>
+          <span class="cat-score c-good">97.0%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bg-good" style="width:97%"></div></div>
+        <div class="cat-meta"><span>96.0 / 99.0 weighted</span><span>6 questions</span><span>Difficulty: Medium (×1.5)</span><span>1 gap: subrating formula phrasing (Q008)</span></div>
+      </div>
+
+      <div class="cat-row">
+        <div class="cat-header">
+          <span class="cat-name">Cross-Version Reasoning <span style="font-weight:400;color:var(--muted)">(Q019–Q022)</span></span>
+          <span class="cat-score c-good">95.5%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bg-good" style="width:95.5%"></div></div>
+        <div class="cat-meta"><span>84.0 / 88.0 weighted</span><span>4 questions</span><span>Difficulty: Hard (×2.0)</span><span>1 gap: RPA 4.0 vs 4.2 ambiguity (Q020)</span></div>
+      </div>
+
+      <div class="cat-row">
+        <div class="cat-header">
+          <span class="cat-name">Implementation / HCI <span style="font-weight:400;color:var(--muted)">(Q023–Q026)</span></span>
+          <span class="cat-score c-good">93.2%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bg-good" style="width:93.2%"></div></div>
+        <div class="cat-meta"><span>82.0 / 88.0 weighted</span><span>4 questions</span><span>Difficulty: Hard (×2.0)</span><span>Gaps: BIS step count (Q023), Continuation_Number range (Q024)</span></div>
+      </div>
+
+      <div class="cat-row">
+        <div class="cat-header">
+          <span class="cat-name">Edge Cases <span style="font-weight:400;color:var(--muted)">(Q027–Q030)</span></span>
+          <span class="cat-score c-ok">90.9%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bg-ok" style="width:90.9%"></div></div>
+        <div class="cat-meta"><span>100.0 / 110.0 weighted</span><span>4 questions</span><span>Difficulty: Expert (×2.5)</span><span>1 gap: formula ambiguity in Q028 (−4 pts weighted)</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Dimension Averages -->
+  <div class="section">
+    <div class="section-title">Average Score per Dimension (across all 30 questions)</div>
+    <div class="dim-grid">
+
+      <div class="dim-card">
+        <div class="dval c-perfect">2.87</div>
+        <div class="dmax">/ 3.0</div>
+        <div class="dlbl">Factual Accuracy</div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:95.7%"></div></div>
+      </div>
+      <div class="dim-card">
+        <div class="dval c-perfect">2.87</div>
+        <div class="dmax">/ 3.0</div>
+        <div class="dlbl">Completeness</div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:95.7%"></div></div>
+      </div>
+      <div class="dim-card">
+        <div class="dval c-perfect">2.97</div>
+        <div class="dmax">/ 3.0</div>
+        <div class="dlbl">Citation Quality</div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:99%"></div></div>
+      </div>
+      <div class="dim-card">
+        <div class="dval c-perfect">−0.03</div>
+        <div class="dmax">/ 0</div>
+        <div class="dlbl">Hallucination Penalty</div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:99%"></div></div>
+      </div>
+      <div class="dim-card">
+        <div class="dval c-perfect">1.97</div>
+        <div class="dmax">/ 2.0</div>
+        <div class="dlbl">Usability</div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:98.5%"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Per-Question Table -->
+  <div class="section">
+    <div class="section-title">Per-Question Breakdown</div>
+    <div class="table-wrap">
+      <table class="q-table">
+        <thead>
+          <tr>
+            <th>QID</th>
+            <th>Question</th>
+            <th>Category</th>
+            <th>Diff</th>
+            <th title="Accuracy">Acc</th>
+            <th title="Completeness">Cmp</th>
+            <th title="Citation">Cit</th>
+            <th title="Hallucination">Hal</th>
+            <th title="Usability">Usa</th>
+            <th>Raw</th>
+            <th>×Wt</th>
+            <th>Wtd</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- version_facts -->
+          <tr><td class="q-id">Q001</td><td class="q-text">Min BLE 6.2 connection interval?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
+          <tr><td class="q-id">Q002</td><td class="q-text">Direction Finding version &amp; hardware?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
+          <tr><td class="q-id">Q003</td><td class="q-text">LE Audio codec &amp; version?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
+          <tr><td class="q-id">Q004</td><td class="q-text">What is EATT and what does it solve?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
+          <tr><td class="q-id">Q005</td><td class="q-text">PAwR and EAD version?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
+          <tr><td class="q-id">Q006</td><td class="q-text">Channel Sounding ranging technique?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
+          <tr><td class="q-id">Q007</td><td class="q-text">BLE 6.1 RPA privacy feature?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
+          <!-- feature_explanation -->
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q008</td><td class="q-text">Connection Subrating stacking formula?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×1.5</td><td class="raw-total c-ok">13.5</td></tr>
+          <tr><td class="q-id">Q009</td><td class="q-text">CIS vs BIS difference?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q010</td><td class="q-text">LE Power Control zones &amp; HCI?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q011</td><td class="q-text">DBAF filtering mechanism?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q012</td><td class="q-text">PAwR vs Periodic Advertising, slot spacing?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q013</td><td class="q-text">Extended vs Legacy Advertising architecture?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <!-- version_comparison -->
+          <tr><td class="q-id">Q014</td><td class="q-text">Key differences 5.3 vs 5.4?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q015</td><td class="q-text">5.2 audio features over 5.1?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q016</td><td class="q-text">6.0 to 6.1 security improvements?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q017</td><td class="q-text">Advertising evolution 4.0 to 5.0?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr><td class="q-id">Q018</td><td class="q-text">Connection interval evolution 5.3 to 6.2?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <!-- cross_version_reasoning -->
+          <tr><td class="q-id">Q019</td><td class="q-text">Stream 16 kHz audio to 20 hearing aids?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q020</td><td class="q-text">BLE privacy evolution 4.2 to 6.2?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">18.0</td></tr>
+          <tr><td class="q-id">Q021</td><td class="q-text">Earliest version for &gt;27 byte LE packets?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <tr><td class="q-id">Q022</td><td class="q-text">Sub-1ms interval for gaming controller?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <!-- implementation_hci -->
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q023</td><td class="q-text">HCI sequence to set up BIS?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">18.0</td></tr>
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q024</td><td class="q-text">HCI for Connection Subrating &amp; constraints?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">10</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">20.0</td></tr>
+          <tr><td class="q-id">Q025</td><td class="q-text">LESC pairing HCI sequence?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <tr><td class="q-id">Q026</td><td class="q-text">LE Power Control HCI setup (5 commands)?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <!-- edge_cases -->
+          <tr><td class="q-id">Q027</td><td class="q-text">6.2 central + 5.4 peripheral: what happens?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
+          <tr style="background:rgba(248,113,113,0.04)"><td class="q-id">Q028</td><td class="q-text">Min supervision timeout: SF=10, CI=100ms, CN=1?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-n">−1</span></td><td><span class="score-pill sp-1">1</span></td><td class="raw-total c-low">7</td><td class="q-cat">×2.5</td><td class="raw-total c-low">17.5</td></tr>
+          <tr><td class="q-id">Q029</td><td class="q-text">Does active connection break on 6.1 RPA rotation?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
+          <tr><td class="q-id">Q030</td><td class="q-text">Coded S=8 vs 2M PHY at 375 µs interval?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Issues Found -->
+  <div class="section">
+    <div class="section-title">Issues Found &amp; Wiki Improvement Opportunities</div>
+    <div class="issue-list">
+
+      <div class="issue-card critical">
+        <div class="issue-head">
+          <span class="issue-id">Q024 · WIKI BUG</span>
+          <span class="issue-title">Continuation_Number range incorrect in ble-parameters.md</span>
+        </div>
+        <div class="issue-body">The wiki's <code>ble-parameters.md</code> states Continuation_Number range as 0–499, but the Bluetooth Core Spec defines it as 0–15. This is a factual error that causes the wiki to give wrong implementation guidance.</div>
+        <div class="issue-fix">Update ble-parameters.md Continuation_Number range to 0–15 (0x00–0x0F).</div>
+      </div>
+
+      <div class="issue-card">
+        <div class="issue-head">
+          <span class="issue-id">Q008 · PHRASING GAP</span>
+          <span class="issue-title">Subrating stacking formula not stated explicitly</span>
+        </div>
+        <div class="issue-body"><code>connection-management.md</code> demonstrates Connection Subrating using Peripheral_Latency in examples but never states the explicit formula: <code>Effective_Interval = Connection_Interval × Subrate_Factor × (1 + Continuation_Number)</code>.</div>
+        <div class="issue-fix">Add the formula explicitly to connection-management.md §Connection Subrating.</div>
+      </div>
+
+      <div class="issue-card">
+        <div class="issue-head">
+          <span class="issue-id">Q020 · AMBIGUITY</span>
+          <span class="issue-title">RPA origin version (4.0 vs 4.2) unclear</span>
+        </div>
+        <div class="issue-body">The wiki's <code>security.md</code> notes RPA existed since 4.0 but 4.2 added controller-based resolution. The privacy evolution timeline is ambiguous — the page does not clearly state which version "introduced" RPA for typical use.</div>
+        <div class="issue-fix">Add explicit timeline callout: "RPA defined in 4.0; controller-based resolution (Enhanced Privacy) added in 4.2."</div>
+      </div>
+
+      <div class="issue-card">
+        <div class="issue-head">
+          <span class="issue-id">Q023 · INCOMPLETE SEQUENCE</span>
+          <span class="issue-title">BIS setup sequence shows 7 steps, reference expects 9</span>
+        </div>
+        <div class="issue-body"><code>hci-sequences.md</code> section 7a lists 7 numbered steps for BIS setup, omitting two discrete steps: (2) Set Extended Advertising Data and (4) Set Periodic Advertising Data as separate enumerated items.</div>
+        <div class="issue-fix">Expand hci-sequences.md BIS setup to 9 explicit steps, matching the canonical sequence.</div>
+      </div>
+
+      <div class="issue-card">
+        <div class="issue-head">
+          <span class="issue-id">Q028 · FORMULA CONFUSION</span>
+          <span class="issue-title">Continuation_Number vs Max_Latency conflated in supervision timeout explanation</span>
+        </div>
+        <div class="issue-body">The wiki does not clearly distinguish Continuation_Number from Max_Latency (Peripheral_Latency in subrated units). Both appear in supervision timeout formulas but serve different roles. This caused a minor hallucination penalty (−1) in the edge case response.</div>
+        <div class="issue-fix">Add a disambiguation note in connection-management.md clarifying Continuation_Number (additional consecutive active events) vs Max_Latency (skipped subrated events for peripheral latency).</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div class="section">
+    <div class="section-title">Key Insights</div>
+    <div class="insight-grid">
+
+      <div class="insight-card">
+        <h4>Strengths</h4>
+        <ul>
+          <li>All 7 version_facts questions answered perfectly — factual recall is excellent</li>
+          <li>All 5 version_comparison questions answered perfectly — diff pages are authoritative and comprehensive</li>
+          <li>Citation quality: 2.97/3.0 avg — nearly every answer includes spec version and section</li>
+          <li>Near-zero hallucination rate: only 1 minor instance across 30 questions</li>
+          <li>Complex multi-hop reasoning (Q019, Q021, Q022) handled correctly</li>
+          <li>LESC pairing sequence (Q025) correctly distinguishes SMP from HCI — a common source of confusion</li>
+        </ul>
+      </div>
+
+      <div class="insight-card">
+        <h4>Gaps &amp; Limitations</h4>
+        <ul>
+          <li>Explicit formulas need to be stated verbatim in wiki, not only demonstrated via examples</li>
+          <li>One confirmed wiki content bug: Continuation_Number range (Q024) — fix before production use</li>
+          <li>Supervision timeout calculation (Q028) is the hardest edge case — consider adding a worked example</li>
+          <li>BIS HCI sequence step count is ambiguous — 7 vs 9 steps depending on interpretation</li>
+          <li>RPA timeline (4.0 vs 4.2) needs a one-line disambiguation in security.md</li>
+          <li>Self-evaluation note: scores may be slightly optimistic vs a third-party judge</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Bluetooth LLM-Wiki Eval v1.0 · 30 questions · <a href="dataset.json">dataset.json</a> · <a href="rubric.md">rubric.md</a></span>
+    <span>Generated 2026-05-04 by claude-sonnet-4-6</span>
+  </div>
+
+</div>
+</body>
+</html>

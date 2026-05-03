@@ -1,0 +1,504 @@
+{
+  "meta": {
+    "title": "Bluetooth Wiki — RAG vs LLM-Wiki Evaluation Dataset",
+    "version": "1.0",
+    "created": "2026-05-04",
+    "total_questions": 30,
+    "categories": [
+      "version_facts",
+      "feature_explanation",
+      "version_comparison",
+      "cross_version_reasoning",
+      "implementation_hci",
+      "edge_cases"
+    ],
+    "description": "Structured test set for comparing RAG-based vs LLM-Wiki-based Bluetooth knowledge retrieval. Questions are designed to expose typical RAG failure modes: chunk boundary splits, cross-document synthesis, pre-computed diffs, and hallucination under ambiguity."
+  },
+  "questions": [
+    {
+      "id": "Q001",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "What is the minimum BLE connection interval introduced in Bluetooth Core Specification 6.2?",
+      "reference_answer": "375 µs, expressed as 3 units of the new 125 µs tick size. Prior to 6.2 the minimum was 7.5 ms (6 × 1.25 ms). The new granularity is set via HCI_LE_Connection_Rate_Request.",
+      "key_facts": [
+        "375 µs minimum",
+        "125 µs tick/unit size",
+        "Replaces the previous 7.5 ms minimum",
+        "HCI_LE_Connection_Rate_Request command"
+      ],
+      "expected_citations": ["Core 6.2"],
+      "rag_challenge": "The value appears in multiple spec sections; RAG chunks may return only one side of the before/after comparison.",
+      "tags": ["6.2", "connection-intervals", "HCI"]
+    },
+    {
+      "id": "Q002",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "Which Bluetooth Core Spec version first introduced Direction Finding (AoA/AoD), and what hardware feature does it require?",
+      "reference_answer": "Bluetooth 5.1 introduced Direction Finding using Angle of Arrival (AoA) and Angle of Departure (AoD). It requires an antenna array on the receiver (AoA) or transmitter (AoD) and uses the Constant Tone Extension (CTE) appended to PDUs for IQ sampling.",
+      "key_facts": [
+        "Version 5.1",
+        "AoA and AoD modes",
+        "Antenna array required",
+        "Constant Tone Extension (CTE)",
+        "IQ sampling"
+      ],
+      "expected_citations": ["Core 5.1"],
+      "rag_challenge": "Hardware requirements and the CTE mechanism are described in different spec parts; a chunk-based system may return only one.",
+      "tags": ["5.1", "direction-finding", "AoA", "AoD", "CTE"]
+    },
+    {
+      "id": "Q003",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "What audio codec does LE Audio use, and which Bluetooth version introduced LE Audio?",
+      "reference_answer": "LE Audio uses the LC3 (Low Complexity Communication Codec). It was introduced in Bluetooth 5.2 alongside Isochronous Channels (CIS and BIS) and the Basic Audio Profile (BAP).",
+      "key_facts": [
+        "LC3 codec",
+        "Version 5.2",
+        "Isochronous Channels (CIS/BIS)",
+        "Basic Audio Profile (BAP)"
+      ],
+      "expected_citations": ["Core 5.2"],
+      "rag_challenge": "Low risk for RAG, but the codec name vs. the version link may be split across chunks.",
+      "tags": ["5.2", "le-audio", "LC3", "CIS", "BIS"]
+    },
+    {
+      "id": "Q004",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "What is EATT, when was it introduced, and what problem does it solve compared to ATT?",
+      "reference_answer": "EATT (Enhanced ATT) was introduced in Bluetooth 5.2. It adds multiple parallel L2CAP channels (Enhanced LE Credit-Based) on top of the ATT bearer, enabling concurrent GATT operations without the sequential request-response bottleneck of classic ATT.",
+      "key_facts": [
+        "Enhanced Attribute Protocol",
+        "Version 5.2",
+        "Multiple parallel L2CAP channels",
+        "Concurrent GATT operations",
+        "Removes single-request bottleneck"
+      ],
+      "expected_citations": ["Core 5.2"],
+      "rag_challenge": "The problem it solves is in a different spec section than the feature definition; RAG may return definition without context.",
+      "tags": ["5.2", "EATT", "ATT", "GATT", "L2CAP"]
+    },
+    {
+      "id": "Q005",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "Which Bluetooth version introduced Periodic Advertising with Responses (PAwR) and Encrypted Advertising Data (EAD)?",
+      "reference_answer": "Both PAwR and EAD were introduced in Bluetooth 5.4. PAwR adds bidirectional capability to Periodic Advertising — up to 24 response slots per advertising interval. EAD allows advertisers to encrypt advertising payload so only paired devices can decode it.",
+      "key_facts": [
+        "Version 5.4",
+        "PAwR: up to 24 response slots",
+        "EAD: encrypts advertising payload"
+      ],
+      "expected_citations": ["Core 5.4"],
+      "rag_challenge": "Both features may appear in separate spec chapters; RAG might return only one.",
+      "tags": ["5.4", "PAwR", "EAD", "advertising"]
+    },
+    {
+      "id": "Q006",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "What is Channel Sounding in Bluetooth 6.0 and which ranging technique does it use?",
+      "reference_answer": "Channel Sounding (CS) is a precise distance-measurement mechanism introduced in Bluetooth 6.0. It uses Phase-Based Ranging (PBR) and Round-Trip Time (RTT) measurements across multiple channels to estimate distance between two devices. It includes relay-attack resilience via randomized CS step ordering.",
+      "key_facts": [
+        "Version 6.0",
+        "Phase-Based Ranging (PBR)",
+        "Round-Trip Time (RTT)",
+        "Multi-channel measurement",
+        "Relay-attack resilience"
+      ],
+      "expected_citations": ["Core 6.0"],
+      "rag_challenge": "PBR and RTT descriptions are in different spec parts; relay-attack protection may be missed by chunk retrieval.",
+      "tags": ["6.0", "channel-sounding", "PBR", "RTT", "ranging"]
+    },
+    {
+      "id": "Q007",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "What new privacy feature did Bluetooth 6.1 introduce for Resolvable Private Addresses (RPA)?",
+      "reference_answer": "Bluetooth 6.1 added HCI_LE_Set_Resolvable_Private_Address_Timeout_V2, which allows the host to set a randomized (rather than fixed) RPA rotation interval. This prevents timing-based tracking by making RPA rotation unpredictable to passive observers.",
+      "key_facts": [
+        "HCI_LE_Set_Resolvable_Private_Address_Timeout_V2",
+        "Randomized RPA rotation interval",
+        "Prevents timing-based tracking"
+      ],
+      "expected_citations": ["Core 6.1"],
+      "rag_challenge": "The motivation (timing-based tracking attack) is in a different section from the HCI command definition.",
+      "tags": ["6.1", "RPA", "privacy", "HCI"]
+    },
+    {
+      "id": "Q008",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "How does Connection Subrating work in BLE 5.3, and what is the stacking formula for the effective connection interval?",
+      "reference_answer": "Connection Subrating (introduced in 5.3) allows two connected devices to agree that the peripheral will only respond every N connection events (the subrate factor). The effective interval becomes: Effective_Interval = Connection_Interval × Subrate_Factor × (1 + Continuation_Number). This enables very long sleep periods without renegotiating connection parameters, preserving the underlying tight connection interval for when low-latency bursts are needed.",
+      "key_facts": [
+        "Subrate factor: skip N-1 connection events",
+        "Formula: Effective_Interval = Connection_Interval × Subrate_Factor × (1 + Continuation_Number)",
+        "No renegotiation needed",
+        "Enables burst + sleep pattern"
+      ],
+      "expected_citations": ["Core 5.3"],
+      "rag_challenge": "The formula requires reading both the parameter definitions and the timing section; high probability of chunk split.",
+      "tags": ["5.3", "connection-subrating", "connection-management"]
+    },
+    {
+      "id": "Q009",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "What is the difference between CIS (Connected Isochronous Stream) and BIS (Broadcast Isochronous Stream) in LE Audio?",
+      "reference_answer": "CIS is a point-to-point isochronous channel between two connected (bonded) BLE devices, used for true wireless stereo (TWS) earbuds or unicast audio. BIS is a broadcast isochronous channel where a single source streams to unlimited receivers without pairing — the Auracast use case. Both use the Isochronous Channels framework from BLE 5.2 with the LC3 codec.",
+      "key_facts": [
+        "CIS: point-to-point, requires connection/bonding",
+        "BIS: one-to-many broadcast, no pairing",
+        "CIS use case: TWS earbuds",
+        "BIS use case: Auracast public broadcast",
+        "Both introduced in 5.2 with LC3"
+      ],
+      "expected_citations": ["Core 5.2"],
+      "rag_challenge": "CIS and BIS are defined in separate spec parts (Vol 6); retrieval may return only one definition.",
+      "tags": ["5.2", "CIS", "BIS", "le-audio", "Auracast"]
+    },
+    {
+      "id": "Q010",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "How does LE Power Control work in BLE 5.2? What are the path loss zones and the relevant HCI commands?",
+      "reference_answer": "LE Power Control (5.2) allows a device to request its peer to adjust TX power in real time based on RSSI feedback. It defines three path loss zones (low, middle, high) with configurable thresholds and hysteresis. Key HCI commands include: HCI_LE_Set_Path_Loss_Reporting_Parameters, HCI_LE_Set_Path_Loss_Reporting_Enable, HCI_LE_Set_Transmit_Power_Reporting_Enable, HCI_LE_Enhanced_Read_Transmit_Power_Level, and HCI_LE_Read_Remote_Transmit_Power_Level.",
+      "key_facts": [
+        "Version 5.2",
+        "Three path loss zones (low/middle/high)",
+        "Configurable thresholds + hysteresis",
+        "5 HCI commands for control and reporting"
+      ],
+      "expected_citations": ["Core 5.2"],
+      "rag_challenge": "The 5 HCI commands and the zone model are in different spec chapters; typical RAG will miss at least 2 commands.",
+      "tags": ["5.2", "power-control", "HCI", "path-loss"]
+    },
+    {
+      "id": "Q011",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "What is Decision-Based Advertising Filtering (DBAF) introduced in BLE 6.0?",
+      "reference_answer": "DBAF is a controller-side filtering mechanism introduced in BLE 6.0 that allows the host to provide rules for the controller to autonomously decide whether to respond to or forward advertising PDUs — without waking the host for each event. This reduces host wake-up overhead in scanning scenarios with high advertising density.",
+      "key_facts": [
+        "Version 6.0",
+        "Controller-side autonomous filtering",
+        "Host provides rules, controller decides",
+        "Reduces host wake-ups during scanning"
+      ],
+      "expected_citations": ["Core 6.0"],
+      "rag_challenge": "The motivation (host wake-up overhead) is documented separately from the feature definition.",
+      "tags": ["6.0", "DBAF", "advertising", "scanning"]
+    },
+    {
+      "id": "Q012",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "How does PAwR differ from standard Periodic Advertising, and what is the Response_Slot_Spacing resolution?",
+      "reference_answer": "Standard Periodic Advertising (BLE 5.0+) is strictly one-way: the advertiser broadcasts and scanners listen with no uplink path. PAwR (BLE 5.4) adds up to 24 response slots within each advertising interval, allowing scanners to send short responses back to the advertiser. This enables scalable one-to-many bidirectional communication. Response_Slot_Spacing is specified at 0.125 ms resolution.",
+      "key_facts": [
+        "Standard Periodic Advertising is one-way",
+        "PAwR adds up to 24 response slots",
+        "Scanners can respond back",
+        "Response_Slot_Spacing: 0.125 ms resolution"
+      ],
+      "expected_citations": ["Core 5.4"],
+      "rag_challenge": "The slot count and spacing resolution are in separate spec tables; high chunk-split risk.",
+      "tags": ["5.4", "PAwR", "periodic-advertising"]
+    },
+    {
+      "id": "Q013",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "What is the Extended Advertising architecture introduced in BLE 5.0 and how does it differ from Legacy Advertising?",
+      "reference_answer": "Legacy Advertising uses 3 primary advertising channels (37, 38, 39) with a max payload of 31 bytes and supports only 3 PDU types (ADV_IND, ADV_DIRECT_IND, ADV_NONCONN_IND). Extended Advertising (5.0+) adds secondary advertising channels (0–36) for larger payloads (up to 254 bytes), introduces ADV_EXT_IND on primary channels that points to AUX_ADV_IND/AUX_CHAIN_IND on secondaries, and supports new PHYs (2M, Coded). This delivers the 8× broadcast capacity improvement.",
+      "key_facts": [
+        "Legacy: 3 channels, 31 byte max, 3 PDU types",
+        "Extended: secondary channels 0-36, up to 254 bytes",
+        "ADV_EXT_IND → AUX_ADV_IND chain",
+        "Supports 2M and Coded PHY",
+        "8× broadcast capacity"
+      ],
+      "expected_citations": ["Core 5.0"],
+      "rag_challenge": "Legacy vs Extended differences span multiple spec volumes; retrieval likely returns either the old or new description, not both.",
+      "tags": ["5.0", "advertising", "extended-advertising", "PDU"]
+    },
+    {
+      "id": "Q014",
+      "category": "version_comparison",
+      "difficulty": "medium",
+      "question": "What are the key differences between Bluetooth 5.3 and 5.4?",
+      "reference_answer": "BLE 5.3 (2021) focused on connection efficiency: Connection Subrating (skip connection events), Enhanced Connection Update (host-initiated parameter negotiation), and Advertising Coding Selection (controller-side PHY selection for advertising). BLE 5.4 (2023) focused on broadcast and security: Periodic Advertising with Responses (PAwR) for bidirectional broadcast, Encrypted Advertising Data (EAD) for payload privacy, and Advertising Coding Selection verification via Redlines.",
+      "key_facts": [
+        "5.3: Connection Subrating, Enhanced Connection Update, Advertising Coding Selection",
+        "5.4: PAwR, EAD",
+        "5.3 theme: connection efficiency",
+        "5.4 theme: broadcast + security"
+      ],
+      "expected_citations": ["Core 5.3", "Core 5.4"],
+      "rag_challenge": "Requires reading and synthesizing two version documents; RAG must retrieve and compare chunks from different files.",
+      "tags": ["5.3", "5.4", "version-diff"]
+    },
+    {
+      "id": "Q015",
+      "category": "version_comparison",
+      "difficulty": "medium",
+      "question": "What new features did Bluetooth 5.2 add over 5.1, focusing on audio and transport?",
+      "reference_answer": "BLE 5.2 was the LE Audio release, adding: Isochronous Channels (CIS for unicast, BIS for broadcast) with the LC3 codec; the LE Audio profile stack (BAP, PACS); Enhanced ATT (EATT) for parallel GATT operations; and LE Power Control for dynamic TX power management. BLE 5.1 had focused on Direction Finding (AoA/AoD) and GATT caching — no audio features.",
+      "key_facts": [
+        "5.2 added: CIS, BIS, LC3, EATT, LE Power Control",
+        "5.1 had: Direction Finding, GATT caching",
+        "5.2 is the LE Audio release"
+      ],
+      "expected_citations": ["Core 5.1", "Core 5.2"],
+      "rag_challenge": "Cross-document comparison; RAG may return 5.2 features without the 5.1 baseline context.",
+      "tags": ["5.1", "5.2", "le-audio", "version-diff"]
+    },
+    {
+      "id": "Q016",
+      "category": "version_comparison",
+      "difficulty": "medium",
+      "question": "What security and privacy improvements were made from BLE 6.0 to 6.1?",
+      "reference_answer": "BLE 6.1 introduced randomized RPA rotation intervals via HCI_LE_Set_Resolvable_Private_Address_Timeout_V2, preventing passive timing-based tracking attacks that were possible when RPA rotation was on a fixed schedule. BLE 6.0 had introduced Channel Sounding relay-attack resilience but did not address RPA timing predictability.",
+      "key_facts": [
+        "6.1: randomized RPA rotation (V2 HCI command)",
+        "Prevents timing-based RPA tracking",
+        "6.0 had CS relay-attack protection but not RPA timing fix"
+      ],
+      "expected_citations": ["Core 6.0", "Core 6.1"],
+      "rag_challenge": "Requires comparing security sections across two versions; high synthesis requirement.",
+      "tags": ["6.0", "6.1", "RPA", "privacy", "security"]
+    },
+    {
+      "id": "Q017",
+      "category": "version_comparison",
+      "difficulty": "medium",
+      "question": "How did BLE advertising capacity evolve from version 4.0 to 5.0? What was the practical impact?",
+      "reference_answer": "BLE 4.0 defined Legacy Advertising on 3 primary channels (37/38/39) with 31-byte payloads and 3 PDU types. BLE 5.0 introduced Extended Advertising with secondary channels (0–36), payloads up to 254 bytes, new PDU types (ADV_EXT_IND, AUX_ADV_IND, AUX_CHAIN_IND, AUX_SYNC_IND), and support for 2M and Coded PHYs. The practical impact was 8× broadcast capacity and 4× range (via LE Coded PHY).",
+      "key_facts": [
+        "4.0: 3 channels, 31 bytes, 3 PDU types",
+        "5.0: secondary channels, 254 bytes, new PDU chain",
+        "5.0: 8× broadcast capacity, 4× range"
+      ],
+      "expected_citations": ["Core 4.0", "Core 5.0"],
+      "rag_challenge": "4.0 and 5.0 specs are separate documents; RAG must bridge two source files.",
+      "tags": ["4.0", "5.0", "advertising", "version-diff"]
+    },
+    {
+      "id": "Q018",
+      "category": "version_comparison",
+      "difficulty": "medium",
+      "question": "How did connection interval management evolve from BLE 5.3 to 6.2?",
+      "reference_answer": "BLE 5.3 added Connection Subrating, letting devices skip connection events (effective interval = Connection_Interval × Subrate_Factor × (1 + Continuation_Number)) without renegotiating. BLE 6.2 then pushed in the opposite direction — adding ultra-short intervals down to 375 µs (3 × 125 µs ticks) via HCI_LE_Connection_Rate_Request, enabling sub-millisecond latency for real-time applications. Together they cover the full spectrum: from very infrequent polling to ultra-high frequency burst traffic.",
+      "key_facts": [
+        "5.3: Connection Subrating (effective long intervals, no renegotiation)",
+        "6.2: Short Connection Intervals (min 375 µs, 125 µs ticks)",
+        "Together they span the full interval spectrum"
+      ],
+      "expected_citations": ["Core 5.3", "Core 6.2"],
+      "rag_challenge": "Requires synthesizing two features from two different version documents to show the spectrum story.",
+      "tags": ["5.3", "6.2", "connection-management", "version-diff"]
+    },
+    {
+      "id": "Q019",
+      "category": "cross_version_reasoning",
+      "difficulty": "hard",
+      "question": "A firmware engineer wants to stream 16 kHz mono audio simultaneously to 20 hearing aids using BLE. What minimum Bluetooth version is required, which isochronous stream type should be used, and what profile stack is involved?",
+      "reference_answer": "Minimum version: BLE 5.2 (Isochronous Channels). Stream type: BIS (Broadcast Isochronous Stream) — no pairing needed, supports unlimited receivers. Profile stack: Basic Audio Profile (BAP) for stream control, Broadcast Audio Scan Service (BASS) on receivers, LC3 codec (e.g. 16_1 or 16_2 config for 16 kHz). HAP (Hearing Access Profile, introduced alongside BAP) provides the hearing-aid-specific layer. The LE Audio broadcast corresponds to the Auracast use case.",
+      "key_facts": [
+        "Minimum version: 5.2",
+        "BIS (not CIS — no pairing, unlimited receivers)",
+        "BAP + BASS + HAP profile stack",
+        "LC3 codec",
+        "Auracast pattern"
+      ],
+      "expected_citations": ["Core 5.2"],
+      "rag_challenge": "Requires reasoning across CIS vs BIS choice, profile stack selection, and codec config from multiple spec documents.",
+      "tags": ["5.2", "BIS", "le-audio", "HAP", "Auracast", "multi-hop"]
+    },
+    {
+      "id": "Q020",
+      "category": "cross_version_reasoning",
+      "difficulty": "hard",
+      "question": "Trace the evolution of BLE privacy (RPA and related) from version 4.2 to 6.2.",
+      "reference_answer": "4.2 introduced Resolvable Private Addresses (RPA) with fixed rotation intervals and LE Secure Connections for key exchange privacy. 5.0 added 2M and Coded PHY but no privacy changes. 5.1 added GATT caching — no privacy changes. 5.2–5.4 added LE Power Control, PAwR, EAD (5.4 EAD encrypts advertising payload itself). 6.0 added CS relay-attack resilience. 6.1 was the key privacy update: HCI_LE_Set_Resolvable_Private_Address_Timeout_V2 added randomized RPA rotation, eliminating timing-based tracking. 6.2 added 12 security errata and CS security hardening.",
+      "key_facts": [
+        "4.2: RPA introduced, fixed rotation",
+        "5.4: EAD (payload encryption)",
+        "6.1: randomized RPA rotation (V2 command)",
+        "6.2: 12 security errata, CS hardening"
+      ],
+      "expected_citations": ["Core 4.2", "Core 5.4", "Core 6.1", "Core 6.2"],
+      "rag_challenge": "Requires spanning 5+ version documents and building a coherent timeline — the hardest multi-hop pattern for RAG.",
+      "tags": ["4.2", "5.4", "6.1", "6.2", "RPA", "privacy", "multi-hop"]
+    },
+    {
+      "id": "Q021",
+      "category": "cross_version_reasoning",
+      "difficulty": "hard",
+      "question": "What is the earliest Bluetooth version that supports data lengths greater than 27 bytes per LE packet, and how did this evolve?",
+      "reference_answer": "BLE 4.2 introduced Data Length Extension (DLE), raising the max LL PDU payload from 27 to 251 bytes (with HCI_LE_Set_Data_Length). BLE 5.0 extended this further by adding 2M PHY and Coded PHY, which affect throughput but not the PDU size limit itself. The DLE negotiation procedure uses HCI_LE_Set_Data_Length and the LL_LENGTH_REQ/LL_LENGTH_RSP link-layer procedure.",
+      "key_facts": [
+        "4.2: DLE introduced, max 251 bytes",
+        "HCI_LE_Set_Data_Length command",
+        "LL_LENGTH_REQ / LL_LENGTH_RSP procedure",
+        "5.0 PHYs affect throughput, not PDU size"
+      ],
+      "expected_citations": ["Core 4.2", "Core 5.0"],
+      "rag_challenge": "The DLE limit, the HCI command, and the LL procedure are in different spec volumes.",
+      "tags": ["4.2", "5.0", "DLE", "data-length", "multi-hop"]
+    },
+    {
+      "id": "Q022",
+      "category": "cross_version_reasoning",
+      "difficulty": "hard",
+      "question": "A developer needs BLE connections with an effective interval under 1 ms for a gaming controller. What is the minimum Bluetooth version and what parameters should they configure?",
+      "reference_answer": "BLE 6.2 is required. Use HCI_LE_Connection_Rate_Request to set a connection interval of 3 units × 125 µs = 375 µs. For sub-1ms but above 375 µs targets (e.g. 750 µs), use 6 units. The Supervision_Timeout must be at least 6× the connection interval (so ≥ 2.25 ms for 375 µs intervals). Use 2M PHY (from BLE 5.0) to maximize throughput at these intervals. Note: both sides must support BLE 6.2 for short intervals; a 5.x peer will fall back to standard 7.5 ms minimum.",
+      "key_facts": [
+        "Minimum version: 6.2",
+        "HCI_LE_Connection_Rate_Request",
+        "375 µs = 3 × 125 µs units",
+        "Supervision_Timeout ≥ 6× connection interval",
+        "Both peers must support 6.2 for short intervals"
+      ],
+      "expected_citations": ["Core 6.2"],
+      "rag_challenge": "Requires combining the new 6.2 interval feature, the supervision timeout constraint formula, and the backwards-compatibility caveat from different spec sections.",
+      "tags": ["6.2", "connection-intervals", "6.2", "multi-hop"]
+    },
+    {
+      "id": "Q023",
+      "category": "implementation_hci",
+      "difficulty": "hard",
+      "question": "What is the sequence of HCI commands required to set up a BIS (Broadcast Isochronous Stream) for LE Audio on the source side?",
+      "reference_answer": "1. HCI_LE_Set_Extended_Advertising_Parameters — configure extended advertising\n2. HCI_LE_Set_Extended_Advertising_Data — set BASE (Broadcast Audio Source Endpoint) data\n3. HCI_LE_Set_Extended_Advertising_Enable — start extended advertising\n4. HCI_LE_Set_Periodic_Advertising_Parameters — configure periodic advertising interval\n5. HCI_LE_Set_Periodic_Advertising_Data — set BIG announcement\n6. HCI_LE_Set_Periodic_Advertising_Enable — start periodic advertising\n7. HCI_LE_Create_BIG — create the BIG with ISO interval, NSE, BN, FT parameters\n8. Wait for HCI_LE_Create_BIG_Complete event — contains BIS handles\n9. Send ISO data via HCI ISO Data packets on the BIS handles",
+      "key_facts": [
+        "Extended advertising must be set up first",
+        "Periodic advertising carries the BIG announcement",
+        "HCI_LE_Create_BIG creates the stream",
+        "BIS handles returned in Create_BIG_Complete event",
+        "9-step sequence"
+      ],
+      "expected_citations": ["Core 5.2", "Vol 4, Part E"],
+      "rag_challenge": "The full sequence spans Vol 4 (HCI) and Vol 6 (LE Controller); RAG chunks will return partial sequences.",
+      "tags": ["5.2", "BIS", "HCI", "le-audio", "implementation"]
+    },
+    {
+      "id": "Q024",
+      "category": "implementation_hci",
+      "difficulty": "hard",
+      "question": "What HCI commands configure Connection Subrating on an established BLE 5.3 connection, and what constraints apply to the parameters?",
+      "reference_answer": "Use HCI_LE_Set_Connection_Subrate_Default (before connection) and HCI_LE_Connection_Subrate_Request (on existing connection). Parameters: Subrate_Min (1–500), Subrate_Max (1–500), Max_Latency (0–499), Continuation_Number (0–15), Supervision_Timeout. Constraints: Subrate_Min ≤ Subrate_Max; effective supervision timeout must be ≥ 6× the subrated interval; Max_Latency must be < Subrate_Max × (Max_Latency + 1). The controller may override requested values within these bounds.",
+      "key_facts": [
+        "HCI_LE_Set_Connection_Subrate_Default",
+        "HCI_LE_Connection_Subrate_Request",
+        "Subrate_Min/Max: 1–500",
+        "Continuation_Number: 0–15",
+        "Supervision_Timeout ≥ 6× subrated interval"
+      ],
+      "expected_citations": ["Core 5.3", "Vol 4, Part E"],
+      "rag_challenge": "Parameter constraints and the two HCI commands are in separate spec sections; typical retrieval returns only one command.",
+      "tags": ["5.3", "connection-subrating", "HCI", "implementation"]
+    },
+    {
+      "id": "Q025",
+      "category": "implementation_hci",
+      "difficulty": "hard",
+      "question": "What is the step-by-step HCI sequence to perform LE Secure Connections pairing between two BLE devices?",
+      "reference_answer": "1. Exchange HCI_LE_Set_Event_Mask to enable SMP events\n2. Connection established via HCI_LE_Create_Connection / HCI_LE_Extended_Create_Connection\n3. Host initiates pairing via L2CAP SMP (not HCI directly): SMP Pairing Request / Pairing Response\n4. If Numeric Comparison: HCI_LE_Long_Term_Key_Request_Negative_Reply to reject legacy LTK\n5. SMP Public Key Exchange (P-256 ECDH) — handled by host stack\n6. SMP Confirm / Random exchange\n7. Numeric comparison value displayed — user confirms\n8. SMP DHKey Check exchange\n9. HCI_LE_Long_Term_Key_Request + HCI_LE_Long_Term_Key_Request_Reply with derived LTK\n10. HCI_LE_Start_Encryption — link is now encrypted",
+      "key_facts": [
+        "LESC uses P-256 ECDH in host stack (not controller)",
+        "HCI is only used for LTK injection and encryption start",
+        "SMP runs over L2CAP, not HCI",
+        "HCI_LE_Long_Term_Key_Request_Reply injects LTK",
+        "HCI_LE_Start_Encryption finalizes"
+      ],
+      "expected_citations": ["Core 5.2", "Vol 3, Part H", "Vol 4, Part E"],
+      "rag_challenge": "The SMP vs HCI responsibility split is documented in two separate volumes; RAG almost always conflates them.",
+      "tags": ["security", "LESC", "SMP", "HCI", "pairing", "implementation"]
+    },
+    {
+      "id": "Q026",
+      "category": "implementation_hci",
+      "difficulty": "hard",
+      "question": "What HCI commands are needed to configure LE Power Control after a connection is established in BLE 5.2?",
+      "reference_answer": "5 commands are needed:\n1. HCI_LE_Set_Path_Loss_Reporting_Parameters — set high/low thresholds and hysteresis for each zone\n2. HCI_LE_Set_Path_Loss_Reporting_Enable — start path loss monitoring on a connection handle\n3. HCI_LE_Set_Transmit_Power_Reporting_Enable — enable local and/or remote TX power change events\n4. HCI_LE_Enhanced_Read_Transmit_Power_Level — read current TX power for a PHY on a connection\n5. HCI_LE_Read_Remote_Transmit_Power_Level — request peer's TX power level (async, returns event)\nThe controller fires HCI_LE_Path_Loss_Threshold_Event when zone transitions occur.",
+      "key_facts": [
+        "5 HCI commands for full power control setup",
+        "Separate parameter config and enable commands",
+        "HCI_LE_Path_Loss_Threshold_Event for zone changes",
+        "PHY-specific power reading"
+      ],
+      "expected_citations": ["Core 5.2", "Vol 4, Part E"],
+      "rag_challenge": "5 commands across different spec subsections; high likelihood of partial retrieval.",
+      "tags": ["5.2", "power-control", "HCI", "implementation"]
+    },
+    {
+      "id": "Q027",
+      "category": "edge_cases",
+      "difficulty": "expert",
+      "question": "A BLE 6.2 central tries to establish a 375 µs connection interval with a BLE 5.4 peripheral. What actually happens and why?",
+      "reference_answer": "The connection will fall back to the standard minimum of 7.5 ms (or whatever both sides negotiate). The 125 µs tick granularity and HCI_LE_Connection_Rate_Request are BLE 6.2 features. A BLE 5.4 peripheral's controller does not support the new tick size or the new HCI command. During connection parameter negotiation, both sides advertise their supported parameter ranges; the 5.4 peripheral will reject any interval below 6 units × 1.25 ms = 7.5 ms. The central's Host must detect this and not attempt sub-7.5 ms intervals with a non-6.2 peer.",
+      "key_facts": [
+        "Falls back to 7.5 ms minimum",
+        "5.4 controller does not support 125 µs ticks",
+        "HCI_LE_Connection_Rate_Request is 6.2-only",
+        "Negotiation enforces both-side support",
+        "Host must guard against this"
+      ],
+      "expected_citations": ["Core 6.2"],
+      "rag_challenge": "The backwards-compatibility behavior requires reading the feature introduction section and the negotiation procedure together — high synthesis requirement.",
+      "tags": ["6.2", "connection-intervals", "backwards-compatibility", "edge-case"]
+    },
+    {
+      "id": "Q028",
+      "category": "edge_cases",
+      "difficulty": "expert",
+      "question": "What is the minimum valid supervision timeout when Connection Subrating is active with Subrate_Factor=10 and Connection_Interval=100 ms, and Continuation_Number=1?",
+      "reference_answer": "Effective_Interval = Connection_Interval × Subrate_Factor × (1 + Continuation_Number) = 100 ms × 10 × 2 = 2000 ms. The supervision timeout must be at least 6× the effective interval: 6 × 2000 ms = 12,000 ms (12 seconds). It must also be ≥ 100 ms per the base BLE rule. So minimum Supervision_Timeout = 12,000 ms.",
+      "key_facts": [
+        "Formula: Effective = CI × SF × (1 + CN)",
+        "100 × 10 × 2 = 2000 ms",
+        "Supervision_Timeout ≥ 6 × Effective_Interval",
+        "Minimum = 12,000 ms"
+      ],
+      "expected_citations": ["Core 5.3"],
+      "rag_challenge": "Requires combining the stacking formula with the timeout constraint rule, both from different spec subsections.",
+      "tags": ["5.3", "connection-subrating", "supervision-timeout", "edge-case", "formula"]
+    },
+    {
+      "id": "Q029",
+      "category": "edge_cases",
+      "difficulty": "expert",
+      "question": "In BLE 6.1, if a device is actively connected and its RPA rotation interval fires (randomized), does the device immediately rotate its RPA and does the peer connection break?",
+      "reference_answer": "No, an active connection does not break when the RPA rotation timer fires. BLE devices use their current RPA only for advertising and scanning while not connected; during an established connection, the device address used for that connection is fixed for the connection lifetime. The new randomized rotation interval affects the timing of the NEXT advertising or scanning session after the connection terminates, not the in-connection address.",
+      "key_facts": [
+        "Active connections are not affected by RPA rotation",
+        "Connection address is fixed for connection lifetime",
+        "Rotation affects future advertising/scanning only",
+        "No connection break"
+      ],
+      "expected_citations": ["Core 6.1"],
+      "rag_challenge": "The scoping of RPA rotation to non-connected operation is a subtle point found only in the privacy and connection procedure sections read together.",
+      "tags": ["6.1", "RPA", "privacy", "edge-case", "connections"]
+    },
+    {
+      "id": "Q030",
+      "category": "edge_cases",
+      "difficulty": "expert",
+      "question": "A BLE device supports both LE Coded PHY (S=8) and 2M PHY. For a latency-critical connection using BLE 6.2's 375 µs interval, which PHY should be preferred and why?",
+      "reference_answer": "2M PHY should be used. At 375 µs intervals, the connection event window is extremely tight. LE Coded PHY S=8 has 8× forward error correction overhead, making it ~8× slower than 1M PHY and unsuitable for sub-ms intervals (a single BLE packet at S=8 on 1M PHY takes ~720 µs for a 27-byte payload — longer than the entire connection interval). 2M PHY doubles raw throughput versus 1M PHY, fitting more data into the short interval. LE Coded PHY is designed for range extension (up to 4× range), not for low-latency high-frequency connections.",
+      "key_facts": [
+        "Use 2M PHY for 375 µs intervals",
+        "Coded S=8 PDU duration exceeds 375 µs for non-trivial payloads",
+        "2M PHY = 2× throughput vs 1M",
+        "Coded PHY is for range, not latency"
+      ],
+      "expected_citations": ["Core 6.2", "Core 5.0"],
+      "rag_challenge": "Requires combining PHY timing calculations from the PHY spec section with the new 6.2 interval constraints — cross-version, cross-volume reasoning.",
+      "tags": ["6.2", "5.0", "PHY", "2M", "coded-PHY", "edge-case", "latency"]
+    }
+  ]
+}
