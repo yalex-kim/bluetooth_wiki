@@ -470,4 +470,4 @@ Events generated asynchronously by the Controller; Host must process them on the
 
 ---
 
-*Source: [Core 6.2, Vol 4, Part E, §7] and [HCI.ICS.p30]*
+*Source: [Core 6.2, Vol 4, Part E, §7](../../sources/specs/6.2/Core_v6.2.md) and [HCI.ICS.p30](../../sources/specs/conformance-profiles/HCI.ICS.p30.md)*
