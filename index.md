@@ -72,6 +72,7 @@
 | [hci-commands](wiki/reference/hci-commands.md) | HCI command lookup: opcodes, key parameters, events, version introduced — LE + BR/EDR |
 | [hci-sequences](wiki/reference/hci-sequences.md) | Step-by-step HCI flows: init, connection, pairing/bonding, GATT discovery, CIS/BIS setup |
 | [ble-parameters](wiki/reference/ble-parameters.md) | Quick-reference table of all BLE tunable parameters with ranges, units, typical values, and formulas |
+| [error-codes](wiki/reference/error-codes.md) | HCI status codes (0x00–0x48) and ATT error codes (0x01–0xFF) with names, meanings, and developer notes |
 
 ---
 
@@ -105,6 +106,8 @@
 | HCI commands / opcodes / parameters | `wiki/reference/hci-commands.md` |
 | HCI command sequences / flows / setup | `wiki/reference/hci-sequences.md` |
 | BLE parameter ranges / values / formulas | `wiki/reference/ble-parameters.md` |
+| HCI error codes / status codes | `wiki/reference/error-codes.md` |
+| ATT error codes / GATT errors | `wiki/reference/error-codes.md` |
 | Advertising / ADV PDU / AD types / PAwR | `wiki/concepts/advertising.md` |
 | Connection parameters / subrating / DLE / PHY | `wiki/concepts/connection-management.md` |
 | MAP / message access / car messaging | `wiki/concepts/profiles-and-services.md` |

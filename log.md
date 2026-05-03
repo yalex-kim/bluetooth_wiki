@@ -5,6 +5,27 @@
 
 ---
 
+## [2026-05-04] CREATE — Error Code Reference page
+
+**Operation**: CREATE
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Sources read**: `sources/specs/6.2/Core_v6.2.md` (Vol 1, Part F Table 1.1 lines ~7812; Vol 3, Part F §3.4.1 lines ~27544)
+
+### Pages created
+- `wiki/reference/error-codes.md` — HCI status codes and ATT error codes quick-reference:
+  - Full HCI error code table 0x00–0x48 with exact names verified from Core_v6.2.md Table 1.1
+  - Key verified corrections: 0x3F = "Previously used" (old "MAC Connection Failed" name retired in 6.2); 0x48 = "Insufficient Channels" (new in 6.2)
+  - ATT error code table 0x01–0x13 (defined), 0x80–0x9F (application errors), 0xE0–0xFF (Common Profile/Service errors)
+  - Key ATT corrections: 0x0C = "Encryption Key Size Too Short"; 0x0D = "Invalid Attribute Value Length"
+  - "Frequently Seen HCI Codes" developer notes section
+  - "GATT-Level Errors" practical patterns section
+
+### Index updates
+- `index.md`: Added error-codes.md to Reference Pages section; added 2 routing entries for HCI error codes and ATT error codes
+
+---
+
 ## [2026-05-04] CREATE — 4 new developer-focused wiki pages
 
 **Operation**: CREATE
