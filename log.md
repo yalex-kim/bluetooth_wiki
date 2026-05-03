@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-04] CREATE — 4 new developer-focused wiki pages
+
+**Operation**: CREATE
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Sources read**: `sources/specs/6.2/Core_v6.2.md`, `wiki/reference/hci-commands.md`, `wiki/versions/core-spec-5.3.md`, `wiki/versions/core-spec-5.4.md`, `sources/specs/profiles/BAP_v1.0.2.md`
+
+### Pages created
+
+- `wiki/concepts/advertising.md` (264 lines) — Legacy vs. Extended advertising, all ADV PDU types with flags, Extended PDU types incl. ADV_DECISION_IND (6.0), AD Types table (15+ entries with hex values), Periodic Advertising, PAwR parameters (Response_Slot_Spacing verified at 0.125 ms resolution), HCI command flows for legacy/extended/periodic setup, advertising interval guide by use case, version history
+
+- `wiki/concepts/connection-management.md` (421 lines) — Connection lifecycle state diagram, connection parameter table with constraint formulas (verified from Core 6.2 §7.8.12), both L2CAP and LL parameter update flows, Connection Subrating 5.3+ (stacking formula verified), Short Connection Intervals 6.2+ (125 µs ticks, HCI_LE_Connection_Rate_Request), LE Power Control 5.2+ (path loss zones, all 5 HCI commands), Supervision Timeout + reconnection flows, DLE 4.2+, PHY selection 5.0+, version history
+
+- `wiki/reference/hci-sequences.md` (393 lines) — 8 complete HCI command sequences: controller init (10 steps), BLE connection establishment (both sides), LE Secure Connections pairing (10 steps, SMP vs HCI clarified), re-encryption on reconnect, GATT discovery + read/write/subscribe (ATT PDU framing explained), CIS setup, BIS setup, connection parameter update; plus Tips and Common Pitfalls section
+
+- `wiki/reference/ble-parameters.md` (~220 lines) — Advertising, Scanning, Connection, Subrating, DLE, PHY, Privacy/RPA, LE Audio/ISO, Channel Sounding parameter tables with raw ranges, units, usable ranges, typical values; LC3 config table (8_1 through 48_6); Supervision_Timeout and subrated formulas; approximate throughput calculations; Parameter Selection Guide by use case
+
+### Index updates
+- `index.md`: Added advertising.md and connection-management.md to Concept Pages; added hci-sequences.md and ble-parameters.md to Reference Pages; added 5 routing entries in Query Routing Guide
+
+---
+
 ## [2026-05-04] CREATE — HCI Command Reference page
 
 **Operation**: CREATE

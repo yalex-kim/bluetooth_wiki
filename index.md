@@ -48,6 +48,8 @@
 | [le-audio](wiki/concepts/le-audio.md) | LC3 codec, Isochronous Channels (CIS/BIS), BAP/CAP/VCP/MCP/CCP/TMAP/HAP/PBP profiles, Auracast |
 | [direction-finding](wiki/concepts/direction-finding.md) | AoA/AoD, CTE (Constant Tone Extension), IQ sampling, antenna arrays (5.1+) |
 | [channel-sounding](wiki/concepts/channel-sounding.md) | PBR/RTT ranging, CS step modes 0–3, T_PM, HCI commands, relay attack resilience (6.0+) |
+| [advertising](wiki/concepts/advertising.md) | Legacy vs. Extended advertising, ADV PDU types, AD type table, Periodic Advertising, PAwR (4.0–6.2) |
+| [connection-management](wiki/concepts/connection-management.md) | Connection parameters, subrating, short intervals (6.2), power control, reconnection, DLE, PHY selection |
 
 ---
 
@@ -68,6 +70,8 @@
 | Page | Summary |
 |------|---------|
 | [hci-commands](wiki/reference/hci-commands.md) | HCI command lookup: opcodes, key parameters, events, version introduced — LE + BR/EDR |
+| [hci-sequences](wiki/reference/hci-sequences.md) | Step-by-step HCI flows: init, connection, pairing/bonding, GATT discovery, CIS/BIS setup |
+| [ble-parameters](wiki/reference/ble-parameters.md) | Quick-reference table of all BLE tunable parameters with ranges, units, typical values, and formulas |
 
 ---
 
@@ -99,6 +103,10 @@
 | GATT / ATT / services | `wiki/concepts/profiles-and-services.md` |
 | A2DP / HFP / AVRCP / HID profiles | `wiki/concepts/profiles-and-services.md` |
 | HCI commands / opcodes / parameters | `wiki/reference/hci-commands.md` |
+| HCI command sequences / flows / setup | `wiki/reference/hci-sequences.md` |
+| BLE parameter ranges / values / formulas | `wiki/reference/ble-parameters.md` |
+| Advertising / ADV PDU / AD types / PAwR | `wiki/concepts/advertising.md` |
+| Connection parameters / subrating / DLE / PHY | `wiki/concepts/connection-management.md` |
 | MAP / message access / car messaging | `wiki/concepts/profiles-and-services.md` |
 | PBAP / phone book access / contacts | `wiki/concepts/profiles-and-services.md` |
 | BAP / CAP / TMAP / HAP / PBP (LE Audio) | `wiki/concepts/le-audio.md` |
