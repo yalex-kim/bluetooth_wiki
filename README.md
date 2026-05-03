@@ -51,6 +51,13 @@ bluetooth_wiki/
 │       ├── conformance-profiles/ ← ICS (Implementation Conformance Statement) docs
 │       └── test-suites/         ← TS (Test Suite) docs
 │
+├── eval/
+│   ├── dataset.json                ← 30-question evaluation dataset (RAG vs LLM-Wiki)
+│   ├── rubric.md                   ← Scoring rubric (5 dimensions + difficulty weights)
+│   ├── judge_prompt.md             ← LLM-as-Judge prompt + Python run_evaluation() helper
+│   ├── results_wiki.json           ← LLM-Wiki baseline results (95.8%, 2026-05-04)
+│   └── report.html                 ← Visual evaluation dashboard
+│
 ├── scripts/
 │   ├── download_spec_documents.py  ← Download PDFs from bluetooth.com
 │   ├── convert_to_md.py            ← Convert PDF → Markdown + figure PNGs via PyMuPDF
@@ -76,6 +83,26 @@ bluetooth_wiki/
 | [6.2](wiki/versions/core-spec-6.2.md) | 2025-11 | Shorter Connection Intervals (375 µs), LE UTP, CS security hardening | PDF + MD ✓ |
 
 Version diffs: [5.0→5.1](wiki/version-diff/diff-5.0-to-5.1.md) · [5.1→5.2](wiki/version-diff/diff-5.1-to-5.2.md) · [5.2→5.3](wiki/version-diff/diff-5.2-to-5.3.md) · [5.3→5.4](wiki/version-diff/diff-5.3-to-5.4.md) · [5.4→6.0](wiki/version-diff/diff-5.4-to-6.0.md) · [6.0→6.1](wiki/version-diff/diff-6.0-to-6.1.md) · [6.1→6.2](wiki/version-diff/diff-6.1-to-6.2.md)
+
+---
+
+## Evaluation
+
+The `eval/` directory contains a quality-measurement suite for comparing LLM-Wiki against RAG-based systems.
+
+| File | Purpose |
+|------|---------|
+| `dataset.json` | 30 test questions across 6 categories with reference answers and key facts |
+| `rubric.md` | Scoring criteria: accuracy, completeness, citation, hallucination penalty, usability |
+| `judge_prompt.md` | LLM-as-Judge prompt + `run_evaluation()` Python helper for automated scoring |
+| `results_wiki.json` | LLM-Wiki baseline: **95.8%** overall (521.5 / 544.5 weighted, 2026-05-04) |
+| `report.html` | Visual dashboard — open in browser to see category breakdown and improvement areas |
+
+To run a RAG comparison: collect answers from your RAG system for all 30 questions, call `run_evaluation()` from `judge_prompt.md`, and save results as `eval/results_rag.json`.
+
+---
+
+> **Maintenance rule**: Before committing any wiki changes, update `README.md` (Coverage table, Structure section) and `CLAUDE.md` (Directory Structure map, affected operation steps) to keep them in sync with the actual repo.
 
 ---
 

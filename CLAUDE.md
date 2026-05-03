@@ -23,7 +23,12 @@ Layer 2 — wiki/                   LLM-maintained markdown pages (summaries, di
 Layer 3 — CLAUDE.md (this file)   Schema: structure, conventions, and maintainer workflows
 ```
 
-**Rule**: The LLM reads Layer 1 as the source of truth. It writes and updates Layer 2. It never modifies Layer 1 or this file.
+**Rule**: The LLM reads Layer 1 as the source of truth. It writes and updates Layer 2. It never modifies Layer 1.
+
+> **Before committing any wiki changes**, update `README.md` and `CLAUDE.md` to reflect the new state:
+> - `README.md` — update the Structure section, Quick Start examples, or any descriptive text that references changed pages or directories.
+> - `CLAUDE.md` — update the Directory Structure map, Core Operations steps, or any rule that the change affects.
+> These two files must stay in sync with the actual repo at all times.
 
 ---
 
@@ -69,6 +74,12 @@ bluetooth_wiki/
 │       └── X.Y/
 │           ├── Core_vX.Y.md           ← Full spec text converted via PyMuPDF
 │           └── Core_vX.Y_images/      ← Extracted figure PNGs (Vol{N}_Part{P}_Figure{X_Y}.png)
+├── eval/
+│   ├── dataset.json                   ← 30-question test set for RAG vs LLM-Wiki comparison
+│   ├── rubric.md                      ← 5-dimension scoring rubric with difficulty weights
+│   ├── judge_prompt.md                ← LLM-as-Judge prompt + Python run_evaluation() helper
+│   ├── results_wiki.json              ← LLM-Wiki baseline scores (95.8% overall, 2026-05-04)
+│   └── report.html                    ← Visual evaluation dashboard
 ├── scripts/
 │   ├── download_spec_documents.py     ← Downloads PDFs from bluetooth.com
 │   ├── convert_to_md.py               ← Converts PDFs → markdown + figure PNGs via PyMuPDF
@@ -100,6 +111,7 @@ When a new Bluetooth Core Spec PDF has been converted to markdown and placed in 
 4. **Update** `index.md` to include the new page.
 5. **Update** any affected concept pages in `wiki/concepts/`.
 6. **Append** to `log.md` with timestamp and summary of changes.
+7. **Update** `README.md` (Coverage table, Structure section if directories changed) and `CLAUDE.md` (Directory Structure map, any affected rules or operation steps).
 
 ### 4.2 QUERY — Answering user questions
 
