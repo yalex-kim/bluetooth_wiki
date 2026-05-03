@@ -5,6 +5,84 @@
 
 ---
 
+## [2026-05-03] INGEST — 10 new profile specs ingested (BAP, CAP, VCP, MCP, CCP, HAP, PBP, TMAP, MAP, PBAP)
+
+**Operation**: INGEST
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Sources read**: `sources/specs/profiles/BAP_v1.0.2.md`, `CAP_v1.0.1.md`, `VCP_v1.0.md`, `MCP_v1.0.md`, `CCP_v1.0.md`, `HAP_v1.0.1.md`, `PBP_v1.0.2.md`, `TMAP_v1.0.1-1.md`, `MAP_v1.4.3-3.md`, `PBAP_v1.2.3.md`
+
+### Files added/converted
+
+10 profile spec PDFs converted to MD via `convert_to_md.py --all-pdfs` (run in previous session):
+- `sources/specs/profiles/BAP_v1.0.2.md` (65 figures)
+- `sources/specs/profiles/CAP_v1.0.1.md` (1 figure)
+- `sources/specs/profiles/CCP_v1.0.md` (1 figure)
+- `sources/specs/profiles/HAP_v1.0.1.md` (1 figure)
+- `sources/specs/profiles/MAP_v1.4.3-3.md` (26 figures)
+- `sources/specs/profiles/MCP_v1.0.md` (1 figure)
+- `sources/specs/profiles/PBAP_v1.2.3.md` (7 figures)
+- `sources/specs/profiles/PBP_v1.0.2.md` (2 figures)
+- `sources/specs/profiles/TMAP_v1.0.1-1.md` (5 figures)
+- `sources/specs/profiles/VCP_v1.0.md` (3 figures)
+
+10 ICS conformance docs added to `sources/specs/conformance-profiles/`:
+- BAP.ICS.p11, CAP.ICS.p7, CCP.ICS.p4, HAP.ICS.p6, MAP.ICS.p14, MCP.ICS.p4, PBAP.ICS.p13, PBP.ICS.p4-2, TMAP.ICS.p4, VCP.ICS.p6
+
+10 TS test suite docs added to `sources/specs/test-suites/`:
+- BAP.TS.p11-1, CAP.TS.p7, CCP.TS_.p3, HAP.TS_.p2-1, MAP.TS_.p15, MCP.TS_.p4, PBAP.TS.p22, PBP.TS.p4, TMAP.TS_.p3, VCP.TS_.p4
+
+### Pages updated
+
+- `wiki/concepts/le-audio.md` — "LE Audio Middleware and Profiles" section fully rewritten:
+  - BAP v1.0.2 (2024-10-01): 6 roles (Unicast/Broadcast Client/Server, Scan Delegator/Broadcast Assistant), ASCS/PACS/BASS services
+  - CAP v1.0.1 (2025-02-11): 3 roles (Initiator/Acceptor/Commander), CSIP coordination
+  - VCP v1.0 (2020-12-15): Volume Renderer/Controller, VCS/VOCS/AICS services
+  - MCP v1.0 (2021-03-09): Server/Client, GMCS/MCS, OTP, playback controls
+  - CCP v1.0 (2021-03-09): Server/Client, GTBS/TBS, call states, call operations
+  - HAP v1.0.1 (2024-10-01): 4 roles (HA/HAUC/HARC/IAC), HAS service, binaural coordination
+  - PBP v1.0.2 (2025-11-03): PBS/PBK/PBA, SQ/HQ configs, Auracast broadcast
+  - TMAP v1.0.1 (2025-02-11): 6 roles (CG/CT/UMS/UMR/BMS/BMR), mandatory LC3 configs
+
+- `wiki/concepts/profiles-and-services.md` — Added two new BR/EDR profile sections:
+  - MAP v1.4.3: MSE/MCE roles, GOEP/OBEX/L2CAP stack, 5 message types (EMAIL/SMS/MMS/IM), key operations (GetFolderListing, GetMessagesListing, GetMessage, PushMessage, SetMessageStatus, SendEvent), bMessage format, version history
+  - PBAP v1.2.3: PSE/PCE roles, GOEP/OBEX/L2CAP stack, 7 phone book objects (pb/ich/och/mch/cch/spd/fav), vCard 2.1/3.0 format, v1.2 features (folder version counters, vCard selecting, UCI, contact UIDs), version history
+
+- `index.md`:
+  - Updated `profiles-and-services.md` description to include MAP and PBAP
+  - Updated `le-audio.md` description to include VCP/MCP/CCP
+  - Updated `sources/specs/profiles/` source entry with all 14 profiles
+  - Added routing entries for MAP/PBAP and BAP/CAP/VCP/MCP/CCP/TMAP/HAP/PBP
+
+---
+
+## [2026-05-03] INGEST — BR/EDR profile specs ingested (A2DP, HFP, AVRCP, HID)
+
+**Operation**: INGEST
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Sources read**: `sources/specs/profiles/A2DP_v1.4.1.md`, `sources/specs/profiles/HFP_v1.10.md`, `sources/specs/profiles/AVRCP_v1.6.3.md`, `sources/specs/profiles/HID_v1.1.2.md`
+
+### Files added/converted
+- 4 profile spec PDFs converted to MD via `convert_to_md.py --all-pdfs`:
+  - `sources/specs/profiles/A2DP_v1.4.1.md` (1,335 lines, 19 figures)
+  - `sources/specs/profiles/AVRCP_v1.6.3.md` (4,725 lines)
+  - `sources/specs/profiles/HFP_v1.10.md` (2,877 lines)
+  - `sources/specs/profiles/HID_v1.1.2.md` (2,061 lines)
+- 4 ICS + 4 TS profile PDFs also converted (A2DP, AVRCP, HFP, HID11)
+
+### Pages updated
+- `wiki/concepts/profiles-and-services.md` — Full rewrite with source-verified content:
+  - A2DP v1.4.1: SRC/SNK roles, AVDTP stack, SBC parameters (bitpool table, max bit rate 320/512 kbps), AAC object types, version history
+  - HFP v1.10: AG/HF roles, CVSD/mSBC/LC3-SWB codec table with mandatory conditions, SCO/eSCO link configurations (D0-S4-T1/T2), feature table, version history (v1.9 Super Wideband, v1.10 Call Forwarding + Call Duration)
+  - AVRCP v1.6.3: CT/TG roles, 4-category device model, dual AVCTP channels (AV/C + Browsing), BIP Cover Art, key operations (SetAbsoluteVolume, RegisterNotification, GetElementAttributes), version history
+  - HID v1.1.2: Device/Host roles, dual L2CAP channels (PSM 0x0011 control + 0x0013 interrupt), 3 report types, Report/Boot Protocol modes, Virtual Cable concept, version history
+
+### Index updates
+- `index.md`: Updated profiles-and-services.md description; added profiles/ source entry; added A2DP/HFP/AVRCP/HID routing entry
+
+---
+
 ## [2026-05-03] INGEST — Concept pages enriched from source PDFs; source structure reorganized
 
 **Operation**: INGEST / LINT

@@ -119,31 +119,50 @@ def find_figure_bounds(page, caption_y0: float, min_y: float, fitz,
                        drawings=None):
     """
     Return (x0, y0, x1, y1) of the tightest bounding box around the figure
-    (vector-drawing cluster) that sits above *caption_y0*.
+    (vector-drawing cluster or embedded raster image) above *caption_y0*.
 
-    Strategy:
-    - Collect all drawings above the caption within [min_y, caption_y0].
-      *min_y* is normally HEADER_Y for the first figure on a page, or the
-      bottom of the previous figure's caption for subsequent figures — this
-      prevents the cluster from reaching into the area of the figure above.
-    - Walk downward from the drawing with the highest bottom (closest to caption),
-      accumulating a cluster until a vertical gap > 50 pt is seen.
-    - Use the cluster's union bbox for both x and y bounds (tight crop).
-    - Falls back to full content width if no drawings are found.
-
-    The x bounds eliminate the wide blank margins that surround the figure
-    on a standard letter/A4 page.
-
-    Pass *drawings* (from page.get_drawings()) to reuse a cached result
-    when this function is called multiple times on the same page.
+    Strategy (in order):
+    1. Vector drawings: collect non-decorative drawings in [min_y, caption_y0],
+       cluster them from the bottom up (stopping at a gap > 50 pt), and return
+       the cluster's union bbox.  Decorative elements — thin horizontal rules and
+       full-column-width heading backgrounds — are excluded so that section
+       heading styling in profile PDFs does not inflate the clip region.
+    2. Raster images: if no qualifying vector drawings exist, look for embedded
+       raster images (page.get_image_info) in [min_y, caption_y0] and use the
+       tightest bbox around them.  This handles profile PDFs that embed figures
+       as bitmaps rather than vector paths.
+    3. Full-region fallback: used only when neither drawings nor raster images
+       are found.
     """
     pw = page.rect.width
 
+    # ── 1. Vector drawings ────────────────────────────────────────────────────
     if drawings is None:
         try:
             drawings = page.get_drawings()
         except Exception:
-            return (0.0, header_y, pw, caption_y0 - 2)
+            drawings = []
+
+    def _decorative(rx0, ry0, rx1, ry1) -> bool:
+        """
+        True if this drawing element is decorative rather than part of a figure.
+        - Thin horizontal rule: height < 3 pt AND width > 30% of page.
+        - Heading/section background: height < 20 pt AND width > 75% of page.
+        - Narrow math/formula stroke: width < 5 pt (fraction bars, bracket stems).
+          These appear when formula text is typeset with vector strokes and would
+          otherwise pull the figure bounds up into surrounding body text.
+        """
+        w = rx1 - rx0
+        h = max(ry1 - ry0, 0.01)
+        if h < 3 and w > pw * 0.30:
+            return True
+        if h < 20 and w > pw * 0.75:
+            return True
+        if w < 5:               # narrow stroke (fraction bar stem, bracket)
+            return True
+        if h < 1 and w < 20:   # zero-height formula element (fraction bar)
+            return True
+        return False
 
     above = []
     for d in drawings:
@@ -157,36 +176,71 @@ def find_figure_bounds(page, caption_y0: float, min_y: float, fitz,
             ry1 = _r(r, "y1", 3)
         except (IndexError, TypeError, ValueError):
             continue
-        # Only drawings strictly above the caption and within the content zone.
-        # Do NOT filter by prev_text_y — figure labels (text blocks) inside
-        # the diagram would otherwise push prev_text_y into the figure area.
-        if ry1 <= caption_y0 and ry0 >= min_y:
+        if ry1 <= caption_y0 and ry0 >= min_y and not _decorative(rx0, ry0, rx1, ry1):
             above.append((rx0, ry0, rx1, ry1))
 
-    if not above:
-        return (0.0, min_y, pw, caption_y0 - 2)
+    if above:
+        # Sort by y1 descending: drawing closest to caption comes first.
+        above.sort(key=lambda r: r[3], reverse=True)
 
-    # Sort by y1 descending: drawing closest to caption comes first.
-    above.sort(key=lambda r: r[3], reverse=True)
+        # If the nearest vector element is more than 200 pt above the caption,
+        # body text fills the space between it and the figure (e.g. a table
+        # rendered at the top of the page far above the actual figure).  In
+        # that case the vector path would capture unrelated table grid lines;
+        # clear the list so we fall through to the raster-image fallback.
+        if caption_y0 - above[0][3] > 200:
+            above = []
 
-    GAP = 50  # pt — gap larger than this means a separate figure above
-    cluster = [above[0]]
-    walk_top = above[0][1]   # y0 of the topmost rect in the cluster so far
+    if above:
+        GAP = 50  # pt — gap larger than this means a separate figure above
+        cluster = [above[0]]
+        walk_top = above[0][1]   # y0 of the topmost rect in the cluster so far
 
-    for i in range(1, len(above)):
-        cx0, cy0, cx1, cy1 = above[i]
-        if walk_top - cy1 > GAP:
-            break
-        cluster.append(above[i])
-        walk_top = min(walk_top, cy0)
+        for i in range(1, len(above)):
+            cx0, cy0, cx1, cy1 = above[i]
+            if walk_top - cy1 > GAP:
+                break
+            cluster.append(above[i])
+            walk_top = min(walk_top, cy0)
 
-    MARGIN = 8   # pt padding around the tight bbox (sides + bottom only)
-    bx0 = max(min(r[0] for r in cluster) - MARGIN, 0.0)
-    by0 = max(min(r[1] for r in cluster), min_y)   # clamp to min_y to avoid overlap with previous figure
-    bx1 = min(max(r[2] for r in cluster) + MARGIN, pw)
-    by1 = caption_y0 - 2
+        MARGIN = 8   # pt padding around the tight bbox (sides + bottom only)
+        bx0 = max(min(r[0] for r in cluster) - MARGIN, 0.0)
+        by0 = max(min(r[1] for r in cluster), min_y)
+        bx1 = min(max(r[2] for r in cluster) + MARGIN, pw)
+        by1 = caption_y0 - 2
+        return (bx0, by0, bx1, by1)
 
-    return (bx0, by0, bx1, by1)
+    # ── 2. Raster image fallback ──────────────────────────────────────────────
+    # Some profile PDFs embed figures as bitmaps rather than vector drawings.
+    # get_image_info() returns each image's bounding box in page coordinates.
+    try:
+        img_infos = page.get_image_info()
+    except Exception:
+        img_infos = []
+
+    img_above = []
+    for info in img_infos:
+        bbox = info.get("bbox")
+        if not bbox:
+            continue
+        try:
+            ix0, iy0, ix1, iy1 = (float(bbox[0]), float(bbox[1]),
+                                   float(bbox[2]), float(bbox[3]))
+        except (TypeError, ValueError, IndexError):
+            continue
+        if iy1 <= caption_y0 and iy0 >= min_y:
+            img_above.append((ix0, iy0, ix1, iy1))
+
+    if img_above:
+        MARGIN = 8
+        bx0 = max(min(r[0] for r in img_above) - MARGIN, 0.0)
+        by0 = max(min(r[1] for r in img_above), min_y)
+        bx1 = min(max(r[2] for r in img_above) + MARGIN, pw)
+        by1 = caption_y0 - 2
+        return (bx0, by0, bx1, by1)
+
+    # ── 3. Full-region fallback ───────────────────────────────────────────────
+    return (0.0, min_y, pw, caption_y0 - 2)
 
 
 def render_region(page, x0: float, y0: float, x1: float, y1: float,
@@ -281,6 +335,10 @@ def process_page(page, p_idx: int, vol_part_map: dict,
         for i, b in enumerate(_cap_blocks)
     ]
 
+    # Pages with 3+ figure captions are Table-of-Figures pages; don't render
+    # images from them — the actual figures appear later in the document.
+    _IS_TOF_PAGE = len(_cap_blocks) >= 3
+
     _page_drawings = None
     _fig_zones = []   # list of (y0, y1) bands to suppress content inside
     for cap_y0, min_y in _cap_info:
@@ -289,9 +347,9 @@ def process_page(page, p_idx: int, vol_part_map: dict,
                 _page_drawings = page.get_drawings()
             except Exception:
                 _page_drawings = []
-            _, fy0, _, fy1 = find_figure_bounds(
-                page, cap_y0, min_y, fitz, _page_drawings)
-            _fig_zones.append((fy0, fy1))
+        _, fy0, _, fy1 = find_figure_bounds(
+            page, cap_y0, min_y, fitz, _page_drawings)
+        _fig_zones.append((fy0, fy1))
 
     def _in_figure(by0, by1):
         """True if the block [by0, by1] sits entirely inside a figure zone."""
@@ -373,7 +431,7 @@ def process_page(page, p_idx: int, vol_part_map: dict,
             else:
                 fname = f"Figure{safe_num}.png"
             img_path = img_dir / fname
-            if not img_path.exists():
+            if not _IS_TOF_PAGE and not img_path.exists():
                 # Use the per-caption min_y so we don't overlap the figure above
                 min_y = next(
                     (my for cy, my in _cap_info if abs(cy - by0) < 2),

@@ -44,8 +44,8 @@
 | [ble-architecture](wiki/concepts/ble-architecture.md) | BLE protocol stack: PHY, LL, HCI, L2CAP, ATT, GATT, GAP, SM |
 | [classic-bluetooth](wiki/concepts/classic-bluetooth.md) | BR/EDR: piconets, scatternets, profiles, audio (SCO/eSCO) |
 | [security](wiki/concepts/security.md) | Pairing, bonding, LE Secure Connections, privacy, encrypted advertising |
-| [profiles-and-services](wiki/concepts/profiles-and-services.md) | GATT profiles, common profiles (HID, HRS, BAS, etc.), service discovery |
-| [le-audio](wiki/concepts/le-audio.md) | LC3 codec, Isochronous Channels (CIS/BIS), BAP/CAP/TMAP/HAP profiles, Auracast |
+| [profiles-and-services](wiki/concepts/profiles-and-services.md) | BR/EDR profiles (A2DP v1.4.1, HFP v1.10, AVRCP v1.6.3, HID v1.1.2, MAP v1.4.3, PBAP v1.2.3) with full source citations; GATT services and LE Audio profile overview |
+| [le-audio](wiki/concepts/le-audio.md) | LC3 codec, Isochronous Channels (CIS/BIS), BAP/CAP/VCP/MCP/CCP/TMAP/HAP/PBP profiles, Auracast |
 | [direction-finding](wiki/concepts/direction-finding.md) | AoA/AoD, CTE (Constant Tone Extension), IQ sampling, antenna arrays (5.1+) |
 | [channel-sounding](wiki/concepts/channel-sounding.md) | PBR/RTT ranging, CS step modes 0–3, T_PM, HCI commands, relay attack resilience (6.0+) |
 
@@ -57,8 +57,9 @@
 |------|-------------|
 | [sources/README.md](sources/README.md) | How to download and convert Bluetooth spec PDFs |
 | sources/specs/X.Y/ | Core Spec PDFs + PyMuPDF-converted markdown + extracted figure images |
-| sources/specs/conformance-profiles/ | ICS (Implementation Conformance Statement) docs for all protocols |
+| sources/specs/conformance-profiles/ | ICS (Implementation Conformance Statement) docs for all protocols (A2DP, AVRCP, GAP, GATT, HCI, HFP, HID, LL, SM, etc.) |
 | sources/specs/test-suites/ | TS (Test Suite) docs + figure images for all protocols |
+| sources/specs/profiles/ | Profile specification MDs: A2DP v1.4.1, AVRCP v1.6.3, HFP v1.10, HID v1.1.2, MAP v1.4.3, PBAP v1.2.3, BAP v1.0.2, CAP v1.0.1, VCP v1.0, MCP v1.0, CCP v1.0, HAP v1.0.1, PBP v1.0.2, TMAP v1.0.1 |
 
 ---
 
@@ -88,4 +89,9 @@
 | PAwR / broadcast updates | `core-spec-5.4.md`, `diff-5.3-to-5.4.md` |
 | Security / pairing / bonding | `wiki/concepts/security.md` |
 | GATT / ATT / services | `wiki/concepts/profiles-and-services.md` |
+| A2DP / HFP / AVRCP / HID profiles | `wiki/concepts/profiles-and-services.md` |
+| MAP / message access / car messaging | `wiki/concepts/profiles-and-services.md` |
+| PBAP / phone book access / contacts | `wiki/concepts/profiles-and-services.md` |
+| BAP / CAP / TMAP / HAP / PBP (LE Audio) | `wiki/concepts/le-audio.md` |
+| VCP / MCP / CCP (audio control, LE) | `wiki/concepts/le-audio.md` |
 | BLE vs Classic Bluetooth | `wiki/overview.md`, `wiki/concepts/classic-bluetooth.md` |
