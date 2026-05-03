@@ -45,6 +45,9 @@
 | [classic-bluetooth](wiki/concepts/classic-bluetooth.md) | BR/EDR: piconets, scatternets, profiles, audio (SCO/eSCO) |
 | [security](wiki/concepts/security.md) | Pairing, bonding, LE Secure Connections, privacy, encrypted advertising |
 | [profiles-and-services](wiki/concepts/profiles-and-services.md) | GATT profiles, common profiles (HID, HRS, BAS, etc.), service discovery |
+| [le-audio](wiki/concepts/le-audio.md) | LC3 codec, Isochronous Channels (CIS/BIS), BAP/CAP/TMAP/HAP profiles, Auracast |
+| [direction-finding](wiki/concepts/direction-finding.md) | AoA/AoD, CTE (Constant Tone Extension), IQ sampling, antenna arrays (5.1+) |
+| [channel-sounding](wiki/concepts/channel-sounding.md) | PBR/RTT ranging, CS step modes 0–3, T_PM, HCI commands, relay attack resilience (6.0+) |
 
 ---
 
@@ -53,7 +56,9 @@
 | File | Description |
 |------|-------------|
 | [sources/README.md](sources/README.md) | How to download and convert Bluetooth spec PDFs |
-| sources/specs/ | Raw PDF files and OpenDataLoader-converted markdown |
+| sources/specs/X.Y/ | Core Spec PDFs + PyMuPDF-converted markdown + extracted figure images |
+| sources/specs/conformance-profiles/ | ICS (Implementation Conformance Statement) docs for all protocols |
+| sources/specs/test-suites/ | TS (Test Suite) docs + figure images for all protocols |
 
 ---
 

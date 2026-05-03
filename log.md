@@ -5,6 +5,51 @@
 
 ---
 
+## [2026-05-03] INGEST — Concept pages enriched from source PDFs; source structure reorganized
+
+**Operation**: INGEST / LINT
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Sources read**: `sources/specs/6.0/Core_v6.0.md` (DBAF, Monitoring Advertisers, CS step modes, T_PM, HCI_LE_CS_* commands), `sources/specs/6.2/Core_v6.2.md` (CS amplitude resilience DFT metric, NADM)
+
+### Pages updated
+
+- `wiki/concepts/channel-sounding.md` — Major expansion:
+  - Mode 0 calibration procedure: T_FCS internal calibration window, T_FM = 80 µs, T_IP1 idle period
+  - T_PM (Phase Measurement Period) defined: 10/20/40 µs options, ≥1 µs exclusion zones, N_AP + 1 measurements per period
+  - Antenna paths: up to 4 paths, switching controlled by CS-DRBG, exchanged during capability negotiation
+  - Full HCI_LE_CS_* command reference table (14 commands + 8 events)
+  - CS packet types table: CS_SYNC (GFSK, RTT) vs. CS_TONE (ASK, PBR), 5 CS_SYNC variants
+  - Amplitude-based attack resilience: DFT metric formula `20×log10[(φ(f1)+φ(f2))/φ(0)]`; NADM definition; Type 3 mandatory for CS devices `[Core 6.2, Vol 6, Part H, §5]`
+  - LL PDU reference table (LL_CS_CAPABILITIES_REQ/RSP, LL_CS_CONFIG_REQ/RSP, LL_CS_FAE_REQ/RSP, LL_CS_SEC_REQ/RSP)
+
+- `wiki/concepts/le-audio.md` — Full rewrite in English (was partially Korean):
+  - LC3 section fully translated to English; bitrate/sampling/PLC details preserved
+  - Latency budget formula added: `Presentation_Delay + SDU_Interval + Max_Transport_Latency`; typical ranges for gaming vs. broadcast
+  - BAP/CAP sections fully in English with ASE state machine description (Idle→Codec Configured→QoS Configured→Enabling→Streaming→Disabling→Releasing)
+  - Version history table added (5.2 foundation, 6.0 ISOAL Unsegmented Framed Mode, 6.2 USB ISO)
+  - All profile citations updated to include SIG specification repository reference
+
+- `wiki/concepts/ble-architecture.md` — Targeted fixes:
+  - HCI Physical Transports section translated to English (UART H4/H5, USB)
+  - Version history table extended with 6.1 (Randomized RPA Updates) and 6.2 (Shorter Connection Intervals, LE UTP, CS Amplitude Resilience)
+  - "Covers" header updated to include 6.2
+
+- `index.md` — Concept pages table completed:
+  - Added missing entries: `le-audio.md`, `direction-finding.md`, `channel-sounding.md`
+  - Sources section updated with `conformance-profiles/` and `test-suites/` directories
+
+### Repository structure changes
+
+- Supplemental spec PDFs and converted MDs reorganized:
+  - All `*.ICS.*` files moved to `sources/specs/conformance-profiles/`
+  - All `*.TS.*` files moved to `sources/specs/test-suites/`
+  - `showing_changes` PDFs and their generated MDs/images deleted (change markup lost in text extraction)
+  - Empty `_images/` directories removed
+- `scripts/convert_to_md.py` updated with `--all-pdfs` mode; `_is_showing_changes()` filter prevents processing of redline PDFs
+
+---
+
 ## [2026-05-02] ANALYZE — Integrated Profile & Transport specs into core concepts
 
 **Operation**: ANALYZE / CONSOLIDATE
