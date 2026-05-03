@@ -70,7 +70,7 @@ Operates in the **2.4 GHz ISM band** using **Gaussian Frequency Shift Keying (GF
 
 **LE 2M 2BT PHY (6.0+)**: Uncoded at 2 Mb/s with BT=2.0 Gaussian filter — used exclusively
 for Channel Sounding tone and RTT packet exchanges. Not usable for general data.
-[Core 6.0, Vol 6, Part A, §3.1.2]
+[Core 6.0, Vol 6, Part A, §3.1.2](../../sources/specs/6.0/Core_v6.0.md#L57980)
 
 ---
 
@@ -118,13 +118,13 @@ Vol 6, Part B, §4.6.41; Vol 6, Part H]
 Advertisers include decision data in `ADV_DECISION_IND` PDUs; scanners program decision
 instructions into the controller via HCI. The controller evaluates PDUs against the instructions
 and only wakes the host for matching advertisements. Requires LE Extended Advertising.
-[Core 6.0, Vol 6, Part B, §4.6.43]
+[Core 6.0, Vol 6, Part B, §4.6.43](../../sources/specs/6.0/Core_v6.0.md#L62448)
 
 **Monitoring Advertisers (6.0+)**:
 The controller tracks appearance/disappearance of specific advertiser addresses and notifies
 the host on change, without requiring continuous host-level scanning. Operates independently
 from the Filter Accept List; uses the Resolving List for RPA matching.
-[Core 6.0, Vol 6, Part B, §4.6.45]
+[Core 6.0, Vol 6, Part B, §4.6.45](../../sources/specs/6.0/Core_v6.0.md#L62466)
 
 ---
 

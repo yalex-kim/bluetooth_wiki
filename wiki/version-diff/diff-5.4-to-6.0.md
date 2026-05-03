@@ -25,11 +25,11 @@ secure digital car keys, access control, and fine-grained asset location.
 | **CS Tone Quality Indication** | Optional sub-feature: per-tone quality measurement during T_PM interval | [Core 6.0, Vol 6, Part B, §4.6.42; Vol 6, Part H, §4.6] |
 | **CS LL procedures** | Security Start, Capabilities Exchange, Configuration, CS Start, Repeat Termination, Channel Map Update, Mode-0 FAE Table Request | [Core 6.0, Vol 6, Part B, §5.1.23–5.1.29] |
 | **LE Channel Sounding Physical Channel** | New LE physical channel type (alongside advertising, periodic, connection, isochronous); uses LE 2M 2BT PHY | [Core 6.0, Vol 1, Part A, §3.3.2; Vol 6, Part A, §3.1.2] |
-| **Decision-Based Advertising Filtering (DBAF)** | Host programs decision instructions; advertisers include ADV_DECISION_IND PDUs with decision data; controller filters without host wakeup | [Core 6.0, Vol 6, Part B, §4.6.43] |
+| **Decision-Based Advertising Filtering (DBAF)** | Host programs decision instructions; advertisers include ADV_DECISION_IND PDUs with decision data; controller filters without host wakeup | [Core 6.0, Vol 6, Part B, §4.6.43](../../sources/specs/6.0/Core_v6.0.md#L62448) |
 | **Monitoring Advertisers** | Controller notifies host when specific advertisers appear/disappear; operates independently from Filter Accept List; 4 new HCI commands | [Core 6.0, Vol 6, Part B, §4.6.45; Vol 4, Part E, §7.8.147–7.8.150] |
 | **LE Frame Space Update** | Negotiate T_IFS, T_MSS_CIS, T_MCES below or above default 150 µs via LL_FRAME_SPACE_REQ/RSP | [Core 6.0, Vol 6, Part B, §4.6.46; §4.1; §5.1.30] |
 | **ISOAL Unsegmented Framed Mode** | New unsegmented mode for framed ISO PDUs; reduces overhead for LE Audio streams | [Core 6.0, Vol 6, Part B, §4.6.44; Vol 6, Part G, §2.2; §3.2.1] |
-| **LL Extended Feature Set** | Extended feature page exchange (LL_FEATURE_EXT_REQ/RSP) enabling >64 feature bits | [Core 6.0, Vol 6, Part B, §4.6.40] |
+| **LL Extended Feature Set** | Extended feature page exchange (LL_FEATURE_EXT_REQ/RSP) enabling >64 feature bits | [Core 6.0, Vol 6, Part B, §4.6.40](../../sources/specs/6.0/Core_v6.0.md#L62401) |
 
 ---
 
@@ -63,21 +63,21 @@ CS is the most complex feature added to the Bluetooth spec to date.
 Required implementation steps:
 
 1. **Check hardware support**: Read `LE Features` for Channel Sounding bit on local and peer controller
-2. **Capabilities Exchange**: `HCI_LE_CS_Read_Remote_Supported_Capabilities` — learn peer's supported step types, antenna configurations, RTT payload types, etc. [Core 6.0, Vol 6, Part B, §5.1.24]
-3. **Security Start** (for anti-relay): `HCI_LE_CS_Security_Enable` — initiates CS Security Start procedure; DRBG key material is exchanged under the encrypted link [Core 6.0, Vol 6, Part B, §5.1.23]
-4. **Create CS Configuration**: `HCI_LE_CS_Create_Config` — define channel map, step modes, tone durations, RTT payload type, number of steps, main mode repetitions [Core 6.0, Vol 6, Part B, §5.1.25]
-5. **Start procedure**: `HCI_LE_CS_Procedure_Enable` — begins CS events on the established connection [Core 6.0, Vol 6, Part B, §5.1.26]
+2. **Capabilities Exchange**: `HCI_LE_CS_Read_Remote_Supported_Capabilities` — learn peer's supported step types, antenna configurations, RTT payload types, etc. [Core 6.0, Vol 6, Part B, §5.1.24](../../sources/specs/6.0/Core_v6.0.md#L63085)
+3. **Security Start** (for anti-relay): `HCI_LE_CS_Security_Enable` — initiates CS Security Start procedure; DRBG key material is exchanged under the encrypted link [Core 6.0, Vol 6, Part B, §5.1.23](../../sources/specs/6.0/Core_v6.0.md#L63067)
+4. **Create CS Configuration**: `HCI_LE_CS_Create_Config` — define channel map, step modes, tone durations, RTT payload type, number of steps, main mode repetitions [Core 6.0, Vol 6, Part B, §5.1.25](../../sources/specs/6.0/Core_v6.0.md#L63094)
+5. **Start procedure**: `HCI_LE_CS_Procedure_Enable` — begins CS events on the established connection [Core 6.0, Vol 6, Part B, §5.1.26](../../sources/specs/6.0/Core_v6.0.md#L63129)
 6. **Process results**: `LE_CS_Subevent_Result` HCI events contain IQ samples (for PBR) and ToA/ToD values (for RTT) per step
 7. **Compute distance**: Host-side algorithm applies the mathematical model (see [Core 6.0, Vol 1, Part A, §9.2–9.3]) to estimate distance
 
-**CS measurement accuracy** depends on: [Core 6.0, Vol 1, Part A, §9.2]
+**CS measurement accuracy** depends on: [Core 6.0, Vol 1, Part A, §9.2](../../sources/specs/6.0/Core_v6.0.md#L6182)
 - Number of channels and frequency span (more channels → more accurate phase unwrapping; 1 MHz spacing → 150 m ambiguity range)
 - Step repetitions (main mode repetitions average out noise)
 - Antenna configuration (multiple antennas improve spatial diversity)
 - RTT payload type (sounding sequence or random sequence more accurate than access address only)
 - RF environment (multipath reflections in indoor settings affect PBR accuracy)
 
-**Anti-relay for PACS**: [Core 6.0, Vol 1, Part A, §9.4]
+**Anti-relay for PACS**: [Core 6.0, Vol 1, Part A, §9.4](../../sources/specs/6.0/Core_v6.0.md#L6229)
 - CS step mode-1 and mode-3 allow detection of relay attacks via RTT; relay adds measurable propagation latency
 - Mode-3 provides two independent estimates (RTT + PBR) simultaneously
 - DRBG randomization prevents prediction of channel hop sequence by an attacker

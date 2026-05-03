@@ -38,15 +38,15 @@ LC3 is the mandatory codec for LE Audio, replacing SBC from Classic Bluetooth au
 
 Provides timing-critical transport for audio data. `[Core 5.2, Vol 6, Part B]`
 
-- **CIS (Connected Isochronous Stream)**: Point-to-point (e.g., Phone ↔ Earbud). Supports bidirectional data (voice calls). `[Core 6.2, Vol 6, Part B, §4.5.13]`
-- **BIS (Broadcast Isochronous Stream)**: One-to-many (e.g., public display → all nearby listeners). Unidirectional. `[Core 6.2, Vol 6, Part B, §4.4.6]`
+- **CIS (Connected Isochronous Stream)**: Point-to-point (e.g., Phone ↔ Earbud). Supports bidirectional data (voice calls). `[Core 6.2, Vol 6, Part B, §4.5.13](../../sources/specs/6.2/Core_v6.2.md#L61061)`
+- **BIS (Broadcast Isochronous Stream)**: One-to-many (e.g., public display → all nearby listeners). Unidirectional. `[Core 6.2, Vol 6, Part B, §4.4.6](../../sources/specs/6.2/Core_v6.2.md#L60515)`
 - **CIG/BIG**: Groups of streams (Connected/Broadcast Isochronous Groups) sharing a common timing reference for sub-millisecond synchronization across devices.
 
 ### 3. ISOAL (Isochronous Adaptation Layer)
 
 Resides between the Upper Stack and the Link Layer. Fragments SDUs (Service Data Units) into PDUs (Protocol Data Units) to fit the radio's isochronous timing slots. `[Core 6.2, Vol 6, Part G]`
 
-- **Unsegmented Framed Mode** (added in Core 6.0): An optimized SDU-to-PDU mapping for ISOAL where each PDU carries exactly one complete SDU with minimal framing overhead, improving efficiency for fixed-size audio frames. `[Core 6.0, Vol 6, Part G, §2]`
+- **Unsegmented Framed Mode** (added in Core 6.0): An optimized SDU-to-PDU mapping for ISOAL where each PDU carries exactly one complete SDU with minimal framing overhead, improving efficiency for fixed-size audio frames. `[Core 6.0, Vol 6, Part G, §2](../../sources/specs/6.0/Core_v6.0.md#L74377)`
 
 ---
 
@@ -149,7 +149,7 @@ Key events:
 | Version | Change |
 |---------|--------|
 | **5.2** | LE Audio foundation: LC3 mandate, Isochronous Channels (CIS/BIS/CIG/BIG), ISOAL, EATT `[Core 5.2, Vol 6, Part B]` |
-| **6.0** | ISOAL Unsegmented Framed Mode (lower framing overhead for fixed-size audio SDUs) `[Core 6.0, Vol 6, Part G, §2]` |
+| **6.0** | ISOAL Unsegmented Framed Mode (lower framing overhead for fixed-size audio SDUs) `[Core 6.0, Vol 6, Part G, §2](../../sources/specs/6.0/Core_v6.0.md#L74377)` |
 | **6.2** | Normative HCI USB LE Isochronous support (ISO data over USB transport) `[Core 6.2, Vol 4, Part B]` |
 
 ---

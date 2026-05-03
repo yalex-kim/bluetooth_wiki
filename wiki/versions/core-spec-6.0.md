@@ -41,11 +41,11 @@ mode support for LE Audio streams.
 | CS Tone Quality Indication | Optional sub-feature: per-tone quality measurement during T_PM phase | [Core 6.0, Vol 6, Part B, §4.6.42; Vol 6, Part H, §4.6] |
 | CS Step Types (mode-0 through mode-3) | Mode-0: calibration; Mode-1: RTT; Mode-2: PBR tones; Mode-3: RTT+PBR | [Core 6.0, Vol 1, Part A, §9.1; Vol 6, Part H, §4.3] |
 | CS Security | DRBG-based cryptographic randomization; anti-relay via CS random value exchange | [Core 6.0, Vol 1, Part A, §9.4; Vol 6, Part B, §5.1.23] |
-| Decision-Based Advertising Filtering (DBAF) | Programmable controller-side decision instructions for advertising PDU filtering | [Core 6.0, Vol 6, Part B, §4.6.43] |
-| Monitoring Advertisers | Controller tracks appearance/disappearance of specific advertisers | [Core 6.0, Vol 6, Part B, §4.6.45] |
+| Decision-Based Advertising Filtering (DBAF) | Programmable controller-side decision instructions for advertising PDU filtering | [Core 6.0, Vol 6, Part B, §4.6.43](../../sources/specs/6.0/Core_v6.0.md#L62448) |
+| Monitoring Advertisers | Controller tracks appearance/disappearance of specific advertisers | [Core 6.0, Vol 6, Part B, §4.6.45](../../sources/specs/6.0/Core_v6.0.md#L62466) |
 | LE Frame Space Update | Negotiate sub-150 µs inter-frame spacing (T_IFS, T_MSS_CIS, T_MCES) per connection | [Core 6.0, Vol 6, Part B, §4.6.46; §4.1; §5.1.30] |
 | ISOAL Unsegmented Framed Mode | Unsegmented mode for framed ISO PDUs; improves LE Audio stream efficiency | [Core 6.0, Vol 6, Part B, §4.6.44; Vol 6, Part G, §2.2, §3.2.1] |
-| LL Extended Feature Set | Extended feature page exchange using LL_FEATURE_EXT_REQ/RSP for >64 feature bits | [Core 6.0, Vol 6, Part B, §4.6.40] |
+| LL Extended Feature Set | Extended feature page exchange using LL_FEATURE_EXT_REQ/RSP for >64 feature bits | [Core 6.0, Vol 6, Part B, §4.6.40](../../sources/specs/6.0/Core_v6.0.md#L62401) |
 
 ---
 
@@ -59,7 +59,7 @@ LE Channel Sounding physical link and CS generic packet structure.
 
 **Architecture**: A CS procedure is divided into CS events, each containing CS subevents,
 which contain CS steps. CS events are anchored from a common LE connection event.
-[Core 6.0, Vol 1, Part A, §9.1]
+[Core 6.0, Vol 1, Part A, §9.1](../../sources/specs/6.0/Core_v6.0.md#L6167)
 
 **Four CS step modes** [Core 6.0, Vol 1, Part A, §9.1; Vol 6, Part H, §4.3]:
 - **Mode-0**: Calibration — synchronizes frequency and timing between initiator and reflector
@@ -67,13 +67,13 @@ which contain CS steps. CS events are anchored from a common LE connection event
 - **Mode-2**: Phase-Based Ranging — exchanges tones; measures IQ (in-phase and quadrature) samples across channels
 - **Mode-3**: Combined RTT + PBR in the same step
 
-**Phase-Based Ranging (PBR) mathematics** [Core 6.0, Vol 1, Part A, §9.2]:
+**Phase-Based Ranging (PBR) mathematics** [Core 6.0, Vol 1, Part A, §9.2](../../sources/specs/6.0/Core_v6.0.md#L6182):
 - Both devices transmit tones; receiver measures phase/amplitude (IQ values)
 - Channel transfer function estimated as H²(f) = PCT_REFL(f) × PCT_INIT(f)
 - Distance x derived from: x = −(dφ/df) × c / (4π)
 - 1 MHz channel spacing gives 150 m distance ambiguity; RTT disambiguates larger distances
 
-**Round-Trip Time (RTT) measurement** [Core 6.0, Vol 1, Part A, §9.3]:
+**Round-Trip Time (RTT) measurement** [Core 6.0, Vol 1, Part A, §9.3](../../sources/specs/6.0/Core_v6.0.md#L6215):
 - Initiator and reflector exchange CS_SYNC packets; both record ToD and ToA
 - Distance: x = (T_initiator − 2·T_reflector) × c / 2
 - Accuracy depends on RTT payload type (access address only vs. sounding/random sequence)
@@ -116,7 +116,7 @@ matching advertising reports to the host, which then discarded unwanted reports.
 
 **With DBAF**: The host programs decision instructions into the controller via
 `HCI_LE_Set_Decision_Instructions`. Advertisers include decision data in `ADV_DECISION_IND`
-PDUs via `HCI_LE_Set_Decision_Data`. [Core 6.0, Vol 6, Part B, §4.6.43]
+PDUs via `HCI_LE_Set_Decision_Data`. [Core 6.0, Vol 6, Part B, §4.6.43](../../sources/specs/6.0/Core_v6.0.md#L62448)
 
 The controller must support at least 8 tests in the decision instructions.
 [Core 6.0, Vol 4, Part E — HCI_LE_Set_Decision_Instructions]
@@ -133,7 +133,7 @@ not support DBAF return an error if these bits are set non-zero.
 ### Monitoring Advertisers
 
 A new feature that enables the controller to track when specific advertisers appear or
-disappear, without requiring continuous host scanning. [Core 6.0, Vol 6, Part B, §4.6.45]
+disappear, without requiring continuous host scanning. [Core 6.0, Vol 6, Part B, §4.6.45](../../sources/specs/6.0/Core_v6.0.md#L62466)
 
 New HCI commands [Core 6.0, Vol 4, Part E]:
 - `HCI_LE_Add_Device_To_Monitored_Advertisers_List` (section 7.8.147)
@@ -162,7 +162,7 @@ inter-frame spacing for the following timing parameters:
 - `T_MCES` — Minimum Connection Event Spacing (default 150 µs)
 
 A Controller supports this feature by supporting either a minimum frame space ≤ 145 µs
-or a maximum frame space ≥ 155 µs (or both). [Core 6.0, Vol 6, Part B, §4.6.46]
+or a maximum frame space ≥ 155 µs (or both). [Core 6.0, Vol 6, Part B, §4.6.46](../../sources/specs/6.0/Core_v6.0.md#L62471)
 
 New LL PDUs: `LL_FRAME_SPACE_REQ` and `LL_FRAME_SPACE_RSP`
 New HCI command: `HCI_LE_Frame_Space_Update` (section 7.8.151)
@@ -178,7 +178,7 @@ Adds an unsegmented mode for framed ISO PDUs to the Isochronous Adaptation Layer
 Improves efficiency for LE Audio streams by removing the per-PDU segmentation header
 overhead when a single SDU fits in one PDU without segmentation. Affects all four ISO
 logical transport types (CIS Central, CIS Peripheral, BIG Broadcaster, Synchronized Receiver).
-[Core 6.0, Vol 6, Part B, §4.6.44]
+[Core 6.0, Vol 6, Part B, §4.6.44](../../sources/specs/6.0/Core_v6.0.md#L62455)
 
 **Feature type**: Type 2 (Controller feature). [Core 6.0, Vol 0, Part D, Table 4.2]
 

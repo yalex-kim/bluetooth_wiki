@@ -41,11 +41,11 @@ Classic Bluetooth는 **FHSS(Frequency Hopping Spread Spectrum)**를 사용하여
 ### Piconet (피코넷)
 피코넷은 공유 채널을 사용하는 기기들의 집합입니다. `[Core 6.2, Vol 1, Part A, §3.2.1]`
 - **Primary/Secondary**: 1개의 Primary 기기가 홉 시퀀스와 타이밍을 결정하며, 최대 7개의 활성 Secondary 기기가 참여할 수 있습니다. (Core 5.3부터 Master/Slave 용어가 Primary/Secondary로 공식 변경됨)
-- **Clock Synchronization**: 모든 Secondary 기기는 Primary의 클럭($CLK$)에 자신의 오프셋을 더해 동기화합니다. `[Core 6.2, Vol 2, Part B, §8.1]`
+- **Clock Synchronization**: 모든 Secondary 기기는 Primary의 클럭($CLK$)에 자신의 오프셋을 더해 동기화합니다. `[Core 6.2, Vol 2, Part B, §8.1](../../sources/specs/6.2/Core_v6.2.md#L10013)`
 - **Physical Channel**: 피코넷 내의 통신은 Primary의 Bluetooth 기기 주소(BD_ADDR)에 의해 정의된 고유한 홉 시퀀스를 따릅니다.
 
 ### Scatternet
-- 한 기기가 여러 피코넷에 참여하여 데이터를 중계할 수 있는 구조입니다. `[Core 6.2, Vol 2, Part B, §8.5]`
+- 한 기기가 여러 피코넷에 참여하여 데이터를 중계할 수 있는 구조입니다. `[Core 6.2, Vol 2, Part B, §8.5](../../sources/specs/6.2/Core_v6.2.md#L10180)`
 - Enables multi-hop networking (rarely used in practice)
 
 ---

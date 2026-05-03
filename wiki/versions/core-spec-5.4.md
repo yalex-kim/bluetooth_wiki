@@ -34,8 +34,8 @@ per the spec header; the Bluetooth SIG Board adoption date is 2023-02-02.
 |---------|------------------|----------------|
 | Periodic Advertising with Responses (PAwR) | Bidirectional periodic advertising; devices reply in assigned slots using AUX_SYNC_SUBEVENT_IND/RSP PDUs | [Core 5.4, Vol 6, Part B, §4.6.38–4.6.39] |
 | Encrypted Advertising Data (EAD) | AES-128-CCM encrypted advertising payload; AD type Encrypted Data wraps payload | [Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10] |
-| LE GATT Security Levels Characteristic | New GATT characteristic (UUID 0x2BF5) exposing server's highest LE security requirement | [Core 5.4, Vol 3, Part C, §12.7] |
-| Advertising Coding Selection | Host control over S=2 or S=8 data coding for LE Coded PHY advertising | [Core 5.4, Vol 6, Part B, §4.6.37] |
+| LE GATT Security Levels Characteristic | New GATT characteristic (UUID 0x2BF5) exposing server's highest LE security requirement | [Core 5.4, Vol 3, Part C, §12.7](../../sources/specs/5.4/Core_v5.4.md#L29050) |
+| Advertising Coding Selection | Host control over S=2 or S=8 data coding for LE Coded PHY advertising | [Core 5.4, Vol 6, Part B, §4.6.37](../../sources/specs/5.4/Core_v5.4.md#L60276) |
 | Connection Subrating (from 5.3) | Reduce connection event frequency while maintaining connection — inherited from withdrawn 5.3 | [Core 5.4, Vol 6, Part B] |
 | LE Enhanced Connection Update (from 5.3) | Controller-initiated connection parameter updates — inherited from withdrawn 5.3 | [Core 5.4, Vol 6, Part B] |
 
@@ -71,7 +71,7 @@ Key parameters from `HCI_LE_Set_Periodic_Advertising_Parameters_v2`
 - `Subevent_Interval`: time between subevents; must be ≤ Periodic_Advertising_Interval_Min / Num_Subevents
 - `Response_Slot_Spacing`: time between consecutive response slots
 
-New PDU types [Core 5.4, Vol 6, Part B, §2]:
+New PDU types [Core 5.4, Vol 6, Part B, §2](../../sources/specs/5.4/Core_v5.4.md#L56754):
 - `AUX_SYNC_SUBEVENT_IND` — advertiser → devices (broadcast per subevent)
 - `AUX_SYNC_SUBEVENT_RSP` — device → advertiser (in assigned response slot)
 - `LL_PERIODIC_SYNC_WR_IND` — synchronization transfer for PAwR trains
@@ -92,7 +92,7 @@ of price tags simultaneously, and tags acknowledge receipt — all without indiv
 ### Encrypted Advertising Data (EAD)
 
 EAD prevents fingerprinting of devices based on advertising data content even when the
-Bluetooth Device Address is being randomized. [Core 5.4, Vol 1, Part A, §5.4.6]
+Bluetooth Device Address is being randomized. [Core 5.4, Vol 1, Part A, §5.4.6](../../sources/specs/5.4/Core_v5.4.md#L5498)
 
 The encrypted advertising data uses a **pre-shared session key** communicated only to
 peer devices that are authorized to receive such information. Only devices with the key
@@ -108,7 +108,7 @@ existing Security Manager (SM) procedures over an established connection.
 ### LE GATT Security Levels Characteristic
 
 A new GATT characteristic (UUID `0x2BF5`) that exposes the highest security requirements
-of the GATT server when operating on a LE connection. [Core 5.4, Vol 3, Part C, §12.7]
+of the GATT server when operating on a LE connection. [Core 5.4, Vol 3, Part C, §12.7](../../sources/specs/5.4/Core_v5.4.md#L29050)
 
 The characteristic value is static during a connection and contains a sequence of one or
 more Security Level Requirements (see Table 12.11 in the spec). A device shall have at
@@ -120,7 +120,7 @@ most one instance of a LE GATT Security Levels characteristic.
 
 Allows the Host to explicitly select the coding scheme (S=2 for 2 Mbps effective data rate,
 or S=8 for maximum range) for LE Coded PHY advertising, rather than leaving it to the
-Controller. [Core 5.4, Vol 6, Part B, §4.6.37]
+Controller. [Core 5.4, Vol 6, Part B, §4.6.37](../../sources/specs/5.4/Core_v5.4.md#L60276)
 
 **Feature type**: Type 2 (Controller feature configurable by Host). Requires both LE Extended
 Advertising and LE Coded PHY features. [Core 5.4, Vol 0, Part D, Table 4.2]

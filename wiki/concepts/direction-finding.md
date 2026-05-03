@@ -25,13 +25,13 @@ Direction Finding relies on measuring the phase difference of a signal as it arr
 The transmitter (e.g., a simple beacon) sends a signal from a single antenna. The receiver (e.g., a fixed locator) has an **antenna array**. 
 - The receiver switches between antennas to sample the signal's phase.
 - By calculating the phase shift across the array, the receiver determines the angle of the incoming signal.
-- `[Core 5.1, Vol 6, Part B, §6.1]`
+- `[Core 5.1, Vol 6, Part B, §6.1](../../sources/specs/5.1/Core_v5.1.md#L58386)`
 
 ### 2. AoD (Angle of Departure)
 The transmitter (e.g., a fixed locator) has an **antenna array** and switches between them while sending the signal. The receiver (e.g., a smartphone) has a single antenna.
 - The transmitter provides antenna switching information in the packet.
 - The receiver samples the phase and calculates the angle at which the signal departed from the transmitter.
-- `[Core 5.1, Vol 6, Part B, §6.2]`
+- `[Core 5.1, Vol 6, Part B, §6.2](../../sources/specs/5.1/Core_v5.1.md#L58392)`
 
 ---
 
@@ -43,7 +43,7 @@ Direction Finding requires a stable signal for phase sampling. This is achieved 
 - **Duration**: Configurable from 16 µs to 160 µs (in 8 µs increments).
 - **PHY Support**: Available on **LE 1M** and **LE 2M** PHYs.
 - **Format**: CTE is not encrypted or whitened, ensuring the carrier frequency remains constant for phase measurement.
-- `[Core 5.1, Vol 6, Part B, §2.5]`
+- `[Core 5.1, Vol 6, Part B, §2.5](../../sources/specs/5.1/Core_v5.1.md#L56619)`
 
 ---
 
@@ -82,8 +82,8 @@ The first 8 µs of the CTE is the **Reference Period**. During this time, no ant
 ---
 
 ## References
-- **Direction Finding Overview**: `[Core 5.1, Vol 1, Part A, §7]`
-- **Link Layer Specification**: `[Core 5.1, Vol 6, Part B, §6]`
+- **Direction Finding Overview**: `[Core 5.1, Vol 1, Part A, §7](../../sources/specs/5.1/Core_v5.1.md#L5318)`
+- **Link Layer Specification**: `[Core 5.1, Vol 6, Part B, §6](../../sources/specs/5.1/Core_v5.1.md#L58381)`
 - **HCI Specification**: `[Core 5.1, Vol 4, Part E, §7.8]`
 
 ---

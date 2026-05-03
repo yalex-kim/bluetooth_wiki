@@ -23,11 +23,11 @@ for medical, enterprise, and access control applications.
 |------|-------------|-----------|
 | **Periodic Advertising with Responses (PAwR)** | Bidirectional periodic advertising with subevent + response slot structure; uses AUX_SYNC_SUBEVENT_IND/RSP PDUs | [Core 5.4, Vol 6, Part B, §4.6.38–4.6.39] |
 | **PAwR Subevent structure** | Up to 0x80 (128) subevents per PA event; up to 0xFF (255) response slots per subevent | [Core 5.4, Vol 4, Part E — HCI_LE_Set_Periodic_Advertising_Parameters_v2] |
-| **LL_PERIODIC_SYNC_WR_IND** | New LL PDU for transferring PAwR sync info to a connected peer (WR = With Responses) | [Core 5.4, Vol 6, Part B, §4.6.38] |
-| **AUX_SYNC_SUBEVENT_IND / RSP** | New advertising PDU types for PAwR subevent broadcast and device responses | [Core 5.4, Vol 6, Part B, §2] |
+| **LL_PERIODIC_SYNC_WR_IND** | New LL PDU for transferring PAwR sync info to a connected peer (WR = With Responses) | [Core 5.4, Vol 6, Part B, §4.6.38](../../sources/specs/5.4/Core_v5.4.md#L60283) |
+| **AUX_SYNC_SUBEVENT_IND / RSP** | New advertising PDU types for PAwR subevent broadcast and device responses | [Core 5.4, Vol 6, Part B, §2](../../sources/specs/5.4/Core_v5.4.md#L56754) |
 | **Encrypted Advertising Data (EAD)** | Pre-shared session key encrypts advertising payload; prevents fingerprinting of devices via advertising data content | [Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10] |
-| **LE GATT Security Levels Characteristic** | New GATT characteristic (UUID 0x2BF5) exposing highest LE security requirement of GATT server | [Core 5.4, Vol 3, Part C, §12.7] |
-| **Advertising Coding Selection** | Host selects S=2 or S=8 data coding for LE Coded PHY advertising | [Core 5.4, Vol 6, Part B, §4.6.37] |
+| **LE GATT Security Levels Characteristic** | New GATT characteristic (UUID 0x2BF5) exposing highest LE security requirement of GATT server | [Core 5.4, Vol 3, Part C, §12.7](../../sources/specs/5.4/Core_v5.4.md#L29050) |
+| **Advertising Coding Selection** | Host selects S=2 or S=8 data coding for LE Coded PHY advertising | [Core 5.4, Vol 6, Part B, §4.6.37](../../sources/specs/5.4/Core_v5.4.md#L60276) |
 
 ---
 

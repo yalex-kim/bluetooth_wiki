@@ -18,7 +18,7 @@ Two profile systems exist in parallel:
 
 ## GATT Service/Characteristic Model
 
-GATT(Generic Attribute Profile)는 ATT(Attribute Protocol)를 기반으로 데이터의 구조를 정의합니다. GATT 서버는 **Service**, **Characteristic**, **Descriptor**로 구성된 계층적 구조를 노출합니다. `[Core 6.2, Vol 3, Part G, §2]`
+GATT(Generic Attribute Profile)는 ATT(Attribute Protocol)를 기반으로 데이터의 구조를 정의합니다. GATT 서버는 **Service**, **Characteristic**, **Descriptor**로 구성된 계층적 구조를 노출합니다. `[Core 6.2, Vol 3, Part G, §2](../../sources/specs/6.2/Core_v6.2.md#L29737)`
 
 ### Hierarchy structure
 

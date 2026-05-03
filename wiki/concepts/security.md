@@ -43,7 +43,7 @@ The Security Manager (SM) defines **Security Modes** and **Levels**:
 | 3 | Use of Broadcast Code with Bluetooth LE Secure Connections pairing |
 
 ### LE GATT Security Levels Characteristic (5.4+)
-GATT 서버는 자신의 보안 요구 사항을 클라이언트에게 알리기 위해 **LE GATT Security Levels** 특성(UUID `0x2BF5`)을 노출할 수 있습니다. 이는 클라이언트가 서비스를 이용하기 전에 필요한 보안 수준(Mode 1 Level 1~4)을 미리 파악하고 적절한 페어링 절차를 시작할 수 있게 돕습니다. `[Core 5.4, Vol 3, Part C, §12.7]`
+GATT 서버는 자신의 보안 요구 사항을 클라이언트에게 알리기 위해 **LE GATT Security Levels** 특성(UUID `0x2BF5`)을 노출할 수 있습니다. 이는 클라이언트가 서비스를 이용하기 전에 필요한 보안 수준(Mode 1 Level 1~4)을 미리 파악하고 적절한 페어링 절차를 시작할 수 있게 돕습니다. `[Core 5.4, Vol 3, Part C, §12.7](../../sources/specs/5.4/Core_v5.4.md#L29050)`
 
 ---
 

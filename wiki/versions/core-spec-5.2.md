@@ -17,7 +17,7 @@ for superior audio quality at lower bitrates.
 The foundation of LE Audio is **LE Isochronous Channels** (`[Core 5.2, Vol 1, Part C, §11.1]`):
 **CIS** (Connected Isochronous Streams) for one-to-one audio (e.g., earbuds) and **BIS** (Broadcast
 Isochronous Streams) for one-to-many audio (e.g., TV audio broadcast to hearing aids). These are
-specified in `[Core 5.2, Vol 6, Part B, §4.5.13–4.5.14]` (CIS/CIG) and `[Core 5.2, Vol 6, Part B, §4.4.6]`
+specified in `[Core 5.2, Vol 6, Part B, §4.5.13–4.5.14]` (CIS/CIG) and `[Core 5.2, Vol 6, Part B, §4.4.6](../../sources/specs/5.2/Core_v5.2.md#L61723)`
 (Isochronous Broadcasting State / BIG).
 
 Additionally, 5.2 introduced **Enhanced ATT (EATT)** for parallel GATT transactions
@@ -61,22 +61,22 @@ Unlike ACL connections (best-effort), ISO channels define:
 - **FT** (Flush Timeout): How many events an SDU can wait before being flushed
 - **Framing**: Framed (variable-length SDUs) or unframed (fixed-length)
 
-`[Core 5.2, Vol 6, Part B, §4.5.13]`
+`[Core 5.2, Vol 6, Part B, §4.5.13](../../sources/specs/5.2/Core_v5.2.md#L62259)`
 
 **CIS** (Connected Isochronous Stream):
-- Lives within an existing ACL connection `[Core 5.2, Vol 6, Part B, §4.5.13]`
+- Lives within an existing ACL connection `[Core 5.2, Vol 6, Part B, §4.5.13](../../sources/specs/5.2/Core_v5.2.md#L62259)`
 - Supports bidirectional audio (BN may be non-zero in both directions)
-- Creation uses `LL_CIS_REQ → LL_CIS_RSP → LL_CIS_IND` `[Core 5.2, Vol 6, Part B, §5.1.15]`
-- Termination uses `LL_CIS_TERMINATE_IND` `[Core 5.2, Vol 6, Part B, §5.1.16]`
-- A **CIG** groups multiple CIS streams for synchronized playback (e.g., left + right earbuds); maximum 31 CIS per CIG `[Core 5.2, Vol 6, Part B, §4.5.14]`
-- CIS encryption follows the associated ACL's encryption status `[Core 5.2, Vol 6, Part B, §4.5.13]`
+- Creation uses `LL_CIS_REQ → LL_CIS_RSP → LL_CIS_IND` `[Core 5.2, Vol 6, Part B, §5.1.15](../../sources/specs/5.2/Core_v5.2.md#L63167)`
+- Termination uses `LL_CIS_TERMINATE_IND` `[Core 5.2, Vol 6, Part B, §5.1.16](../../sources/specs/5.2/Core_v5.2.md#L63179)`
+- A **CIG** groups multiple CIS streams for synchronized playback (e.g., left + right earbuds); maximum 31 CIS per CIG `[Core 5.2, Vol 6, Part B, §4.5.14](../../sources/specs/5.2/Core_v5.2.md#L62359)`
+- CIS encryption follows the associated ACL's encryption status `[Core 5.2, Vol 6, Part B, §4.5.13](../../sources/specs/5.2/Core_v5.2.md#L62259)`
 
 **BIS** (Broadcast Isochronous Stream):
-- No ACL connection needed; operates in the **Isochronous Broadcasting State** `[Core 5.2, Vol 6, Part B, §4.4.6]`
-- Unlimited receivers (Synchronized Receiver feature `[Core 5.2, Vol 6, Part B, §4.6.29]`)
+- No ACL connection needed; operates in the **Isochronous Broadcasting State** `[Core 5.2, Vol 6, Part B, §4.4.6](../../sources/specs/5.2/Core_v5.2.md#L61723)`
+- Unlimited receivers (Synchronized Receiver feature `[Core 5.2, Vol 6, Part B, §4.6.29](../../sources/specs/5.2/Core_v5.2.md#L62709)`)
 - A **BIG** groups multiple BIS streams; BIG discovery uses Periodic Advertising as the sync mechanism
 - BIGInfo advertising data carries BIG timing parameters for receivers to sync
-- BIG Control procedures (`LL_BIG_CONTROL_PDU`) handle channel map updates and termination `[Core 5.2, Vol 6, Part B, §5.6]`
+- BIG Control procedures (`LL_BIG_CONTROL_PDU`) handle channel map updates and termination `[Core 5.2, Vol 6, Part B, §5.6](../../sources/specs/5.2/Core_v5.2.md#L63272)`
 - Optional BIG encryption with a Broadcast Code
 
 **Feature bits for ISO** `[Core 5.2, Vol 6, Part B, §4.6.27–4.6.29]`:
@@ -99,11 +99,11 @@ channels `[Core 5.2, Vol 3, Part F, §3.2]`:
 ### LE Power Control
 
 Devices can request each other to adjust TX power to maintain optimal link quality
-`[Core 5.2, Vol 6, Part B, §5.1.17]`:
-- **Power Control Request procedure**: Either master or slave sends `LL_POWER_CONTROL_REQ`; peer adjusts TX power and replies with `LL_POWER_CONTROL_RSP` indicating actual change made `[Core 5.2, Vol 6, Part B, §5.1.17]`
-- **Power Change Indication procedure**: Unsolicited `LL_POWER_CHANGE_IND` when a device changes its own TX power `[Core 5.2, Vol 6, Part B, §5.1.18]`
-- **Power level management**: Controller manages power levels on all active PHYs for a given peer `[Core 5.2, Vol 6, Part B, §4.5.15]`
-- **Path Loss Monitoring**: RSSI-based zone classification; Host sets high/low thresholds, Controller reports zone transitions via `HCI_LE_Path_Loss_Threshold` event `[Core 5.2, Vol 6, Part B, §4.5.16]`
+`[Core 5.2, Vol 6, Part B, §5.1.17](../../sources/specs/5.2/Core_v5.2.md#L63186)`:
+- **Power Control Request procedure**: Either master or slave sends `LL_POWER_CONTROL_REQ`; peer adjusts TX power and replies with `LL_POWER_CONTROL_RSP` indicating actual change made `[Core 5.2, Vol 6, Part B, §5.1.17](../../sources/specs/5.2/Core_v5.2.md#L63186)`
+- **Power Change Indication procedure**: Unsolicited `LL_POWER_CHANGE_IND` when a device changes its own TX power `[Core 5.2, Vol 6, Part B, §5.1.18](../../sources/specs/5.2/Core_v5.2.md#L63211)`
+- **Power level management**: Controller manages power levels on all active PHYs for a given peer `[Core 5.2, Vol 6, Part B, §4.5.15](../../sources/specs/5.2/Core_v5.2.md#L62406)`
+- **Path Loss Monitoring**: RSSI-based zone classification; Host sets high/low thresholds, Controller reports zone transitions via `HCI_LE_Path_Loss_Threshold` event `[Core 5.2, Vol 6, Part B, §4.5.16](../../sources/specs/5.2/Core_v5.2.md#L62413)`
 - Feature bits: 4.6.30 (LE Power Change Indication), 4.6.31 (LE Power Control Request), 4.6.32 (LE Path Loss Monitoring)
 
 ---

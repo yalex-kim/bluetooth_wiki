@@ -18,13 +18,13 @@ Bluetooth 5.3 was an incremental but important release focused on **connection e
 **Host to Controller Encryption Key Control Enhancements**, **LE Enhanced Connection Update**,
 and **LE Channel Classification**.
 
-The headline efficiency feature, **Connection Subrating** `[Core 5.3, Vol 6, Part B, §4.6.35]`,
+The headline efficiency feature, **Connection Subrating** `[Core 5.3, Vol 6, Part B, §4.6.35](../../sources/specs/5.3/Core_v5.3.md#L59528)`,
 allows connected devices to dramatically reduce the frequency of connection events without
 disconnecting — critical for battery-powered devices. The **LL_SUBRATE_IND** and
 **LL_SUBRATE_REQ** PDUs support Central-initiated and Peripheral-initiated subrate changes,
 respectively `[Core 5.3, Vol 6, Part B, §5.1.19–5.1.20]`.
 
-**LE Channel Classification** `[Core 5.3, Vol 6, Part B, §4.6.36]` is a new cooperative
+**LE Channel Classification** `[Core 5.3, Vol 6, Part B, §4.6.36](../../sources/specs/5.3/Core_v5.3.md#L59537)` is a new cooperative
 mechanism where a Peripheral reports its observed channel quality to the Central via
 `LL_CHANNEL_STATUS_IND`, enabling smarter AFH channel map selection.
 
@@ -57,7 +57,7 @@ A global terminology update replaced inappropriate terms (e.g., "master/slave" �
 Before 5.3, slowing down a connection required a full Connection Parameter Update
 (negotiated at host level), changing the base interval. Connection Subrating adds a
 **subrate factor** that multiplies the effective interval without changing the underlying one
-`[Core 5.3, Vol 6, Part B, §4.6.35]`:
+`[Core 5.3, Vol 6, Part B, §4.6.35](../../sources/specs/5.3/Core_v5.3.md#L59528)`:
 
 - A `connSubrateFactor` of N means the device only participates in every N-th connection event
 - The **connSubrateBaseEvent** anchors which events are "subrated connection events"
@@ -79,14 +79,14 @@ Before 5.3, slowing down a connection required a full Connection Parameter Updat
 **Practical advantage**: Switching from slow mode (large subrate) to fast mode (subrate=1) completes
 in 1–2 connection events — far faster than a full Connection Parameter Update negotiation.
 
-`[Core 5.3, Vol 3, Part C, §9.3.16]` defines the GAP Connection Subrate procedure.
+`[Core 5.3, Vol 3, Part C, §9.3.16](../../sources/specs/5.3/Core_v5.3.md#L28193)` defines the GAP Connection Subrate procedure.
 
 ### LE Channel Classification
 
-A new cooperative channel quality reporting mechanism `[Core 5.3, Vol 6, Part B, §4.6.36]`:
+A new cooperative channel quality reporting mechanism `[Core 5.3, Vol 6, Part B, §4.6.36](../../sources/specs/5.3/Core_v5.3.md#L59537)`:
 
-1. **Central** sends `LL_CHANNEL_REPORTING_IND` to enable or disable reporting on the Peripheral (Channel Classification Enable procedure `[Core 5.3, Vol 6, Part B, §5.1.21]`)
-2. **Peripheral** monitors channel quality and sends `LL_CHANNEL_STATUS_IND` with a channel classification map to the Central (Channel Classification Reporting procedure `[Core 5.3, Vol 6, Part B, §5.1.22]`)
+1. **Central** sends `LL_CHANNEL_REPORTING_IND` to enable or disable reporting on the Peripheral (Channel Classification Enable procedure `[Core 5.3, Vol 6, Part B, §5.1.21](../../sources/specs/5.3/Core_v5.3.md#L60081)`)
+2. **Peripheral** monitors channel quality and sends `LL_CHANNEL_STATUS_IND` with a channel classification map to the Central (Channel Classification Reporting procedure `[Core 5.3, Vol 6, Part B, §5.1.22](../../sources/specs/5.3/Core_v5.3.md#L60088)`)
 3. Peripheral shall not report if channel classification has not changed since the last report
 4. Two consecutive reports must be spaced apart by at least the minimum reporting spacing
 
@@ -95,7 +95,7 @@ This complements the existing `HCI_LE_Set_Host_Channel_Classification` mechanism
 ### Periodic Advertising ADI (AdvDataInfo)
 
 The **ADI** (Advertising Data Info) field, already used in extended advertising PDUs to indicate
-data content identity, is now added to `AUX_SYNC_IND` PDUs `[Core 5.3, Vol 6, Part B, §4.6.34]`.
+data content identity, is now added to `AUX_SYNC_IND` PDUs `[Core 5.3, Vol 6, Part B, §4.6.34](../../sources/specs/5.3/Core_v5.3.md#L59520)`.
 This allows a scanner that receives a periodic advertising report to determine whether the payload
 has changed since the last report, enabling more efficient duplicate filtering for periodic advertising.
 

@@ -25,7 +25,7 @@ Channel Sounding utilizes two primary methods for distance calculation to ensure
 
 Uses the phase of the unmodulated carrier signal (CS_TONE) across multiple frequencies to calculate distance.
 
-- **Mathematics**: Distance is derived from the rate of change of phase with respect to frequency ($d\phi/df$). At the reflector and initiator, the measured amplitudes $A_{REFL}(f)$ and $A_{INIT}(f)$ are used together with phase to compute the range. `[Core 6.0, Vol 6, Part H, §4.3.3]`
+- **Mathematics**: Distance is derived from the rate of change of phase with respect to frequency ($d\phi/df$). At the reflector and initiator, the measured amplitudes $A_{REFL}(f)$ and $A_{INIT}(f)$ are used together with phase to compute the range. `[Core 6.0, Vol 6, Part H, §4.3.3](../../sources/specs/6.0/Core_v6.0.md#L75279)`
 - **Ambiguity**: 150 m at 1 MHz frequency spacing; reduced by combining multiple tones.
 - **Precision**: Centimeter-level in line-of-sight (LOS) conditions.
 
@@ -35,7 +35,7 @@ Measures the time of flight of **CS_SYNC** packets between the two devices.
 
 - **Formula**: $d = (T_{initiator} - 2 \cdot T_{reflector}) \cdot c / 2$.
 - **Robustness**: Provides a sanity check for PBR; effective in multi-path / NLOS where phase is noisy.
-- `[Core 6.0, Vol 1, Part A, §9.3]`
+- `[Core 6.0, Vol 1, Part A, §9.3](../../sources/specs/6.0/Core_v6.0.md#L6215)`
 
 ---
 
@@ -87,7 +87,7 @@ Exchanges **CS_TONE** (unmodulated carrier) between initiator and reflector. The
 
 Duration formula: `2×T_PM + T_SW×(N_AP + 1) + 2×T_RD + T_IP2`
 
-`[Core 6.0, Vol 6, Part H, §4.3.3]`
+`[Core 6.0, Vol 6, Part H, §4.3.3](../../sources/specs/6.0/Core_v6.0.md#L75279)`
 
 #### Mode 3 — RTT + PBR Combined
 
@@ -104,7 +104,7 @@ Duration formula: `2×T_SY + T_GD + 2×T_PM + T_SW×(N_AP + 1) + 2×T_RD + T_IP2
 Channel Sounding introduces a specialized PHY variant using a **BT=2.0** Gaussian filter (standard LE 2M uses BT=0.5) to improve tone quality and RTT pulse shaping.
 - Used exclusively for CS_SYNC and CS_TONE transmissions.
 - Not usable for general data logical transports.
-- `[Core 6.0, Vol 6, Part A, §3.1.2]`
+- `[Core 6.0, Vol 6, Part A, §3.1.2](../../sources/specs/6.0/Core_v6.0.md#L57980)`
 
 ### CS Packet Types
 
@@ -119,7 +119,7 @@ Five CS_SYNC variants exist: `CS_SYNC_0_I`, `CS_SYNC_0_R`, `CS_SYNC_1`, `CS_SYNC
 
 CS supports **up to 4 antenna paths** (N_AP). Multiple antenna paths enable angular diversity and improve phase measurement accuracy in multi-path environments. The antenna switching pattern is controlled by the CS-DRBG and is exchanged during capability negotiation.
 
-`[Core 6.0, Vol 6, Part H, §4.6]`
+`[Core 6.0, Vol 6, Part H, §4.6](../../sources/specs/6.0/Core_v6.0.md#L75460)`
 
 ---
 
@@ -135,7 +135,7 @@ A Deterministic Random Bit Generator randomizes:
 - Antenna switching order
 - CS Access Address
 
-This prevents an attacker from predicting upcoming step parameters. `[Core 6.0, Vol 6, Part H, §2]`
+This prevents an attacker from predicting upcoming step parameters. `[Core 6.0, Vol 6, Part H, §2](../../sources/specs/6.0/Core_v6.0.md#L75248)`
 
 ### 2. Timing Consistency (RTT Anti-Relay)
 
@@ -194,7 +194,7 @@ Associated events: `HCI_LE_CS_Read_Remote_Supported_Capabilities_Complete`, `HCI
 | `LL_CS_FAE_REQ/RSP` | Exchange Frequency Actuation Error tables |
 | `LL_CS_SEC_REQ/RSP` | CS security key exchange |
 
-`[Core 6.0, Vol 6, Part B, §5.1.23]`
+`[Core 6.0, Vol 6, Part B, §5.1.23](../../sources/specs/6.0/Core_v6.0.md#L63067)`
 
 ---
 
@@ -208,12 +208,12 @@ Associated events: `HCI_LE_CS_Read_Remote_Supported_Capabilities_Complete`, `HCI
 ---
 
 ## References
-- Architecture overview: `[Core 6.0, Vol 1, Part A, §9]`
+- Architecture overview: `[Core 6.0, Vol 1, Part A, §9](../../sources/specs/6.0/Core_v6.0.md#L6163)`
 - Physical channel and step timing: `[Core 6.0, Vol 6, Part H, §4.3]`
-- T_PM and antenna measurements: `[Core 6.0, Vol 6, Part H, §4.6]`
-- CS-DRBG security: `[Core 6.0, Vol 6, Part H, §2]`
+- T_PM and antenna measurements: `[Core 6.0, Vol 6, Part H, §4.6](../../sources/specs/6.0/Core_v6.0.md#L75460)`
+- CS-DRBG security: `[Core 6.0, Vol 6, Part H, §2](../../sources/specs/6.0/Core_v6.0.md#L75248)`
 - Amplitude resilience: `[Core 6.2, Vol 6, Part H, §5]`
-- HCI commands: `[Core 6.0, Vol 4, Part E, §7.8]`
+- HCI commands: `[Core 6.0, Vol 4, Part E, §7.8](../../sources/specs/6.0/Core_v6.0.md#L48795)`
 
 ## See Also
 - [BLE Architecture](ble-architecture.md)

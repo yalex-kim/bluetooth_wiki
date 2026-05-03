@@ -23,6 +23,9 @@ Thumbs.db
 # Spec PDF files (large binaries — download via download_specs.sh / download_spec_documents.py)
 sources/specs/**/*.pdf
 
+# Generated citation index (rebuilt by link_citations.py --build)
+sources/specs/section_index.json
+
 # Temp / debug files
 convert_log.txt
 debug_*.png

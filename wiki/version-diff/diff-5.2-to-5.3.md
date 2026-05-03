@@ -15,9 +15,9 @@
 **Host to Controller Encryption Key Control Enhancements**, **LE Enhanced Connection Update**,
 and **LE Channel Classification** (which includes Connection Subrating as a sub-feature).
 
-The practical headline is **Connection Subrating** `[Core 5.3, Vol 6, Part B, §4.6.35]`:
+The practical headline is **Connection Subrating** `[Core 5.3, Vol 6, Part B, §4.6.35](../../sources/specs/5.3/Core_v5.3.md#L59528)`:
 enables dramatic battery savings for peripherals by slowing connection events without disconnecting,
-with fast return to active mode. **LE Channel Classification** `[Core 5.3, Vol 6, Part B, §4.6.36]`
+with fast return to active mode. **LE Channel Classification** `[Core 5.3, Vol 6, Part B, §4.6.36](../../sources/specs/5.3/Core_v5.3.md#L59537)`
 adds Peripheral-observed channel quality reporting to complement host-side AFH input.
 
 The **removal of AMP** `[Core 5.3, Vol 1, Part C, §12.2]` is the most architecturally significant
