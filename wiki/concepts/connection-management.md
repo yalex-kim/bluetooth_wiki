@@ -159,20 +159,21 @@ is a "subrated connection event" that devices must participate in.
 | Continuation_Number | 0–15 (0x0000–0x000F) | Extra consecutive base events to stay active after a non-empty subrated exchange; independent of Subrate_Factor |
 | connSubrateBaseEvent | 0–65535 | Anchor for which events are subrated events |
 
-**Stacking clarification**: Subrate_Factor and Max_Latency (Peripheral_Latency in subrated units)
-are independent multipliers that compound. If `connInterval = 7.5 ms`, `Subrate_Factor = 10`,
-and `Max_Latency = 4`, the effective wakeup interval is `7.5 ms × 10 × (4 + 1) = 375 ms`.
-Max_Latency is expressed in units of *subrated* connection events, not underlying events.
-
-**Continuation_Number is distinct**: it controls how many additional consecutive base events
-a device stays active after a non-empty PDU exchange at the subrated anchor point, enabling
-a short burst window without renegotiating the subrate. It does **not** multiply the wakeup
-interval. Range: 0–15 (raw 0x0000–0x000F); must be < Subrate_Factor.
-
-**Formula summary**:
+**Effective interval formula**:
 ```
-Effective_Wakeup_Interval = Connection_Interval × Subrate_Factor × (Max_Latency + 1)
+Effective_Interval = Connection_Interval × Subrate_Factor × (1 + Continuation_Number)
 ```
+Example: CI=100 ms, SF=10, CN=1 → 100 × 10 × 2 = **2000 ms**.
+
+- **Subrate_Factor** (1–500): multiplies the base connection interval; only 1 in SF base events is a subrated anchor.
+- **Continuation_Number** (0–15): at each anchor, the device stays active for CN+1 consecutive base events, extending the effective cycle length by the (1+CN) factor.
+- **Max_Latency** (0–499): additionally allows the peripheral to skip Max_Latency subrated anchors. When Max_Latency > 0, the maximum sleep period extends further; the supervision timeout constraint must account for this.
+
+**Supervision_Timeout constraint with subrating** (mandatory — must be satisfied before any subrate request):
+```
+Supervision_Timeout (ms) > (1 + Max_Latency) × Subrate_Factor × Connection_Interval_Max (ms) × 2
+```
+Recommended minimum: 6 × Effective_Interval (i.e. 6 × CI × SF × (1+CN) when Max_Latency=0).
 
 **Supervision_Timeout with subrating** (mandatory check before applying):
 
