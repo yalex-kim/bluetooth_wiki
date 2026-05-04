@@ -39,7 +39,7 @@
   .score-circle { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
   .score-circle svg { transform: rotate(-90deg); }
   .score-circle .track { fill: none; stroke: var(--surface2); stroke-width: 10; }
-  .score-circle .fill  { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 377; stroke-dashoffset: calc(377 - 377 * 0.958); transition: stroke-dashoffset 1s ease; }
+  .score-circle .fill  { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 377; stroke-dashoffset: calc(377 - 377 * 0.985); transition: stroke-dashoffset 1s ease; }
   .score-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
   .score-center .num { font-size: 32px; font-weight: 800; color: var(--accent); line-height: 1; }
   .score-center .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -153,13 +153,13 @@
         <circle class="fill"  cx="70" cy="70" r="60"/>
       </svg>
       <div class="score-center">
-        <div class="num">95.8%</div>
+        <div class="num">98.5%</div>
         <div class="label">Overall</div>
       </div>
     </div>
     <div class="hero-stats">
       <div class="stat-box green">
-        <div class="val">521.5</div>
+        <div class="val">536.5</div>
         <div class="lbl">Weighted Score</div>
       </div>
       <div class="stat-box">
@@ -167,19 +167,19 @@
         <div class="lbl">Maximum Possible</div>
       </div>
       <div class="stat-box green">
-        <div class="val">25 / 30</div>
+        <div class="val">26 / 30</div>
         <div class="lbl">Perfect Scores (11/11)</div>
       </div>
       <div class="stat-box yellow">
-        <div class="val">5</div>
+        <div class="val">4</div>
         <div class="lbl">Questions with Gaps</div>
       </div>
       <div class="stat-box green">
         <div class="val">0</div>
         <div class="lbl">Hallucinations (severe)</div>
       </div>
-      <div class="stat-box red">
-        <div class="val">1</div>
+      <div class="stat-box green">
+        <div class="val">0</div>
         <div class="lbl">Wiki Content Bugs</div>
       </div>
     </div>
@@ -202,46 +202,46 @@
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">Version Comparison <span style="font-weight:400;color:var(--muted)">(Q014–Q018)</span></span>
-          <span class="cat-score c-perfect">100.0%</span>
+          <span class="cat-score c-perfect">98.2%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:100%"></div></div>
-        <div class="cat-meta"><span>82.5 / 82.5 weighted</span><span>5 questions</span><span>Difficulty: Medium (×1.5)</span><span>Strong diff-page coverage</span></div>
+        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:98.2%"></div></div>
+        <div class="cat-meta"><span>81.0 / 82.5 weighted</span><span>5 questions</span><span>Difficulty: Medium (×1.5)</span><span>1 citation gap: adv evolution section ref (Q017)</span></div>
       </div>
 
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">Feature Explanation <span style="font-weight:400;color:var(--muted)">(Q008–Q013)</span></span>
-          <span class="cat-score c-good">97.0%</span>
+          <span class="cat-score c-perfect">100.0%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill bg-good" style="width:97%"></div></div>
-        <div class="cat-meta"><span>96.0 / 99.0 weighted</span><span>6 questions</span><span>Difficulty: Medium (×1.5)</span><span>1 gap: subrating formula phrasing (Q008)</span></div>
+        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:100%"></div></div>
+        <div class="cat-meta"><span>99.0 / 99.0 weighted</span><span>6 questions</span><span>Difficulty: Medium (×1.5)</span><span>All key facts and formulas covered</span></div>
       </div>
 
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">Cross-Version Reasoning <span style="font-weight:400;color:var(--muted)">(Q019–Q022)</span></span>
-          <span class="cat-score c-good">95.5%</span>
+          <span class="cat-score c-perfect">100.0%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill bg-good" style="width:95.5%"></div></div>
-        <div class="cat-meta"><span>84.0 / 88.0 weighted</span><span>4 questions</span><span>Difficulty: Hard (×2.0)</span><span>1 gap: RPA 4.0 vs 4.2 ambiguity (Q020)</span></div>
+        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:100%"></div></div>
+        <div class="cat-meta"><span>88.0 / 88.0 weighted</span><span>4 questions</span><span>Difficulty: Hard (×2.0)</span><span>All 4 perfect after security.md English fix</span></div>
       </div>
 
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">Implementation / HCI <span style="font-weight:400;color:var(--muted)">(Q023–Q026)</span></span>
-          <span class="cat-score c-good">93.2%</span>
+          <span class="cat-score c-good">95.5%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill bg-good" style="width:93.2%"></div></div>
-        <div class="cat-meta"><span>82.0 / 88.0 weighted</span><span>4 questions</span><span>Difficulty: Hard (×2.0)</span><span>Gaps: BIS step count (Q023), Continuation_Number range (Q024)</span></div>
+        <div class="bar-track"><div class="bar-fill bg-good" style="width:95.5%"></div></div>
+        <div class="cat-meta"><span>84.0 / 88.0 weighted</span><span>4 questions</span><span>Difficulty: Hard (×2.0)</span><span>Citation gaps only: BIS section (Q023), LESC LL section (Q025)</span></div>
       </div>
 
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">Edge Cases <span style="font-weight:400;color:var(--muted)">(Q027–Q030)</span></span>
-          <span class="cat-score c-ok">90.9%</span>
+          <span class="cat-score c-good">97.7%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill bg-ok" style="width:90.9%"></div></div>
-        <div class="cat-meta"><span>100.0 / 110.0 weighted</span><span>4 questions</span><span>Difficulty: Expert (×2.5)</span><span>1 gap: formula ambiguity in Q028 (−4 pts weighted)</span></div>
+        <div class="bar-track"><div class="bar-fill bg-good" style="width:97.7%"></div></div>
+        <div class="cat-meta"><span>107.5 / 110.0 weighted</span><span>4 questions</span><span>Difficulty: Expert (×2.5)</span><span>1 citation gap: RPA LL section (Q029)</span></div>
       </div>
 
     </div>
@@ -253,34 +253,34 @@
     <div class="dim-grid">
 
       <div class="dim-card">
-        <div class="dval c-perfect">2.87</div>
+        <div class="dval c-perfect">3.00</div>
         <div class="dmax">/ 3.0</div>
         <div class="dlbl">Factual Accuracy</div>
-        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:95.7%"></div></div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:100%"></div></div>
+      </div>
+      <div class="dim-card">
+        <div class="dval c-perfect">3.00</div>
+        <div class="dmax">/ 3.0</div>
+        <div class="dlbl">Completeness</div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:100%"></div></div>
       </div>
       <div class="dim-card">
         <div class="dval c-perfect">2.87</div>
         <div class="dmax">/ 3.0</div>
-        <div class="dlbl">Completeness</div>
+        <div class="dlbl">Citation Quality</div>
         <div class="dbar"><div class="dbar-fill bg-perfect" style="width:95.7%"></div></div>
       </div>
       <div class="dim-card">
-        <div class="dval c-perfect">2.97</div>
-        <div class="dmax">/ 3.0</div>
-        <div class="dlbl">Citation Quality</div>
-        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:99%"></div></div>
-      </div>
-      <div class="dim-card">
-        <div class="dval c-perfect">−0.03</div>
+        <div class="dval c-perfect">0.00</div>
         <div class="dmax">/ 0</div>
         <div class="dlbl">Hallucination Penalty</div>
-        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:99%"></div></div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:100%"></div></div>
       </div>
       <div class="dim-card">
-        <div class="dval c-perfect">1.97</div>
+        <div class="dval c-perfect">2.00</div>
         <div class="dmax">/ 2.0</div>
         <div class="dlbl">Usability</div>
-        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:98.5%"></div></div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:100%"></div></div>
       </div>
 
     </div>
@@ -317,7 +317,7 @@
           <tr><td class="q-id">Q006</td><td class="q-text">Channel Sounding ranging technique?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
           <tr><td class="q-id">Q007</td><td class="q-text">BLE 6.1 RPA privacy feature?</td><td class="q-cat">version_facts</td><td><span class="diff-badge diff-easy">easy</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.0</td><td class="raw-total c-perfect">11.0</td></tr>
           <!-- feature_explanation -->
-          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q008</td><td class="q-text">Connection Subrating stacking formula?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×1.5</td><td class="raw-total c-ok">13.5</td></tr>
+          <tr><td class="q-id">Q008</td><td class="q-text">Connection Subrating stacking formula?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
           <tr><td class="q-id">Q009</td><td class="q-text">CIS vs BIS difference?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
           <tr><td class="q-id">Q010</td><td class="q-text">LE Power Control zones &amp; HCI?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
           <tr><td class="q-id">Q011</td><td class="q-text">DBAF filtering mechanism?</td><td class="q-cat">feature_explanation</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
@@ -327,22 +327,22 @@
           <tr><td class="q-id">Q014</td><td class="q-text">Key differences 5.3 vs 5.4?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
           <tr><td class="q-id">Q015</td><td class="q-text">5.2 audio features over 5.1?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
           <tr><td class="q-id">Q016</td><td class="q-text">6.0 to 6.1 security improvements?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
-          <tr><td class="q-id">Q017</td><td class="q-text">Advertising evolution 4.0 to 5.0?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q017</td><td class="q-text">Advertising evolution 4.0 to 5.0?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">10</td><td class="q-cat">×1.5</td><td class="raw-total c-ok">15.0</td></tr>
           <tr><td class="q-id">Q018</td><td class="q-text">Connection interval evolution 5.3 to 6.2?</td><td class="q-cat">version_comparison</td><td><span class="diff-badge diff-medium">medium</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×1.5</td><td class="raw-total c-perfect">16.5</td></tr>
           <!-- cross_version_reasoning -->
           <tr><td class="q-id">Q019</td><td class="q-text">Stream 16 kHz audio to 20 hearing aids?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
-          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q020</td><td class="q-text">BLE privacy evolution 4.2 to 6.2?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">18.0</td></tr>
+          <tr><td class="q-id">Q020</td><td class="q-text">BLE privacy evolution 4.2 to 6.2?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
           <tr><td class="q-id">Q021</td><td class="q-text">Earliest version for &gt;27 byte LE packets?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
           <tr><td class="q-id">Q022</td><td class="q-text">Sub-1ms interval for gaming controller?</td><td class="q-cat">cross_version</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
           <!-- implementation_hci -->
-          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q023</td><td class="q-text">HCI sequence to set up BIS?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">18.0</td></tr>
-          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q024</td><td class="q-text">HCI for Connection Subrating &amp; constraints?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">10</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">20.0</td></tr>
-          <tr><td class="q-id">Q025</td><td class="q-text">LESC pairing HCI sequence?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q023</td><td class="q-text">HCI sequence to set up BIS?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">10</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">20.0</td></tr>
+          <tr><td class="q-id">Q024</td><td class="q-text">HCI for Connection Subrating &amp; constraints?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q025</td><td class="q-text">LESC pairing HCI sequence?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">10</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">20.0</td></tr>
           <tr><td class="q-id">Q026</td><td class="q-text">LE Power Control HCI setup (5 commands)?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
           <!-- edge_cases -->
           <tr><td class="q-id">Q027</td><td class="q-text">6.2 central + 5.4 peripheral: what happens?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
-          <tr style="background:rgba(248,113,113,0.04)"><td class="q-id">Q028</td><td class="q-text">Min supervision timeout: SF=10, CI=100ms, CN=1?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-n">−1</span></td><td><span class="score-pill sp-1">1</span></td><td class="raw-total c-low">7</td><td class="q-cat">×2.5</td><td class="raw-total c-low">17.5</td></tr>
-          <tr><td class="q-id">Q029</td><td class="q-text">Does active connection break on 6.1 RPA rotation?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
+          <tr><td class="q-id">Q028</td><td class="q-text">Min supervision timeout: SF=10, CI=100ms, CN=1?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
+          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q029</td><td class="q-text">Does active connection break on 6.1 RPA rotation?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">10</td><td class="q-cat">×2.5</td><td class="raw-total c-ok">25.0</td></tr>
           <tr><td class="q-id">Q030</td><td class="q-text">Coded S=8 vs 2M PHY at 375 µs interval?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
         </tbody>
       </table>
@@ -351,52 +351,43 @@
 
   <!-- Issues Found -->
   <div class="section">
-    <div class="section-title">Issues Found &amp; Wiki Improvement Opportunities</div>
+    <div class="section-title">Remaining Citation Gaps (all content bugs fixed)</div>
     <div class="issue-list">
 
-      <div class="issue-card critical">
+      <div class="issue-card">
         <div class="issue-head">
-          <span class="issue-id">Q024 · WIKI BUG</span>
-          <span class="issue-title">Continuation_Number range incorrect in ble-parameters.md</span>
+          <span class="issue-id">Q017 · CITATION GAP</span>
+          <span class="issue-title">Advertising evolution: section reference is approximate</span>
         </div>
-        <div class="issue-body">The wiki's <code>ble-parameters.md</code> states Continuation_Number range as 0–499, but the Bluetooth Core Spec defines it as 0–15. This is a factual error that causes the wiki to give wrong implementation guidance.</div>
-        <div class="issue-fix">Update ble-parameters.md Continuation_Number range to 0–15 (0x00–0x0F).</div>
+        <div class="issue-body">Answer cites <code>Vol 6, Part B, §2.3.4</code> for extended advertising. The legacy ADV_IND PDU format (§2.3.1) and extended advertising PDU chain (§2.3.4) are separate sections — a single ref does not precisely cover both sides of the comparison.</div>
+        <div class="issue-fix">Add §2.3.1 citation for legacy advertising PDU formats alongside §2.3.4 for extended.</div>
       </div>
 
       <div class="issue-card">
         <div class="issue-head">
-          <span class="issue-id">Q008 · PHRASING GAP</span>
-          <span class="issue-title">Subrating stacking formula not stated explicitly</span>
+          <span class="issue-id">Q023 · CITATION GAP</span>
+          <span class="issue-title">BIS setup: section-level citation not specified</span>
         </div>
-        <div class="issue-body"><code>connection-management.md</code> demonstrates Connection Subrating using Peripheral_Latency in examples but never states the explicit formula: <code>Effective_Interval = Connection_Interval × Subrate_Factor × (1 + Continuation_Number)</code>.</div>
-        <div class="issue-fix">Add the formula explicitly to connection-management.md §Connection Subrating.</div>
+        <div class="issue-body">The 9-step BIS broadcaster sequence is now correct, but the citation references Core 5.2 and 6.2 at the volume level only — the specific BIS broadcaster procedure section (Vol 6, Part B §4.4.6.1) is not cited.</div>
+        <div class="issue-fix">Add explicit §4.4.6.1 citation for BIS broadcaster HCI procedure in hci-sequences.md.</div>
       </div>
 
       <div class="issue-card">
         <div class="issue-head">
-          <span class="issue-id">Q020 · AMBIGUITY</span>
-          <span class="issue-title">RPA origin version (4.0 vs 4.2) unclear</span>
+          <span class="issue-id">Q025 · CITATION GAP</span>
+          <span class="issue-title">LESC pairing: LL-layer encryption section not cited</span>
         </div>
-        <div class="issue-body">The wiki's <code>security.md</code> notes RPA existed since 4.0 but 4.2 added controller-based resolution. The privacy evolution timeline is ambiguous — the page does not clearly state which version "introduced" RPA for typical use.</div>
-        <div class="issue-fix">Add explicit timeline callout: "RPA defined in 4.0; controller-based resolution (Enhanced Privacy) added in 4.2."</div>
+        <div class="issue-body">The answer correctly cites <code>Vol 3, Part H, §2.3.5.6</code> for SMP LESC pairing, but does not reference the LL-layer encryption procedure section (<code>Vol 6, Part B §5.1.3</code> LL_ENC_REQ/RSP).</div>
+        <div class="issue-fix">Add Vol 6, Part B §5.1.3 citation to hci-sequences.md LESC section.</div>
       </div>
 
       <div class="issue-card">
         <div class="issue-head">
-          <span class="issue-id">Q023 · INCOMPLETE SEQUENCE</span>
-          <span class="issue-title">BIS setup sequence shows 7 steps, reference expects 9</span>
+          <span class="issue-id">Q029 · CITATION GAP</span>
+          <span class="issue-title">RPA rotation: LL privacy section not cited</span>
         </div>
-        <div class="issue-body"><code>hci-sequences.md</code> section 7a lists 7 numbered steps for BIS setup, omitting two discrete steps: (2) Set Extended Advertising Data and (4) Set Periodic Advertising Data as separate enumerated items.</div>
-        <div class="issue-fix">Expand hci-sequences.md BIS setup to 9 explicit steps, matching the canonical sequence.</div>
-      </div>
-
-      <div class="issue-card">
-        <div class="issue-head">
-          <span class="issue-id">Q028 · FORMULA CONFUSION</span>
-          <span class="issue-title">Continuation_Number vs Max_Latency conflated in supervision timeout explanation</span>
-        </div>
-        <div class="issue-body">The wiki does not clearly distinguish Continuation_Number from Max_Latency (Peripheral_Latency in subrated units). Both appear in supervision timeout formulas but serve different roles. This caused a minor hallucination penalty (−1) in the edge case response.</div>
-        <div class="issue-fix">Add a disambiguation note in connection-management.md clarifying Continuation_Number (additional consecutive active events) vs Max_Latency (skipped subrated events for peripheral latency).</div>
+        <div class="issue-body">The answer correctly states connections are unaffected by RPA rotation, citing the HCI RPA V2 command. The LL-layer controller address resolution procedure (<code>Vol 6, Part B §4.7.2</code>) that explains why connections are immune is not cited.</div>
+        <div class="issue-fix">Add Vol 6, Part B §4.7.2 citation to the connection-management or security page covering RPA behavior.</div>
       </div>
 
     </div>
@@ -410,23 +401,22 @@
       <div class="insight-card">
         <h4>Strengths</h4>
         <ul>
-          <li>All 7 version_facts questions answered perfectly — factual recall is excellent</li>
-          <li>All 5 version_comparison questions answered perfectly — diff pages are authoritative and comprehensive</li>
-          <li>Citation quality: 2.97/3.0 avg — nearly every answer includes spec version and section</li>
-          <li>Near-zero hallucination rate: only 1 minor instance across 30 questions</li>
-          <li>Complex multi-hop reasoning (Q019, Q021, Q022) handled correctly</li>
-          <li>LESC pairing sequence (Q025) correctly distinguishes SMP from HCI — a common source of confusion</li>
+          <li>All 7 version_facts and all 4 cross_version_reasoning questions answered perfectly (100%)</li>
+          <li>Zero hallucinations across all 30 questions (up from 1 minor instance)</li>
+          <li>All wiki content bugs fixed: Q008 formula, Q023 BIS 9-step sequence, Q024 CN range, Q028 disambiguation</li>
+          <li>Accuracy and Completeness now both 3.00/3.0 avg — every fact correct, every key fact covered</li>
+          <li>Complex multi-hop reasoning (Q019–Q022) all 100% including Q020 (fixed security.md Korean text)</li>
+          <li>LESC pairing (Q025) and LE Power Control (Q026) correctly detailed with opcodes and sequences</li>
         </ul>
       </div>
 
       <div class="insight-card">
         <h4>Gaps &amp; Limitations</h4>
         <ul>
-          <li>Explicit formulas need to be stated verbatim in wiki, not only demonstrated via examples</li>
-          <li>One confirmed wiki content bug: Continuation_Number range (Q024) — fix before production use</li>
-          <li>Supervision timeout calculation (Q028) is the hardest edge case — consider adding a worked example</li>
-          <li>BIS HCI sequence step count is ambiguous — 7 vs 9 steps depending on interpretation</li>
-          <li>RPA timeline (4.0 vs 4.2) needs a one-line disambiguation in security.md</li>
+          <li>Citation quality 2.87/3.0 avg — 4 questions with citation=2 (Q017, Q023, Q025, Q029)</li>
+          <li>Remaining gaps are all citation-only: missing subsection-level Vol 6, Part B references</li>
+          <li>Q017: legacy vs extended advertising PDU format sections (§2.3.1 vs §2.3.4) not distinguished</li>
+          <li>Q025/Q029: LL-layer sections (§5.1.3, §4.7.2) would complete the citation chain</li>
           <li>Self-evaluation note: scores may be slightly optimistic vs a third-party judge</li>
         </ul>
       </div>
@@ -436,7 +426,7 @@
 
   <div class="footer">
     <span>Bluetooth LLM-Wiki Eval v1.0 · 30 questions · <a href="dataset.json">dataset.json</a> · <a href="rubric.md">rubric.md</a></span>
-    <span>Generated 2026-05-04 by claude-sonnet-4-6</span>
+    <span>Generated 2026-05-04 (v2) by claude-sonnet-4-6</span>
   </div>
 
 </div>
