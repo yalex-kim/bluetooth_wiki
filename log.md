@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-05-04] UPDATE — L2CAP page, Direction Finding + CS HCI sequences, Filter Accept List / Privacy
+
+**Operation**: CREATE + UPDATE
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+
+### Pages created
+
+- `wiki/concepts/l2cap.md` — New concept page covering:
+  - Fixed channels (CID 0x0004/0005/0006/0007) and their protocols
+  - LE Credit-Based Connection (CoC, 4.2+): PSMs, MTU vs MPS, credit model, signal codes
+  - Enhanced Credit-Based Flow Control (ECBFC, 5.2+): multi-channel request, EATT PSM 0x0027
+  - Known PSM table, SAR (segmentation/reassembly), BR/EDR L2CAP modes
+  - Version history (4.0 / 4.2 / 5.2)
+
+### Pages updated
+
+- `wiki/reference/hci-sequences.md`:
+  - Added Section 9: Direction Finding CTE / AoA / AoD (5.1+) — connectionless CTE (transmitter + receiver sides), connection-based CTE (request/response enable, IQ report events)
+  - Added Section 10: Channel Sounding (6.0+) — full setup flow: capability read, security enable, CS Config create, procedure parameters, procedure enable, Subevent_Result event interpretation
+  - Updated See Also with links to Direction Finding, Channel Sounding, L2CAP pages
+
+- `wiki/concepts/security.md`:
+  - Added Resolving List section: full HCI command table (0x2027–0x202D + 0x204E), modification constraints
+  - Added Privacy Modes section: Network vs Device Privacy Mode (4.2+), `HCI_LE_Set_Privacy_Mode` (0x204E)
+  - Added Filter Accept List section: HCI management commands (0x2010–0x2012, 0x201F), all three filter policy tables (scanning, advertising, connection initiation), FAL + RPA interaction
+
+- `index.md`:
+  - Added l2cap.md to Concept Pages table
+  - Added 7 new query routing entries (L2CAP, EATT, FAL, Privacy Mode, Direction Finding HCI, CS HCI)
+
+---
+
 ## [2026-05-04] LINT — Citation gaps fixed, source footers added, PDF links removed
 
 **Operation**: LINT / UPDATE

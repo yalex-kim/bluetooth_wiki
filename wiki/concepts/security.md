@@ -137,6 +137,97 @@ The controller resolves RPAs internally without waking the host — more efficie
 
 **Active connections are unaffected**: When the RPA rotation timer fires, only future advertising and scanning use the new RPA. An existing connection retains the address used during setup for its entire lifetime. [Core 6.2, Vol 6, Part B, §4.7.2]
 
+### Resolving List and Controller-Based Address Resolution (4.2+)
+
+The **Resolving List** is a Controller-side database mapping each bonded peer's identity address to the IRK pair (peer's IRK for resolving incoming RPAs, local IRK for generating outgoing RPAs). When address resolution is enabled, the Controller resolves RPAs autonomously without waking the Host.
+
+| HCI Command | Opcode | Purpose |
+|-------------|--------|---------|
+| `HCI_LE_Read_Resolving_List_Size` | 0x202A | Query maximum number of entries the Controller supports |
+| `HCI_LE_Clear_Resolving_List` | 0x2029 | Remove all entries |
+| `HCI_LE_Add_Device_To_Resolving_List` | 0x2027 | Add `{Address_Type, Address, Peer_IRK[16], Local_IRK[16]}` |
+| `HCI_LE_Remove_Device_From_Resolving_List` | 0x2028 | Remove a specific entry |
+| `HCI_LE_Read_Peer_Resolvable_Address` | 0x202B | Read the current RPA being used for a specific peer |
+| `HCI_LE_Read_Local_Resolvable_Address` | 0x202C | Read the local RPA being used for a specific peer |
+| `HCI_LE_Set_Address_Resolution_Enable` | 0x202D | Enable (0x01) or disable (0x00) Controller-based resolution |
+
+> The Resolving List **cannot be modified** while address resolution is enabled and any scanner, advertiser, or initiator is active. Disable the scanner/advertiser, make changes, then re-enable.
+
+[Core 6.2, Vol 4, Part E, §7.8.38–7.8.44; Vol 6, Part B, §4.7.1]
+
+### Privacy Modes (4.2+)
+
+Privacy Mode controls how strictly a device checks the address type of incoming advertising packets from a peer that is in the Resolving List.
+
+| Mode | Value | Behavior |
+|------|-------|----------|
+| **Network Privacy Mode** (default) | `0x00` | Only accept advertising from a peer in the Resolving List if the peer uses an RPA. Identity address packets from that peer are rejected. |
+| **Device Privacy Mode** | `0x01` | Accept advertising from a peer in the Resolving List regardless of address type (RPA or identity). More permissive; used when the peer cannot generate RPAs. |
+
+Set per-peer via `HCI_LE_Set_Privacy_Mode` (0x204E):
+- Parameters: `Peer_Identity_Address_Type`, `Peer_Identity_Address`, `Privacy_Mode`
+- The peer must already be in the Resolving List.
+- Default mode for all newly added entries is **Network Privacy Mode**.
+
+[Core 6.2, Vol 4, Part E, §7.8.77; Vol 6, Part B, §4.7.4]
+
+---
+
+## Filter Accept List (4.0+)
+
+The **Filter Accept List** (previously called "White List" in pre-5.3 specs) is a Controller-side list of device addresses. When a filter policy that references the FAL is active, the Controller only processes advertising, scan, or connection requests from addresses in this list — without waking the Host.
+
+### HCI Management
+
+| HCI Command | Opcode | Purpose |
+|-------------|--------|---------|
+| `HCI_LE_Read_Filter_Accept_List_Size` | 0x201F | Query maximum number of entries |
+| `HCI_LE_Clear_Filter_Accept_List` | 0x2010 | Remove all entries |
+| `HCI_LE_Add_Device_To_Filter_Accept_List` | 0x2011 | Add `{Address_Type, Address}` |
+| `HCI_LE_Remove_Device_From_Filter_Accept_List` | 0x2012 | Remove a specific entry |
+
+> The FAL **cannot be modified** while any scanning, advertising, or initiating procedure that references it is active. Returns `Command Disallowed (0x0C)` if modified while active.
+
+### Filter Policies
+
+The FAL is referenced via the `Scanning_Filter_Policy`, `Advertising_Filter_Policy`, and `Initiator_Filter_Policy` parameters:
+
+**Scanning (`HCI_LE_Set_Scan_Parameters`, `HCI_LE_Set_Extended_Scan_Parameters`):**
+
+| Policy | Value | Effect |
+|--------|-------|--------|
+| Accept all | `0x00` | Process all advertising PDUs (default) |
+| FAL only | `0x01` | Process only PDUs from devices in the FAL |
+| Undirected + directed to own | `0x02` | Undirected + directed PDUs targeting this device (ignores FAL) |
+| FAL + directed to own | `0x03` | FAL devices + directed PDUs targeting this device |
+
+**Advertising (`HCI_LE_Set_Advertising_Parameters`, extended equivalent):**
+
+| Policy | Value | Effect |
+|--------|-------|--------|
+| Process all SCAN_REQ and CONNECT_IND | `0x00` | Default; accept from any scanner/initiator |
+| FAL for SCAN_REQ only | `0x01` | Only respond to SCAN_REQ from FAL devices |
+| FAL for CONNECT_IND only | `0x02` | Only accept connections from FAL devices |
+| FAL for both | `0x03` | Restrict both scan responses and connections to FAL devices |
+
+**Connection Initiation (`HCI_LE_Create_Connection`, `HCI_LE_Extended_Create_Connection`):**
+
+| Policy | Value | Effect |
+|--------|-------|--------|
+| Use Peer_Address | `0x00` | Connect to the specific address in the command (default) |
+| Use FAL | `0x01` | Connect to any device in the FAL; `Peer_Address` field is ignored |
+
+### FAL and RPA Interaction
+
+The FAL matches **identity addresses**, not RPAs. If a bonded peer uses RPAs, the Controller must resolve the RPA to its identity address (via the Resolving List) before the FAL check occurs. This requires:
+1. The peer's IRK in the Resolving List.
+2. Address resolution enabled (`HCI_LE_Set_Address_Resolution_Enable = 0x01`).
+3. The peer's identity address in the FAL.
+
+Devices using RPAs with **unknown IRK** can be added to the FAL using `Address_Type = 0xFF` (anonymous entry — matches any RPA), but this effectively disables address filtering for that slot.
+
+[Core 6.2, Vol 4, Part E, §7.8.15–7.8.17; Vol 6, Part B, §4.3.1]
+
 ---
 
 ## Link-Layer Encryption

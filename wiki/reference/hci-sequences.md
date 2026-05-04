@@ -374,6 +374,124 @@ The peripheral cannot directly call `HCI_LE_Connection_Update`. It requests the 
 
 ---
 
+## 9. Direction Finding — CTE / AoA / AoD (5.1+)
+
+Direction Finding uses a **Constant Tone Extension (CTE)** appended to advertising or connection PDUs. The receiving device samples the CTE across its antenna array (IQ samples) to compute angle of arrival (AoA) or angle of departure (AoD).
+
+[Core 6.2, Vol 4, Part E, §7.8.79–7.8.84; Vol 6, Part B, §4.4.5]
+
+### 9a. Connectionless CTE (Periodic Advertising, Transmitter Side)
+
+Requires a running extended + periodic advertising set (see Section 7 setup, steps 1–5).
+
+1. `HCI_LE_Set_Connectionless_CTE_Transmit_Parameters` (0x2051)
+   — Advertising_Handle, CTE_Length (2–20, units of 8 µs), CTE_Type (0x00=AoA, 0x01=AoD 1µs, 0x02=AoD 2µs), CTE_Count (CTEs per periodic advertising interval), Switching_Pattern_Length, Antenna_IDs[]
+   → `HCI_Command_Complete`: Status=0x00
+
+2. `HCI_LE_Set_Connectionless_CTE_Transmit_Enable` (0x2052)
+   — Advertising_Handle, CTE_Enable=0x01
+   → `HCI_Command_Complete`: Status=0x00
+   > Controller appends a CTE to `Num_CTE_Per_Interval` PDUs per periodic advertising event.
+
+### 9b. Connectionless CTE (Periodic Advertising, Receiver Side)
+
+Scanner must first synchronize to the periodic advertising train (see Section 7b, steps 1–4).
+
+1. `HCI_LE_Set_Connectionless_IQ_Sampling_Enable` (0x2053)
+   — Sync_Handle, Sampling_Enable=0x01, Slot_Durations (0x01=1µs, 0x02=2µs), Max_Sampled_CTEs, Switching_Pattern_Length, Antenna_IDs[]
+   → `HCI_Command_Complete`: Status=0x00, Sync_Handle
+
+2. ← `LE_Connectionless_IQ_Report` (Event 0xFF, Subevent 0x15) — arrives for each received CTE
+   — Sync_Handle, Channel_Index, RSSI, RSSI_Antenna_ID, CTE_Type, Slot_Durations, Packet_Status, Periodic_Event_Counter, Sample_Count, I_Sample[], Q_Sample[]
+   > Feed the IQ samples into an AoA/AoD algorithm (e.g., MUSIC, ESPRIT, or a vendor library). The Host is responsible for angle computation — the Controller only provides raw IQ samples.
+
+3. *(Cleanup)* `HCI_LE_Set_Connectionless_IQ_Sampling_Enable` (0x2053) — Sampling_Enable=0x00 to stop.
+
+### 9c. Connection-based CTE (Both Sides)
+
+Requires an established LE ACL connection. Either the Initiator or the Reflector can be the CTE transmitter.
+
+**Reflector (CTE Transmitter) side:**
+
+1. `HCI_LE_Set_Connection_CTE_Transmit_Parameters` (0x2055)
+   — Connection_Handle, CTE_Types bitmask (0x01=AoA, 0x02=AoD 1µs, 0x04=AoD 2µs), Switching_Pattern_Length, Antenna_IDs[]
+   → `HCI_Command_Complete`: Status=0x00, Connection_Handle
+
+2. `HCI_LE_Connection_CTE_Response_Enable` (0x2057)
+   — Connection_Handle, Enable=0x01
+   → `HCI_Command_Complete`: Status=0x00, Connection_Handle
+
+**Initiator (IQ Sampler) side:**
+
+3. `HCI_LE_Set_Connection_CTE_Receive_Parameters` (0x2054)
+   — Connection_Handle, Sampling_Enable=0x01, Slot_Durations, Switching_Pattern_Length, Antenna_IDs[]
+   → `HCI_Command_Complete`: Status=0x00, Connection_Handle
+
+4. `HCI_LE_Connection_CTE_Request_Enable` (0x2056)
+   — Connection_Handle, Enable=0x01, CTE_Request_Interval (connection events between CTE requests), Requested_CTE_Length, Requested_CTE_Type
+   → `HCI_Command_Complete`: Status=0x00, Connection_Handle
+   > Controller automatically sends `LL_CTE_REQ` PDUs at the specified interval and collects IQ samples.
+
+5. ← `LE_Connection_IQ_Report` (Event 0xFF, Subevent 0x16) — one event per received CTE
+   — Connection_Handle, RX_PHY, Data_Channel_Index, RSSI, RSSI_Antenna_ID, CTE_Type, Slot_Durations, Packet_Status, Connection_Event_Counter, Sample_Count, I_Sample[], Q_Sample[]
+
+6. *(Cleanup)* `HCI_LE_Connection_CTE_Request_Enable` (0x2056) — Enable=0x00
+
+> **Antenna switching note**: The Antenna_IDs array programs the GPIO switching pattern used during the CTE. Both transmitter and receiver must use the same slot duration. For AoA, only the receiver switches antennas; for AoD, only the transmitter switches.
+
+---
+
+## 10. Channel Sounding (CS, 6.0+)
+
+Channel Sounding enables centimeter-level ranging. A CS procedure involves two devices — **Initiator** and **Reflector** — exchanging CS steps over an encrypted LE connection.
+
+[Core 6.2, Vol 4, Part E, §7.8.116–7.8.130; Vol 6, Part H]
+
+> **Prerequisite**: The connection must be encrypted before CS can be enabled. [Core 6.2, Vol 6, Part H, §4.2]
+
+### 10a. Capability and Security Setup (One-time per connection)
+
+1. `HCI_LE_CS_Read_Remote_Supported_Capabilities` (0x208A) — Initiator queries peer CS capabilities.
+   → `HCI_Command_Status`: Status=0x00
+   ← `LE_CS_Read_Remote_Supported_Capabilities_Complete` — Num_Config_Supported, Max_Consecutive_Procedures_Supported, Num_Antennas_Supported, Max_Antenna_Paths_Supported, Roles_Supported, Optional_Modes_Supported, RTT_Capability, RTT_AA_Only_N, RTT_Sounding_N, RTT_Random_Payload_N, NADM_Sounding_Capability, NADM_Random_Capability, CS_SYNC_PHY_Supported, Subfeatures_Supported, T_IP1/IP2/FCS/PM_Times_Supported
+
+2. `HCI_LE_CS_Security_Enable` (0x2089) — triggers the CS Security Start procedure (LL_CS_SEC_REQ / LL_CS_SEC_RSP).
+   → `HCI_Command_Status`: Status=0x00
+   ← `LE_CS_Security_Enable_Complete` on **both sides** — Status=0x00
+   > This must complete before any CS config or procedure can be run. The spec requires this cryptographic handshake to prevent relay attacks.
+
+### 10b. Configuration (Per ranging session type)
+
+3. `HCI_LE_CS_Set_Default_Settings` (0x208C) — Set role (0x01=Initiator, 0x02=Reflector, 0x03=Both), CS_SYNC_Antenna_Selection, Max_TX_Power
+   → `HCI_Command_Complete`: Status=0x00, Connection_Handle
+
+4. `HCI_LE_CS_Create_Config` (0x208F)
+   — Connection_Handle, Config_ID (0x00–0x03), Create_Context (0x00=local only, 0x01=both peers), Main_Mode (1=RTT, 2=PBR, 3=PBR+RTT), Sub_Mode, Min_Main_Mode_Steps, Max_Main_Mode_Steps, Main_Mode_Repetition, Mode_0_Steps, Role (0x01=Initiator/0x02=Reflector), RTT_Type, CS_SYNC_PHY, Channel_Map (10 bytes, 72-channel bitmask), Channel_Map_Repetition, Channel_Selection_Type, Ch3c_Shape, Ch3c_Jump, Companion_Signal_Enable
+   → `HCI_Command_Status`: Status=0x00
+   ← `LE_CS_Config_Complete` on **both sides** — Config_ID, Action=0x01 (config created), Main_Mode, Sub_Mode, T_IP1/IP2/FCS/PM, Max_Procedure_Len, Min/Max_Subevent_Len
+
+### 10c. Procedure Execution
+
+5. `HCI_LE_CS_Set_Procedure_Parameters` (0x2092)
+   — Connection_Handle, Config_ID, Max_Procedure_Len, Min_Procedure_Interval, Max_Procedure_Interval, Max_Procedure_Count (0=indefinite), Min/Max_Subevent_Len, Tone_Antenna_Config_Selection, PHY, TX_Power_Delta, Preferred_Peer_Antenna, SNR_Control_Initiator/Reflector
+   → `HCI_Command_Complete`: Status=0x00, Connection_Handle
+
+6. `HCI_LE_CS_Procedure_Enable` (0x2093) — Enable=0x01, Config_ID, Connection_Handle
+   → `HCI_Command_Status`: Status=0x00
+   ← `LE_CS_Procedure_Enable_Complete` on **both sides** — Status=0x00, Config_ID, State=0x01 (enabled), Tone_Antenna_Config_Selection, Selected_TX_Power, Subevent_Len, Subevents_Per_Event, Subevent_Interval, Event_Interval, Procedure_Interval, Procedure_Count, Max_Procedure_Len
+
+7. ← `LE_CS_Subevent_Result` (repeating) — one event per CS subevent
+   — Connection_Handle, Config_ID, Start_ACL_Conn_Event, Procedure_Counter, Frequency_Compensation, Reference_Power_Level, Procedure_Done_Status, Subevent_Done_Status, Abort_Reason, Num_Antenna_Paths, Num_Steps_Reported, Step_Mode[], Step_Channel[], Step_Data_Length[], Step_Data[][]
+   > Step_Data contains raw RTT timestamps (Mode 1) or phase/amplitude IQ samples (Mode 2/3). The Host is responsible for converting these into distance estimates.
+
+8. ← `LE_CS_Subevent_Result_Continue` — if result data exceeds event payload; carries continuation fragments.
+
+9. *(Stop)* `HCI_LE_CS_Procedure_Enable` (0x2093) — Enable=0x00 to stop ongoing procedures.
+
+> **Distance calculation**: RTT (Mode 1) gives time-of-flight → distance. PBR (Mode 2) gives phase differences across frequencies → distance via IFFT. Mode 3 combines both. Vendor SDKs or host-side algorithms process `Step_Data`. See [Channel Sounding](../concepts/channel-sounding.md) for method details.
+
+---
+
 ## Tips and Common Pitfalls
 
 - **Read Supported_Commands first**: Always check `HCI_Read_Local_Supported_Commands` (0x1002) before calling any command introduced after 4.0. Calling an unsupported command returns `Unknown HCI Command (0x01)`.
@@ -400,9 +518,12 @@ The peripheral cannot directly call `HCI_LE_Connection_Update`. It requests the 
 
 - [HCI Command Reference](hci-commands.md) — Full command list with opcodes and all parameters
 - [BLE Architecture](../concepts/ble-architecture.md) — Protocol stack layers (PHY, LL, HCI, L2CAP, ATT, GATT, SM, GAP)
-- [Security](../concepts/security.md) — Pairing modes, key hierarchy, and bonding in detail
+- [Security](../concepts/security.md) — Pairing modes, key hierarchy, bonding, Filter Accept List, Resolving List
 - [LE Audio](../concepts/le-audio.md) — CIS and BIS ISO setup sequences with codec configuration
+- [Direction Finding](../concepts/direction-finding.md) — AoA/AoD algorithm background, antenna array design
+- [Channel Sounding](../concepts/channel-sounding.md) — PBR/RTT ranging methods, Step_Data interpretation, relay attack resilience
+- [L2CAP](../concepts/l2cap.md) — CoC channel setup flows underlying EATT and application protocols
 
 ---
 
-*Source: [Core 6.2, Vol 4, Part E, §7](../../sources/specs/6.2/Core_v6.2.md) — HCI command and event specifications; [Core 6.2, Vol 3, Part F (ATT) and Part G (GATT)](../../sources/specs/6.2/Core_v6.2.md) — attribute protocol PDU sequences; [Core 6.2, Vol 3, Part H (SMP)](../../sources/specs/6.2/Core_v6.2.md) — LE Secure Connections pairing flow; [Core 6.2, Vol 3, Part A (L2CAP)](../../sources/specs/6.2/Core_v6.2.md) — L2CAP Connection Parameter Update signaling.*
+*Source: [Core 6.2, Vol 4, Part E, §7](../../sources/specs/6.2/Core_v6.2.md) — HCI command and event specifications; [Core 6.2, Vol 3, Part F (ATT) and Part G (GATT)](../../sources/specs/6.2/Core_v6.2.md) — attribute protocol PDU sequences; [Core 6.2, Vol 3, Part H (SMP)](../../sources/specs/6.2/Core_v6.2.md) — LE Secure Connections pairing flow; [Core 6.2, Vol 3, Part A (L2CAP)](../../sources/specs/6.2/Core_v6.2.md) — L2CAP signaling; [Core 6.2, Vol 6, Part B, §4.4.5 (Direction Finding)](../../sources/specs/6.2/Core_v6.2.md); [Core 6.2, Vol 6, Part H (Channel Sounding)](../../sources/specs/6.2/Core_v6.2.md)*

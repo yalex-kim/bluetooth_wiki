@@ -51,6 +51,7 @@
 | [advertising](wiki/concepts/advertising.md) | Legacy vs. Extended advertising, ADV PDU types, AD type table, Periodic Advertising, PAwR (4.0–6.2) |
 | [connection-management](wiki/concepts/connection-management.md) | Connection parameters, subrating, short intervals (6.2), power control, reconnection, DLE, PHY selection |
 | [att-gatt](wiki/concepts/att-gatt.md) | ATT PDU opcodes, MTU negotiation, permissions, Long Read/Write, Reliable Write, EATT (5.2+), GATT caching (5.1+) |
+| [l2cap](wiki/concepts/l2cap.md) | L2CAP fixed channels (CID 0x0004/0005/0006), LE CoC (4.2+), ECBFC/EATT (5.2+), PSM table, credit flow control |
 
 ---
 
@@ -90,7 +91,7 @@
 ## Query Routing Guide
 
 | If asked about... | Read these pages |
-|------------------|-----------------|
+|------------------|-----------------| 
 | A specific version's features | `wiki/versions/core-spec-X.Y.md` |
 | What changed between versions | `wiki/version-diff/diff-X.W-to-X.Y.md` |
 | A specific protocol concept | `wiki/concepts/<concept>.md` |
@@ -104,6 +105,12 @@
 | PAwR / broadcast updates | `core-spec-5.4.md`, `diff-5.3-to-5.4.md` |
 | Security / pairing / bonding | `wiki/concepts/security.md` |
 | GATT / ATT / services | `wiki/concepts/profiles-and-services.md` |
+| L2CAP / CoC / ECBFC / PSM / credits | `wiki/concepts/l2cap.md` |
+| EATT bearer setup / L2CAP credit channels | `wiki/concepts/l2cap.md`, `wiki/concepts/att-gatt.md` |
+| Filter Accept List / whitelist / scan filter | `wiki/concepts/security.md` |
+| Privacy Mode / Resolving List / IRK management | `wiki/concepts/security.md` |
+| Direction Finding / CTE / IQ samples (HCI) | `wiki/reference/hci-sequences.md` |
+| Channel Sounding / CS setup / CS procedure (HCI) | `wiki/reference/hci-sequences.md`, `wiki/concepts/channel-sounding.md` |
 | A2DP / HFP / AVRCP / HID profiles | `wiki/concepts/profiles-and-services.md` |
 | HCI commands / opcodes / parameters | `wiki/reference/hci-commands.md` |
 | HCI command sequences / flows / setup | `wiki/reference/hci-sequences.md` |
