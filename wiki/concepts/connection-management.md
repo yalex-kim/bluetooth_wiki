@@ -156,13 +156,23 @@ is a "subrated connection event" that devices must participate in.
 |-----------|-------|-------------|
 | Subrate_Factor | 1–500 (0x0001–0x01F4) | Virtual multiplier on the connection interval |
 | Peripheral_Latency (subrated) | 0–499 (0x0000–0x01F3) | Skip additional subrated events (stacks on top of Subrate_Factor) |
-| Continuation_Number | 0 to (Subrate_Factor – 1) | Extra consecutive events to stay active after a non-empty packet |
+| Continuation_Number | 0–15 (0x0000–0x000F) | Extra consecutive base events to stay active after a non-empty subrated exchange; independent of Subrate_Factor |
 | connSubrateBaseEvent | 0–65535 | Anchor for which events are subrated events |
 
-**Stacking clarification**: Subrate_Factor and Peripheral_Latency are independent multipliers
-that compound. If `connInterval = 7.5 ms`, `Subrate_Factor = 10`, and `Peripheral_Latency = 4`,
-the effective wakeup interval is `7.5 ms × 10 × (4 + 1) = 375 ms`. The Peripheral_Latency
-value is expressed in units of *subrated* connection events, not underlying connection events.
+**Stacking clarification**: Subrate_Factor and Max_Latency (Peripheral_Latency in subrated units)
+are independent multipliers that compound. If `connInterval = 7.5 ms`, `Subrate_Factor = 10`,
+and `Max_Latency = 4`, the effective wakeup interval is `7.5 ms × 10 × (4 + 1) = 375 ms`.
+Max_Latency is expressed in units of *subrated* connection events, not underlying events.
+
+**Continuation_Number is distinct**: it controls how many additional consecutive base events
+a device stays active after a non-empty PDU exchange at the subrated anchor point, enabling
+a short burst window without renegotiating the subrate. It does **not** multiply the wakeup
+interval. Range: 0–15 (raw 0x0000–0x000F); must be < Subrate_Factor.
+
+**Formula summary**:
+```
+Effective_Wakeup_Interval = Connection_Interval × Subrate_Factor × (Max_Latency + 1)
+```
 
 **Supervision_Timeout with subrating** (mandatory check before applying):
 

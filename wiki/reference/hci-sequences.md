@@ -277,26 +277,37 @@ Requires an extended advertising set configured as non-connectable non-scannable
    — Advertising_Handle=0x00, Advertising_Event_Properties=0x0000 (non-connectable, non-scannable, non-legacy), Primary_Advertising_PHY=0x01 (1M), Secondary_Advertising_PHY=0x01 (1M)
    → `HCI_Command_Complete`: Status=0x00, Selected_TX_Power
 
-2. `HCI_LE_Set_Periodic_Advertising_Parameters` (0x203E)
+2. `HCI_LE_Set_Extended_Advertising_Data` (0x2037)
+   — Advertising_Handle=0x00, Operation=0x03 (complete data), Fragment_Preference=0x01, Advertising_Data_Length=N, Advertising_Data=\[AD structures: Service UUIDs, Broadcast_Name, etc.\]
+   → `HCI_Command_Complete`: Status=0x00
+   > Set the extended advertising payload. The BASE structure is carried in periodic advertising data (step 4), not here.
+
+3. `HCI_LE_Set_Periodic_Advertising_Parameters` (0x203E)
    — Advertising_Handle=0x00, Periodic_Advertising_Interval_Min=0x0050 (100 ms), Periodic_Advertising_Interval_Max=0x0050
    → `HCI_Command_Complete`: Status=0x00
 
-3. `HCI_LE_Set_Periodic_Advertising_Enable` (0x2040) — Enable=0x01, Advertising_Handle=0x00
+4. `HCI_LE_Set_Periodic_Advertising_Data` (0x203F)
+   — Advertising_Handle=0x00, Operation=0x03 (complete data), Advertising_Data_Length=N, Advertising_Data=\[BASE LTV structure: BIG_Info, BIS codec configs, sampling rate, frame duration, etc.\]
+   → `HCI_Command_Complete`: Status=0x00
+   > The BASE (Basic Audio Announcement) LTV structure here tells receivers how to join and decode the BIG. Required before enabling periodic advertising.
+
+5. `HCI_LE_Set_Periodic_Advertising_Enable` (0x2040) — Enable=0x01, Advertising_Handle=0x00
    → `HCI_Command_Complete`: Status=0x00
 
-4. `HCI_LE_Set_Extended_Advertising_Enable` (0x2039) — Enable=0x01, Num_Sets=1, Advertising_Handle=0x00
+6. `HCI_LE_Set_Extended_Advertising_Enable` (0x2039) — Enable=0x01, Num_Sets=1, Advertising_Handle=0x00
    → `HCI_Command_Complete`: Status=0x00
 
-5. `HCI_LE_Create_BIG` (0x2068)
+7. `HCI_LE_Create_BIG` (0x2068)
    — BIG_Handle=0x00, Advertising_Handle=0x00, Num_BIS=1, SDU_Interval=10000 µs, Max_SDU=100, Max_Transport_Latency=40 ms, RTN=2, PHY=0x02 (2M), Packing=0x00, Framing=0x00, Encryption=0x00, Broadcast_Code (16 bytes, zeros for unencrypted)
    → `HCI_Command_Status`: Status=0x00
 
-6. ← `LE_Create_BIG_Complete` (Event 0xFF, Subevent 0x1B)
+8. ← `LE_Create_BIG_Complete` (Event 0xFF, Subevent 0x1B)
    — Status=0x00, BIG_Handle, BIG_Sync_Delay, Transport_Latency_BIG, PHY, NSE, BN, ISO_Interval, Num_BIS, Connection_Handle\[\]
 
-7. `HCI_LE_Setup_ISO_Data_Path` (0x206E)
+9. `HCI_LE_Setup_ISO_Data_Path` (0x206E)
    — Connection_Handle (BIS), Data_Path_Direction=0x00 (input/TX), Data_Path_ID=0x00, Coding_Format=0x06 (LC3)
    → `HCI_Command_Complete`: Status=0x00
+   > The broadcaster can now send ISO SDUs. Use `HCI_Number_Of_Completed_Packets` events to track TX slot availability.
 
 ### 7b. Receiver (Broadcast Sink)
 

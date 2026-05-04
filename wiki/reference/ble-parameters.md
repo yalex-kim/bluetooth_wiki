@@ -69,7 +69,7 @@ Example: Interval=50 ms, Latency=4 → Timeout must be > 500 ms.
 |-----------|-----------|------|-------------|-------|
 | Subrate_Factor | 0x0001 – 0x01F4 | — | 1 – 500 | Multiplier on Connection_Interval for the effective event rate |
 | Max_Latency (subrated) | 0x0000 – 0x01F3 | subrated events | 0 – 499 | Like Peripheral_Latency but in subrated event units |
-| Continuation_Number | 0x0000 – 0x01F3 | events | 0 – 499 | Consecutive base events before returning to subrated schedule |
+| Continuation_Number | 0x0000 – 0x000F | — | 0 – 15 | Extra consecutive base events to stay active after a non-empty subrated exchange; does not multiply the wakeup interval |
 
 **Effective Supervision_Timeout constraint with subrating**:
 ```
@@ -164,7 +164,14 @@ Supervision_Timeout > 2 × Connection_Interval × Subrate_Factor × (Max_Latency
 # Supervision timeout minimum
 Supervision_Timeout_min (ms) = 2 × Interval (ms) × (Peripheral_Latency + 1) + 10
 
-# Subrated supervision timeout minimum
+# Effective wakeup interval with Connection Subrating
+#   Subrate_Factor skips N-1 base events; Max_Latency adds further subrated-event skips
+Effective_Wakeup_Interval (ms) = Interval (ms) × Subrate_Factor × (Max_Latency + 1)
+#   Continuation_Number (0–15) is separate: it controls how many extra consecutive base
+#   events a device stays active after a non-empty exchange at the subrated anchor.
+#   It does NOT multiply the wakeup interval.
+
+# Subrated supervision timeout minimum  (uses Max_Latency, not Continuation_Number)
 Supervision_Timeout_min (ms) = 2 × Interval (ms) × Subrate_Factor × (Max_Latency + 1) + 10
 
 # Maximum BLE throughput (approximate)
