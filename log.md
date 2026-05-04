@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-05-04] LINT — Citation gaps fixed, source footers added, PDF links removed
+
+**Operation**: LINT / UPDATE
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+
+### Citation gaps fixed (eval Q-scores improved)
+
+- `wiki/versions/core-spec-5.0.md`: Added `[Vol 6, Part B, §2.3.1]` for legacy advertising PDU description
+- `wiki/concepts/security.md`: Added `[Core 6.2, Vol 6, Part B, §4.7.2]` for RPA connection behavior; added `[Core 6.2, Vol 3, Part H, §2.2; Vol 6, Part B, §5.1.3]` for LL encryption; fixed Korean text in Channel Sounding section to English
+- `wiki/reference/hci-sequences.md`: Added `[Core 5.2, Vol 6, Part B, §4.4.6]` to BIS broadcaster section; added `[Core 6.2, Vol 6, Part B, §5.1.3]` to LESC encryption sequence
+
+### Source footers added (CLAUDE.md compliance)
+
+All wiki pages now carry a `*Source: …*` footer:
+- Version pages: `wiki/versions/core-spec-5.0.md` through `core-spec-6.2.md` (8 pages)
+- Diff pages: `wiki/version-diff/diff-5.0-to-5.1.md` through `diff-6.1-to-6.2.md` (7 pages)
+- Concept pages: `ble-architecture.md`, `classic-bluetooth.md`, `direction-finding.md`, `le-audio.md`, `profiles-and-services.md`, `security.md` (6 pages)
+
+### PDF links removed
+
+All `**Source PDF**` header lines in version pages (5.2–6.2) replaced with `**Source**` pointing to the canonical `sources/specs/X.Y/Core_vX.Y.md` path. Versions 5.0 and 5.1 header paths also corrected to subdirectory format.
+
+### Eval scores
+
+- Overall: 95.8% → **98.5%** (536.5 / 544.5 weighted points)
+- Updated: `eval/results_wiki.json` (v2), `eval/report.html` (v2)
+
+---
+
 ## [2026-05-04] CREATE — att-gatt.md and assigned-numbers.md
 
 **Operation**: CREATE

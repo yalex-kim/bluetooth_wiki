@@ -316,3 +316,7 @@ Key events:
 - [BLE Architecture](ble-architecture.md)
 - [Profiles and Services](profiles-and-services.md)
 - [Security](security.md)
+
+---
+
+*Source: [Core 5.2, Vol 6, Part B, §4.4.6 & §4.5.13 (Isochronous Channels)](../../sources/specs/5.2/Core_v5.2.md)*

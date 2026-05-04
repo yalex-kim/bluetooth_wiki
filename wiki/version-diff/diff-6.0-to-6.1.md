@@ -67,3 +67,7 @@ No features were deprecated or removed in v6.1.
 **Testing:**
 - Add conformance tests for the new v2 HCI command, including parameter boundary validation (Min > Max, Min = 0, Max = 3601 should all be rejected).
 - Verify that the controller's RPA rotation interval is no longer deterministically predictable when v2 is in use.
+
+---
+
+*Source: [Core 6.0](../../sources/specs/6.0/Core_v6.0.md) and [Core 6.1](../../sources/specs/6.1/Core_v6.1.md)*

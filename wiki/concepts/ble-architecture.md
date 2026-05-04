@@ -252,3 +252,7 @@ See also: [Security](security.md) for full details.
 | Channel Sounding, DBAF, Monitoring Advertisers | 6.0 | 2024 |
 | Randomized RPA Updates (v2 privacy hardening) | 6.1 | 2025 |
 | Shorter Connection Intervals (375 µs), LE UTP, CS Amplitude Resilience | 6.2 | 2025 |
+
+---
+
+*Source: [Core 6.2, Vol 1 (Architecture), Vol 3 (Host), Vol 6 (LE Controller)](../../sources/specs/6.2/Core_v6.2.md)*

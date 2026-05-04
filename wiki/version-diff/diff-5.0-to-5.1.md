@@ -74,3 +74,7 @@ If your application bonds with GATT-heavy peripherals (many services/characteris
 - Cache hash + service discovery results in bonded client
 - On reconnect: read hash, compare, skip discovery if match
 - Can reduce reconnection time from hundreds of ms to <10 ms
+
+---
+
+*Source: [Core 5.0](../../sources/specs/5.0/Core_v5.0.md) and [Core 5.1](../../sources/specs/5.1/Core_v5.1.md)*

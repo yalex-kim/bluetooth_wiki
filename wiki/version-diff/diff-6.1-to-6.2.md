@@ -99,3 +99,7 @@ All conforming Bluetooth implementations should apply the 12 security errata inc
 
 - Update firmware to support UTP OTA mode (feature bits 66–69) if you need connection-oriented conformance testing.
 - Update host test infrastructure to use `HCI_LE_UTP_Send` for HCI mode testing.
+
+---
+
+*Source: [Core 6.1](../../sources/specs/6.1/Core_v6.1.md) and [Core 6.2](../../sources/specs/6.2/Core_v6.2.md)*

@@ -133,7 +133,9 @@ The RPA changes periodically (typically every 15 minutes, configurable).
 Only devices with the shared IRK can resolve the RPA to the device's identity.
 
 **Enhanced Privacy (4.2+)**: Controller-based address resolution.
-The controller resolves RPAs internally without waking the host — more efficient.
+The controller resolves RPAs internally without waking the host — more efficient. [Core 4.2, Vol 6, Part B, §4.7.1]
+
+**Active connections are unaffected**: When the RPA rotation timer fires, only future advertising and scanning use the new RPA. An existing connection retains the address used during setup for its entire lifetime. [Core 6.2, Vol 6, Part B, §4.7.2]
 
 ---
 
@@ -146,6 +148,8 @@ Once pairing is complete and a connection is established:
 4. All L2CAP data is encrypted and integrity-protected (MIC)
 
 **Key size**: 7–16 bytes, negotiated during pairing (Core Spec recommends 16 bytes).
+
+[Core 6.2, Vol 3, Part H, §2.2; Vol 6, Part B, §5.1.3]
 
 ---
 
@@ -167,12 +171,12 @@ See: [Core Spec 5.4](../versions/core-spec-5.4.md), [diff-5.3-to-5.4](../version
 
 ## Channel Sounding Security (6.0+)
 
-Channel Sounding(CS)은 릴레이 공격(Relay Attack) 방지를 위한 다층 보안을 제공합니다:
+Channel Sounding (CS) provides multi-layer protection against relay attacks: [Core 6.0, Vol 6, Part H, §4.2]
 
 - CS procedures exchange random nonces during ranging
 - Relay attacks introduce measurable signal path delays
 - Both sides verify timing consistency — inconsistency = relay detected
-- **Amplitude-based Attack Resilience (6.2)**: 6.2에서는 신호의 진폭(Amplitude) 변화를 분석하여, 시간이나 위상을 조작하는 정교한 릴레이 기기를 감지하는 기능을 추가했습니다. `[Core 6.2, Vol 6, Part H, §5]`
+- **Amplitude-based Attack Resilience (6.2)**: Core Spec 6.2 added the ability to detect sophisticated relay devices that manipulate signal timing or phase, by analyzing amplitude (signal strength) variations across the measurement. [Core 6.2, Vol 6, Part H, §5]
 - Critical for **PACS (Physical Access Control)**: car keys, door locks
 
 See: [Core Spec 6.0](../versions/core-spec-6.0.md)
@@ -208,3 +212,7 @@ See: [Core Spec 6.0](../versions/core-spec-6.0.md)
 | Not using LE Secure Connections | Legacy pairing vulnerable to eavesdropping | Require LE SC (Security Mode 1, Level 4) |
 | Unencrypted advertising | Payload visible to all scanners | Use EAD (5.4+) for sensitive payload data |
 | No authentication on GATT characteristics | Unauthorized reads/writes | Set appropriate Permissions on attributes |
+
+---
+
+*Source: [Core 6.2, Vol 3, Part H (Security Manager); Vol 6, Part B §4.7, §5.1](../../sources/specs/6.2/Core_v6.2.md)*

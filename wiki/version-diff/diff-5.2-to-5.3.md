@@ -131,3 +131,7 @@ If your implementation used AMP:
 HCI command names are unchanged in 5.3 (terminology changes are in documentation text).
 However, any host software using field names like "Master" or "Slave" in data structures
 should check for updated names in 5.3 HCI parameter descriptions.
+
+---
+
+*Source: [Core 5.2](../../sources/specs/5.2/Core_v5.2.md) and [Core 5.3](../../sources/specs/5.3/Core_v5.3.md)*

@@ -3,7 +3,7 @@
 **Release Date**: 2021-07-13
 **Status**: Superseded by 5.4 (withdrawn by Bluetooth SIG, use 5.4)
 **Spec Volume**: ~3698 pages
-**Source PDF**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-5-3/) | [Local PDF](../../sources/specs/core-spec-5.3.pdf) | [Local Markdown](../../sources/specs/core-spec-5.3.md)
+**Source**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-5-3/) | [Local Markdown](../../sources/specs/5.3/Core_v5.3.md)
 
 > **Note**: The Bluetooth SIG withdrew Core Specification 5.3. It is superseded by 5.4.
 > The features introduced in 5.3 are retained in 5.4.
@@ -161,3 +161,7 @@ This is a major architectural simplification: the Core Spec is now BR/EDR + LE o
 - Diff from 5.2: [diff-5.2-to-5.3](../version-diff/diff-5.2-to-5.3.md)
 - Diff to 5.4: [diff-5.3-to-5.4](../version-diff/diff-5.3-to-5.4.md)
 - Related concepts: [BLE Architecture](../concepts/ble-architecture.md)
+
+---
+
+*Source: [Core 5.3](../../sources/specs/5.3/Core_v5.3.md)*

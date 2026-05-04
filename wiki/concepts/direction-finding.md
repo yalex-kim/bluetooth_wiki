@@ -92,3 +92,7 @@ The first 8 µs of the CTE is the **Reference Period**. During this time, no ant
 - BLE Architecture
 - Channel Sounding
 - Security
+
+---
+
+*Source: [Core 5.1, Vol 6, Part B, §4.4.5 (AoA/AoD)](../../sources/specs/5.1/Core_v5.1.md)*

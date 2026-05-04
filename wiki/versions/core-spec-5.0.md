@@ -3,7 +3,7 @@
 **Release Date**: 2016-12-06
 **Status**: Superseded by 5.1
 **Spec Volume**: ~2822 pages
-**Source**: [Local Markdown](../../sources/specs/core-spec-5.0.md)
+**Source**: [Local Markdown](../../sources/specs/5.0/Core_v5.0.md)
 
 ---
 
@@ -49,7 +49,7 @@ The **LE 2M PHY** doubled LE throughput to 2 Mbps for connected devices (essenti
 
 ### Advertising (Vol 6, Part B, §2.3, §4.4)
 
-- **Legacy advertising PDUs** (`ADV_IND`, `ADV_DIRECT_IND`, `ADV_NONCONN_IND`, `ADV_SCAN_IND`, `SCAN_RSP`) remain unchanged for backward compatibility; maximum payload 31 bytes
+- **Legacy advertising PDUs** (`ADV_IND`, `ADV_DIRECT_IND`, `ADV_NONCONN_IND`, `ADV_SCAN_IND`, `SCAN_RSP`) remain unchanged for backward compatibility; maximum payload 31 bytes [Vol 6, Part B, §2.3.1]
 - **Extended advertising PDUs** (new): `ADV_EXT_IND` on primary channels carries only an `AuxPtr` + `ADI` field, chaining to secondary channel PDUs (`AUX_ADV_IND`, `AUX_CHAIN_IND`) with up to 255 bytes of actual advertising data [Vol 6, Part B, §2.3.4]
 - **Primary advertising PHY**: can now be LE 1M or LE Coded for extended advertising; secondary channel can be LE 1M, LE 2M, or LE Coded
 - **Periodic advertising** (`AUX_SYNC_IND`): advertiser establishes a sync train with a fixed interval; scanners establish synchronization via `LE Periodic Advertising Create Sync` without forming a connection [Vol 6, Part B, §4.4.2]
@@ -108,3 +108,7 @@ The **LE 2M PHY** doubled LE throughput to 2 Mbps for connected devices (essenti
 
 - Diff to 5.1: [diff-5.0-to-5.1](../version-diff/diff-5.0-to-5.1.md)
 - Related concepts: [BLE Architecture](../concepts/ble-architecture.md)
+
+---
+
+*Source: [Core 5.0](../../sources/specs/5.0/Core_v5.0.md)*

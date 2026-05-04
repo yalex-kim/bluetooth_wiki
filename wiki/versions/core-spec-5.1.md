@@ -3,7 +3,7 @@
 **Release Date**: 2019-01-21
 **Status**: Superseded by 5.2
 **Spec Volume**: ~3256 pages
-**Source**: [Local Markdown](../../sources/specs/core-spec-5.1.md)
+**Source**: [Local Markdown](../../sources/specs/5.1/Core_v5.1.md)
 
 ---
 
@@ -122,3 +122,7 @@ The `ADI` (Advertising Data Information) field introduced in 5.0 Extended Advert
 - Diff from 5.0: [diff-5.0-to-5.1](../version-diff/diff-5.0-to-5.1.md)
 - Diff to 5.2: [diff-5.1-to-5.2](../version-diff/diff-5.1-to-5.2.md)
 - Related concepts: [BLE Architecture](../concepts/ble-architecture.md)
+
+---
+
+*Source: [Core 5.1](../../sources/specs/5.1/Core_v5.1.md)*

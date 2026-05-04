@@ -3,7 +3,7 @@
 **Release Date**: 2025-11-03
 **Status**: Active (current as of 2026-05)
 **Spec Volume**: ~3900 pages
-**Source PDF**: [Local PDF](../../sources/specs/core-spec-6.2.pdf) | [Local Markdown](../../sources/specs/core-spec-6.2.md)
+**Source**: [Local Markdown](../../sources/specs/6.2/Core_v6.2.md)
 
 ---
 
@@ -161,3 +161,7 @@ These errata address vulnerabilities in pairing (both BR/EDR and LE), key genera
 - Previous version: [core-spec-6.1](core-spec-6.1.md)
 - Related concepts: [Security / Privacy](../concepts/security.md), [BLE Architecture](../concepts/ble-architecture.md)
 - Channel Sounding: [core-spec-6.0](core-spec-6.0.md) (introduced), [diff-5.4-to-6.0](../version-diff/diff-5.4-to-6.0.md)
+
+---
+
+*Source: [Core 6.2](../../sources/specs/6.2/Core_v6.2.md)*

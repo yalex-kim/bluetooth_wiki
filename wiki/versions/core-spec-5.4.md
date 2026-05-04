@@ -3,7 +3,7 @@
 **Release Date**: 2023-01-31
 **Status**: Superseded by 6.0
 **Spec Volume**: ~3869 pages
-**Source PDF**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-5-4/) | [Local PDF](../../sources/specs/core-spec-5.4.pdf) | [Local Markdown](../../sources/specs/core-spec-5.4.md)
+**Source**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-5-4/) | [Local Markdown](../../sources/specs/5.4/Core_v5.4.md)
 
 ---
 
@@ -153,3 +153,7 @@ PAwR enables control/signaling alongside it.
 - Diff from 5.3: [diff-5.3-to-5.4](../version-diff/diff-5.3-to-5.4.md)
 - Diff to 6.0: [diff-5.4-to-6.0](../version-diff/diff-5.4-to-6.0.md)
 - Related concepts: [Security](../concepts/security.md), [BLE Architecture](../concepts/ble-architecture.md)
+
+---
+
+*Source: [Core 5.4](../../sources/specs/5.4/Core_v5.4.md)*

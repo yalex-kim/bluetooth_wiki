@@ -410,3 +410,7 @@ Assigned Numbers: [bluetooth.com/specifications/assigned-numbers](https://www.bl
 - [LE Audio](le-audio.md)
 - [Classic Bluetooth](classic-bluetooth.md)
 - [Security](security.md)
+
+---
+
+*Source: [Core 6.2, Vol 3, Part G (GATT), Part C (GAP)](../../sources/specs/6.2/Core_v6.2.md)*

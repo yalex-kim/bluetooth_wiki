@@ -114,3 +114,7 @@ Enable closed-loop TX power management:
 3. Configure Path Loss Monitoring via `HCI_LE_Set_Path_Loss_Reporting_Parameters` (high/low zone thresholds)
 4. Enable reporting via `HCI_LE_Set_Path_Loss_Reporting_Enable`
 5. Host receives `HCI_LE_Path_Loss_Threshold` events on zone transitions
+
+---
+
+*Source: [Core 5.1](../../sources/specs/5.1/Core_v5.1.md) and [Core 5.2](../../sources/specs/5.2/Core_v5.2.md)*

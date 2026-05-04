@@ -83,3 +83,7 @@ EAD is for scenarios where advertising content must be confidential:
 **Note**: EAD protects payload privacy, not device identity. EAD is a **Type 4 feature**
 (Host-only; does not involve the Controller directly). Address randomization (from 4.2)
 is still required for full device identity privacy. [Core 5.4, Vol 0, Part D, Table 4.2]
+
+---
+
+*Source: [Core 5.3](../../sources/specs/5.3/Core_v5.3.md) and [Core 5.4](../../sources/specs/5.4/Core_v5.4.md)*

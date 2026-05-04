@@ -115,3 +115,7 @@ HCI_LE_Enable_Monitoring_Advertisers(Enable)
 **Key distinction**: DBAF requires advertisers to include `ADV_DECISION_IND` PDUs with
 decision data — it is a cooperative filtering mechanism. Monitoring Advertisers works with
 any advertising PDU from monitored devices — it is passive tracking.
+
+---
+
+*Source: [Core 5.4](../../sources/specs/5.4/Core_v5.4.md) and [Core 6.0](../../sources/specs/6.0/Core_v6.0.md)*

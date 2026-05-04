@@ -3,7 +3,7 @@
 **Release Date**: 2024-08-27
 **Status**: Active (superseded by 6.1 → 6.2)
 **Spec Volume**: ~4114 pages
-**Source PDF**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-6-0/) | [Local PDF](../../sources/specs/core-spec-6.0.pdf) | [Local Markdown](../../sources/specs/core-spec-6.0.md)
+**Source**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-6-0/) | [Local Markdown](../../sources/specs/6.0/Core_v6.0.md)
 
 ---
 
@@ -214,3 +214,7 @@ logical transport types (CIS Central, CIS Peripheral, BIG Broadcaster, Synchroni
 - Diff from 5.4: [diff-5.4-to-6.0](../version-diff/diff-5.4-to-6.0.md)
 - Diff to 6.1: [diff-6.0-to-6.1](../version-diff/diff-6.0-to-6.1.md)
 - Related concepts: [Security](../concepts/security.md), [BLE Architecture](../concepts/ble-architecture.md)
+
+---
+
+*Source: [Core 6.0](../../sources/specs/6.0/Core_v6.0.md)*

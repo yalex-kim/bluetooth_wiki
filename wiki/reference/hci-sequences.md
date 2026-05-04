@@ -145,6 +145,8 @@ SMP messages (Pairing Request, Pairing Response, DHKey Check, etc.) are L2CAP PD
     — Status=0x00, Connection_Handle, Encryption_Enabled=0x01
     > Encryption is now active. The connection is bonded. Store the LTK and peer's identity address + IRK for future reconnections.
 
+> **LL layer** (steps 7–10): These HCI calls drive the `LL_ENC_REQ` / `LL_ENC_RSP` / `LL_START_ENC_REQ` / `LL_START_ENC_RSP` PDU exchange at the Link Layer. [Core 6.2, Vol 6, Part B, §5.1.3]
+
 ---
 
 ## 4. Re-encryption on Reconnection (Bonded Devices)
@@ -270,6 +272,8 @@ Requires a prior ACL connection. The Central configures the CIG, then creates CI
 ## 7. BIS Setup (LE Audio Broadcast)
 
 ### 7a. Broadcaster (Transmitter)
+
+[Core 5.2, Vol 6, Part B, §4.4.6]
 
 Requires an extended advertising set configured as non-connectable non-scannable.
 

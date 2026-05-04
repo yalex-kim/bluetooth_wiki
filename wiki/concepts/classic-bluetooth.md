@@ -156,3 +156,7 @@ Key coexistence mechanisms (all in Core Spec):
 - **Slot Availability Mask (SAM, 5.0+)**: BR/EDR Primary signals available/busy slots to LE scheduler
 - **LE Channel Selection Algorithm #2 (5.0+)**: Better distribution to avoid BR/EDR busy slots
 - Both radios typically share one antenna via time-multiplexing managed by a coexistence arbiter
+
+---
+
+*Source: [Core 6.2, Vol 2 (BR/EDR Controller), Vol 3, Part C (GAP)](../../sources/specs/6.2/Core_v6.2.md)*

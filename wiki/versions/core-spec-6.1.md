@@ -3,7 +3,7 @@
 **Release Date**: 2025-04-29
 **Status**: Active
 **Spec Volume**: ~3820 pages
-**Source PDF**: [Local PDF](../../sources/specs/core-spec-6.1.pdf) | [Local Markdown](../../sources/specs/core-spec-6.1.md)
+**Source**: [Local Markdown](../../sources/specs/6.1/Core_v6.1.md)
 
 ---
 
@@ -96,3 +96,7 @@ No features were deprecated or removed in v6.1. All 6.0 features remain fully su
 - Previous version: [core-spec-6.0](core-spec-6.0.md)
 - Next version: [core-spec-6.2](core-spec-6.2.md)
 - Concepts touched: [Security / Privacy](../concepts/security.md), [BLE Architecture](../concepts/ble-architecture.md)
+
+---
+
+*Source: [Core 6.1](../../sources/specs/6.1/Core_v6.1.md)*

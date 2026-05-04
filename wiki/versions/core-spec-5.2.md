@@ -3,7 +3,7 @@
 **Release Date**: 2019-12-31
 **Status**: Superseded by 5.3
 **Spec Volume**: ~3544 pages
-**Source PDF**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-5-2/) | [Local PDF](../../sources/specs/core-spec-5.2.pdf) | [Local Markdown](../../sources/specs/core-spec-5.2.md)
+**Source**: [bluetooth.com](https://www.bluetooth.com/specifications/specs/core-specification-5-2/) | [Local Markdown](../../sources/specs/5.2/Core_v5.2.md)
 
 ---
 
@@ -144,3 +144,7 @@ Devices can request each other to adjust TX power to maintain optimal link quali
 - Diff from 5.1: [diff-5.1-to-5.2](../version-diff/diff-5.1-to-5.2.md)
 - Diff to 5.3: [diff-5.2-to-5.3](../version-diff/diff-5.2-to-5.3.md)
 - Related concepts: [BLE Architecture](../concepts/ble-architecture.md), [Profiles and Services](../concepts/profiles-and-services.md)
+
+---
+
+*Source: [Core 5.2](../../sources/specs/5.2/Core_v5.2.md)*
