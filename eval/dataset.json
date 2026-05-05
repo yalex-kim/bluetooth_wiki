@@ -3,7 +3,7 @@
     "title": "Bluetooth Wiki — RAG vs LLM-Wiki Evaluation Dataset",
     "version": "1.0",
     "created": "2026-05-04",
-    "total_questions": 30,
+    "total_questions": 42,
     "categories": [
       "version_facts",
       "feature_explanation",
@@ -499,6 +499,205 @@
       "expected_citations": ["Core 6.2", "Core 5.0"],
       "rag_challenge": "Requires combining PHY timing calculations from the PHY spec section with the new 6.2 interval constraints — cross-version, cross-volume reasoning.",
       "tags": ["6.2", "5.0", "PHY", "2M", "coded-PHY", "edge-case", "latency"]
+    },
+    {
+      "id": "Q031",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "What are the fixed L2CAP channel IDs (CIDs) used in a BLE connection, and which protocol runs on each?",
+      "reference_answer": "Three fixed L2CAP channels are available immediately on every LE ACL connection — no setup required: CID 0x0004 carries ATT (Attribute Protocol, used by GATT); CID 0x0005 is the LE L2CAP Signaling channel (connection parameter updates, CoC channel setup); CID 0x0006 carries SMP (Security Manager Protocol, used for pairing and key distribution).",
+      "key_facts": [
+        "CID 0x0004 = ATT",
+        "CID 0x0005 = LE L2CAP Signaling",
+        "CID 0x0006 = SMP",
+        "Fixed channels — no setup/connection procedure needed"
+      ],
+      "expected_citations": ["Core 6.2, Vol 3, Part A"],
+      "rag_challenge": "Three CIDs and their protocols are in a single table in Vol 3, Part A; RAG chunks often split mid-table returning only the ATT channel.",
+      "tags": ["L2CAP", "CID", "ATT", "SMP", "fixed-channels"]
+    },
+    {
+      "id": "Q032",
+      "category": "version_facts",
+      "difficulty": "easy",
+      "question": "What is the BLE Filter Accept List, and which three types of BLE procedures can reference it?",
+      "reference_answer": "The Filter Accept List (formerly 'White List' in pre-5.3 specs) is a controller-side list of device addresses. Three procedure types can use it: (1) Scanning — filter advertising reports to only devices in the FAL; (2) Advertising — restrict which devices the advertiser accepts SCAN_REQ or CONNECT_IND from; (3) Connection Initiation — connect to any FAL device instead of a specific peer address.",
+      "key_facts": [
+        "Controller-side address list",
+        "Three uses: scanning, advertising, connection initiation",
+        "Formerly called 'White List' (renamed in 5.3)"
+      ],
+      "expected_citations": ["Core 6.2, Vol 4, Part E"],
+      "rag_challenge": "The three filter-policy use cases appear in separate HCI command descriptions (Set_Scan_Parameters, Set_Advertising_Parameters, Create_Connection); RAG typically returns only one.",
+      "tags": ["filter-accept-list", "whitelist", "scanning", "advertising", "security"]
+    },
+    {
+      "id": "Q033",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "In LE Credit-Based L2CAP connections (CoC), what is the difference between MTU and MPS, and how are SDUs larger than MPS segmented?",
+      "reference_answer": "MTU (Maximum Transmission Unit) is the maximum SDU size the receiver can accept — the application-level limit. MPS (Maximum PDU Payload Size) is the maximum number of bytes in a single L2CAP K-frame payload. When an SDU exceeds MPS: the first K-frame carries a 2-byte SDU_Length header followed by the first (MPS − 2) bytes of data; subsequent K-frames carry up to MPS bytes each with no header. The receiver reassembles all fragments until accumulated bytes equal SDU_Length.",
+      "key_facts": [
+        "MTU = max SDU (application data) size",
+        "MPS = max PDU payload per K-frame",
+        "First K-frame includes 2-byte SDU_Length header",
+        "Subsequent K-frames carry up to MPS bytes each",
+        "Reassembly: sum fragments until SDU_Length reached"
+      ],
+      "expected_citations": ["Core 6.2, Vol 3, Part A, §3.4"],
+      "rag_challenge": "MTU and MPS definitions are adjacent in the spec but the segmentation rule is in a different subsection; RAG frequently conflates the two or omits the SDU_Length header detail.",
+      "tags": ["L2CAP", "CoC", "MTU", "MPS", "segmentation", "credit-based"]
+    },
+    {
+      "id": "Q034",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "How does GATT database caching work in BLE 5.1, and what mechanism allows a client to skip service discovery on reconnection?",
+      "reference_answer": "BLE 5.1 introduced the GATT Database Hash characteristic (UUID 0x2B2A) under the Generic Attribute service. The server computes a 128-bit hash of all attribute handles, types, values, and permissions. On first connection, the client discovers all services and stores handles plus the hash. On reconnection, the client reads the Database Hash: if it matches the stored value, cached handles are valid and discovery is skipped. If the hash changed, or if a Service Changed indication (UUID 0x2A05) was received, the client clears all cached handles and rediscovers.",
+      "key_facts": [
+        "GATT Database Hash UUID 0x2B2A",
+        "128-bit hash of all attribute data",
+        "Service Changed indication UUID 0x2A05",
+        "Version 5.1",
+        "Hash match = skip discovery; hash mismatch = rediscover"
+      ],
+      "expected_citations": ["Core 5.1, Vol 3, Part G"],
+      "rag_challenge": "Database Hash and Service Changed are in different sections of Vol 3, Part G; RAG returns only one or omits the reconnection decision logic.",
+      "tags": ["5.1", "GATT", "caching", "database-hash", "service-changed"]
+    },
+    {
+      "id": "Q035",
+      "category": "feature_explanation",
+      "difficulty": "medium",
+      "question": "What are the two LE Privacy Modes (BLE 4.2+) and what is the behavioral difference between them?",
+      "reference_answer": "Two Privacy Modes are set per-peer via HCI_LE_Set_Privacy_Mode (opcode 0x204E): Network Privacy Mode (default, value 0x00) — the controller rejects advertising PDUs from a peer in the Resolving List if that peer uses its identity address rather than an RPA; only RPA-bearing packets from known peers are accepted. Device Privacy Mode (value 0x01) — the controller accepts advertising from a known peer regardless of whether it uses an RPA or identity address. Network Privacy Mode is stricter; Device Privacy Mode is used for compatibility with peers that cannot generate RPAs.",
+      "key_facts": [
+        "HCI_LE_Set_Privacy_Mode opcode 0x204E",
+        "Network Privacy Mode (0x00, default): rejects identity-address advertising from Resolving List peers",
+        "Device Privacy Mode (0x01): accepts both RPA and identity-address advertising",
+        "Default is Network Privacy Mode for all Resolving List entries"
+      ],
+      "expected_citations": ["Core 6.2, Vol 4, Part E, §7.8.77", "Vol 6, Part B, §4.7.4"],
+      "rag_challenge": "The behavioral difference between the two modes (specifically: identity-address rejection in Network mode) is implicit in the spec; RAG returns the mode names without the rejection behavior.",
+      "tags": ["4.2", "privacy", "privacy-mode", "resolving-list", "RPA"]
+    },
+    {
+      "id": "Q036",
+      "category": "version_comparison",
+      "difficulty": "medium",
+      "question": "What is the difference between the Resolving List and the Filter Accept List in BLE 4.2+, and how do they interact when a bonded peer uses an RPA?",
+      "reference_answer": "The Resolving List stores {identity address + peer IRK + local IRK} for bonded devices; its purpose is RPA generation and resolution by the controller (address privacy). The Filter Accept List stores {address type + address} to restrict which devices a scan, advertising, or connection procedure processes (access control). They operate at different levels. When combined: the controller first resolves an incoming RPA to its identity address using the Resolving List, then checks that identity address against the Filter Accept List. So to filter on a peer that uses RPAs, both the peer's IRK (in the Resolving List) and its identity address (in the FAL) must be present, and address resolution must be enabled.",
+      "key_facts": [
+        "Resolving List = IRK database for address privacy",
+        "Filter Accept List = address filter for access control",
+        "RPA resolution happens before FAL check",
+        "Both lists needed for filtering RPA-using peers",
+        "Address resolution must be enabled"
+      ],
+      "expected_citations": ["Core 6.2, Vol 6, Part B, §4.7", "Vol 4, Part E"],
+      "rag_challenge": "The interaction between the two lists (resolution-before-filter-check) is only documented in the address resolution procedure section; RAG almost never returns this combined behavior.",
+      "tags": ["4.2", "resolving-list", "filter-accept-list", "RPA", "privacy", "security"]
+    },
+    {
+      "id": "Q037",
+      "category": "version_comparison",
+      "difficulty": "medium",
+      "question": "What is the difference between using L2CAP Connection Parameter Update signaling and BLE 5.3 Connection Subrating for a peripheral that wants to reduce its connection event frequency?",
+      "reference_answer": "L2CAP Connection Parameter Update (4.0+): The peripheral sends a signal on CID 0x0005 requesting new Interval/Latency/Timeout values. The central's host decides whether to accept, then issues HCI_LE_Connection_Update — changing the base connection interval permanently. The underlying LL renegotiation takes multiple connection events. Connection Subrating (5.3+): HCI_LE_Subrate_Request applies a fast Subrate_Factor multiplier (1–500) on top of the existing interval without changing it. Switching takes 1–2 events and the tight base interval is preserved for burst traffic. Key differences: subrating is faster to activate/deactivate and preserves low-latency capability; L2CAP update makes a permanent, slower change.",
+      "key_facts": [
+        "L2CAP update = permanent change to base interval, multiple events to apply",
+        "Subrating = fast multiplier (1–500) on existing interval, 1–2 events to switch",
+        "Subrating preserves underlying tight interval for bursts",
+        "L2CAP update requires central host cooperation; subrating is more direct"
+      ],
+      "expected_citations": ["Core 5.3, Vol 3, Part A, §4.20", "Vol 6, Part B, §5.1.19"],
+      "rag_challenge": "L2CAP signaling is in Vol 3 Part A and Connection Subrating is in Vol 6 Part B; the comparison requires reading both volumes.",
+      "tags": ["5.3", "L2CAP", "connection-subrating", "connection-management", "version-diff"]
+    },
+    {
+      "id": "Q038",
+      "category": "implementation_hci",
+      "difficulty": "hard",
+      "question": "What is the HCI sequence to enable connectionless IQ sampling (AoA receiver side) from a Periodic Advertising source in BLE 5.1+?",
+      "reference_answer": "1. Configure extended scanning: HCI_LE_Set_Extended_Scan_Parameters + HCI_LE_Set_Extended_Scan_Enable to find the advertiser and its Advertising_SID.\n2. HCI_LE_Periodic_Advertising_Create_Sync (0x2044): synchronize to the periodic advertising train — wait for LE_Periodic_Advertising_Sync_Established event to obtain Sync_Handle.\n3. HCI_LE_Set_Connectionless_IQ_Sampling_Enable (0x2053): Sync_Handle, Sampling_Enable=0x01, Slot_Durations (0x01=1µs, 0x02=2µs), Switching_Pattern_Length, Antenna_IDs[] → Command_Complete.\n4. Receive LE_Connectionless_IQ_Report events: each contains I_Sample[] and Q_Sample[] arrays per received CTE.\n5. Feed IQ samples to the host-side AoA angle-of-arrival algorithm.\n6. To stop: HCI_LE_Set_Connectionless_IQ_Sampling_Enable with Sampling_Enable=0x00.\nNote: the transmitter must have CTE enabled via HCI_LE_Set_Connectionless_CTE_Transmit_Parameters (0x2051) + HCI_LE_Set_Connectionless_CTE_Transmit_Enable (0x2052).",
+      "key_facts": [
+        "Requires prior periodic advertising sync (Sync_Handle)",
+        "HCI_LE_Set_Connectionless_IQ_Sampling_Enable opcode 0x2053",
+        "LE_Connectionless_IQ_Report events carry I/Q sample arrays",
+        "Host performs angle computation from IQ samples",
+        "Transmitter side needs HCI_LE_Set_Connectionless_CTE_Transmit_Parameters + Enable"
+      ],
+      "expected_citations": ["Core 5.1", "Core 6.2, Vol 4, Part E, §7.8.79–7.8.84"],
+      "rag_challenge": "The 6-step sequence spans the periodic advertising sync flow (Vol 4) and the Direction Finding commands (Vol 6, Part B §4.4.5); RAG returns partial sequences — usually only the sampling enable command without the prior sync steps.",
+      "tags": ["5.1", "direction-finding", "AoA", "CTE", "IQ-sampling", "HCI", "implementation"]
+    },
+    {
+      "id": "Q039",
+      "category": "implementation_hci",
+      "difficulty": "hard",
+      "question": "What is the step-by-step HCI sequence to set up and execute a Channel Sounding (CS) distance measurement on an established BLE 6.0 connection?",
+      "reference_answer": "Prerequisite: the connection must be encrypted before CS can start.\n1. HCI_LE_CS_Read_Remote_Supported_Capabilities (0x208A) → LE_CS_Read_Remote_Supported_Capabilities_Complete event.\n2. HCI_LE_CS_Security_Enable (0x2089) — triggers LL CS security handshake (LL_CS_SEC_REQ/RSP) → LE_CS_Security_Enable_Complete on both sides.\n3. HCI_LE_CS_Set_Default_Settings (0x208C) — set role (Initiator/Reflector), CS_SYNC antenna, max TX power.\n4. HCI_LE_CS_Create_Config (0x208F) — define Config_ID, Main_Mode (1=RTT, 2=PBR, 3=both), channel map, tone extensions → LE_CS_Config_Complete on both sides.\n5. HCI_LE_CS_Set_Procedure_Parameters (0x2092) — set interval, max procedure duration, subevent length.\n6. HCI_LE_CS_Procedure_Enable (0x2093, Enable=0x01) → LE_CS_Procedure_Enable_Complete.\n7. Receive LE_CS_Subevent_Result events containing Step_Data (RTT timestamps for Mode 1, IQ samples for Mode 2/3).\n8. Host computes distance from Step_Data.\n9. HCI_LE_CS_Procedure_Enable (Enable=0x00) to stop.",
+      "key_facts": [
+        "Prerequisite: encrypted connection",
+        "Security Enable (0x2089) must complete before CS Config",
+        "HCI_LE_CS_Create_Config (0x208F) defines modes and channel map",
+        "LE_CS_Subevent_Result events carry Step_Data",
+        "Host computes distance from Step_Data — controller does not"
+      ],
+      "expected_citations": ["Core 6.0", "Core 6.2, Vol 4, Part E, §7.8.116–7.8.130", "Vol 6, Part H"],
+      "rag_challenge": "9-step sequence spread across Vol 4 (HCI commands) and Vol 6 Part H (CS procedures); the encrypted-connection prerequisite and the security-enable ordering are in different spec sections than the procedure commands.",
+      "tags": ["6.0", "channel-sounding", "CS", "HCI", "RTT", "PBR", "implementation"]
+    },
+    {
+      "id": "Q040",
+      "category": "implementation_hci",
+      "difficulty": "hard",
+      "question": "What L2CAP mechanism and PSM are used to establish EATT bearers in BLE 5.2, and what is the minimum MTU requirement?",
+      "reference_answer": "EATT bearers are established using L2CAP Enhanced Credit-Based Flow Control (ECBFC) channels, introduced in BLE 5.2. The client sends a Credit_Based_Connection_Request signal (code 0x17) on the LE Signaling channel (CID 0x0005) with PSM=0x0027 (the EATT PSM) and a list of up to 5 Source CIDs. The server responds with Credit_Based_Connection_Response (code 0x18), assigning Destination CIDs and initial credits. Each accepted channel becomes an independent parallel ATT bearer. The minimum MTU for EATT bearers is 64 bytes (vs. 23 bytes for the classic ATT bearer). No direct HCI commands are involved — EATT setup is pure L2CAP signaling handled by the host stack.",
+      "key_facts": [
+        "L2CAP ECBFC (Enhanced Credit-Based Flow Control)",
+        "PSM 0x0027",
+        "Signal codes 0x17 (request) / 0x18 (response) on CID 0x0005",
+        "Up to 5 channels per request",
+        "Minimum MTU 64 bytes",
+        "No HCI commands — host stack handles L2CAP signaling"
+      ],
+      "expected_citations": ["Core 5.2, Vol 3, Part A", "Vol 3, Part F, §3.2"],
+      "rag_challenge": "EATT setup requires reading Vol 3 Part A (L2CAP ECBFC mechanism) and Part F (EATT definition and PSM); RAG returns the EATT definition from Part F without the L2CAP signal codes from Part A.",
+      "tags": ["5.2", "EATT", "L2CAP", "ECBFC", "PSM", "ATT", "implementation"]
+    },
+    {
+      "id": "Q041",
+      "category": "edge_cases",
+      "difficulty": "expert",
+      "question": "A device has a bonded peer in its Resolving List under Network Privacy Mode. That peer's firmware is updated and it now advertises using its identity address (not an RPA). The local device is scanning. What does the controller do with the peer's advertising PDUs, and how must the host fix this?",
+      "reference_answer": "The controller silently discards the advertising PDUs. In Network Privacy Mode (the default), when a peer is in the Resolving List, the controller requires that peer to use an RPA. If the peer's identity address appears in advertising instead, the controller treats it as a privacy violation and the PDU never surfaces to the host — no LE_Advertising_Report or LE_Extended_Advertising_Report is generated. To fix this, the host must call HCI_LE_Set_Privacy_Mode (0x204E) for that peer with Privacy_Mode=0x01 (Device Privacy Mode), which allows the controller to accept both RPA and identity-address advertising from that peer.",
+      "key_facts": [
+        "Controller silently discards PDUs — host sees nothing",
+        "Network Privacy Mode rejects identity-address advertising from Resolving List peers",
+        "Fix: HCI_LE_Set_Privacy_Mode (0x204E), Privacy_Mode=0x01 (Device Privacy Mode)",
+        "Must be done before re-enabling scanning"
+      ],
+      "expected_citations": ["Core 6.2, Vol 4, Part E, §7.8.77", "Vol 6, Part B, §4.7.4"],
+      "rag_challenge": "The silent discard behavior under Network Privacy Mode is implicit; the spec states the acceptance rule but not explicitly that non-matching PDUs are discarded without notification. RAG returns the mode definition without the discard + fix implication.",
+      "tags": ["4.2", "privacy", "privacy-mode", "resolving-list", "RPA", "edge-case", "firmware-update"]
+    },
+    {
+      "id": "Q042",
+      "category": "edge_cases",
+      "difficulty": "expert",
+      "question": "A BLE host calls HCI_LE_Add_Device_To_Filter_Accept_List while scanning is active with Scanning_Filter_Policy=0x01. What error code does the controller return, and what is the correct procedure to add the device?",
+      "reference_answer": "The controller returns error code 0x0C (Command Disallowed). The Filter Accept List cannot be modified — add, remove, or clear — while any procedure that references it is active. In this case, scanning with Scanning_Filter_Policy=0x01 is referencing the FAL, so the add command is rejected. The existing FAL entries are not affected. Correct procedure: (1) HCI_LE_Set_Scan_Enable = 0x00 to stop scanning; (2) HCI_LE_Add_Device_To_Filter_Accept_List to add the new device; (3) HCI_LE_Set_Scan_Enable = 0x01 to resume scanning. The same constraint applies to advertising and connection-initiation procedures that reference the FAL.",
+      "key_facts": [
+        "Error 0x0C (Command Disallowed)",
+        "FAL cannot be modified while any FAL-referencing procedure is active",
+        "Existing FAL entries are preserved — no partial modification",
+        "Fix: stop procedure → modify FAL → restart procedure",
+        "Applies to scanning, advertising, and connection-initiation procedures"
+      ],
+      "expected_citations": ["Core 6.2, Vol 4, Part E, §7.8.15–7.8.17"],
+      "rag_challenge": "The 'Command Disallowed during active procedure' constraint is a single sentence in each FAL HCI command description; easy to miss in RAG chunk retrieval that returns the command parameter description without the error-condition text.",
+      "tags": ["filter-accept-list", "HCI", "error-codes", "edge-case", "scanning"]
     }
   ]
 }

@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-05-04] UPDATE — Eval dataset extended to 42 questions
+
+**Operation**: UPDATE
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+
+### Eval dataset (eval/dataset.json)
+
+Added 12 new questions (Q031–Q042) covering newly added wiki content:
+
+| QID | Category | Difficulty | Topic |
+|-----|----------|------------|-------|
+| Q031 | version_facts | easy | L2CAP fixed CIDs (0x0004/0005/0006) |
+| Q032 | version_facts | easy | Filter Accept List — three procedure types |
+| Q033 | feature_explanation | medium | L2CAP CoC: MTU vs MPS, SDU segmentation |
+| Q034 | feature_explanation | medium | GATT database caching (5.1+), Database Hash 0x2B2A |
+| Q035 | feature_explanation | medium | Privacy Modes (Network vs Device, HCI 0x204E) |
+| Q036 | version_comparison | medium | Resolving List vs Filter Accept List interaction |
+| Q037 | version_comparison | medium | L2CAP param update vs Connection Subrating tradeoffs |
+| Q038 | implementation_hci | hard | Connectionless IQ sampling HCI sequence (AoA, 5.1+) |
+| Q039 | implementation_hci | hard | Channel Sounding HCI sequence (CS, 6.0+) |
+| Q040 | implementation_hci | hard | EATT L2CAP ECBFC mechanism (PSM 0x0027, 5.2+) |
+| Q041 | edge_cases | expert | Privacy Mode: silent discard of identity-addr from Resolving List peer |
+| Q042 | edge_cases | expert | FAL modification while scanning active → error 0x0C |
+
+### Rubric (eval/rubric.md)
+
+- Updated category breakdown table with new question ranges and max weighted scores
+- Total max weighted score: 544.5 → **770**
+- Expanded scoresheet template to include Q031–Q042 with correct difficulty weights
+
+---
+
 ## [2026-05-04] UPDATE — L2CAP page, Direction Finding + CS HCI sequences, Filter Accept List / Privacy
 
 **Operation**: CREATE + UPDATE

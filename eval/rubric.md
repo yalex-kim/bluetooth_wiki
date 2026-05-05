@@ -108,12 +108,13 @@ This gives a 0–100 score for each system. Compute this **per category** and **
 
 | Category | Questions | Max Weighted Score | Focus |
 |----------|-----------|--------------------|-------|
-| `version_facts` (easy) | Q001–Q007 | 77 | Factual recall |
-| `feature_explanation` (medium) | Q008–Q013 | 99 | Conceptual depth |
-| `version_comparison` (medium) | Q014–Q018 | 82.5 | Cross-doc synthesis |
+| `version_facts` (easy) | Q001–Q007, Q031–Q032 | 99 | Factual recall |
+| `feature_explanation` (medium) | Q008–Q013, Q033–Q035 | 148.5 | Conceptual depth |
+| `version_comparison` (medium) | Q014–Q018, Q036–Q037 | 115.5 | Cross-doc synthesis |
 | `cross_version_reasoning` (hard) | Q019–Q022 | 88 | Multi-hop reasoning |
-| `implementation_hci` (hard) | Q023–Q026 | 88 | Procedural completeness |
-| `edge_cases` (expert) | Q027–Q030 | 110 | Precision under ambiguity |
+| `implementation_hci` (hard) | Q023–Q026, Q038–Q040 | 154 | Procedural completeness |
+| `edge_cases` (expert) | Q027–Q030, Q041–Q042 | 165 | Precision under ambiguity |
+| **Total** | **42 questions** | **770** | |
 
 ---
 
@@ -166,6 +167,45 @@ Evaluator:
 |------|----------|--------------|----------|---------------|-----------|-----|--------|----------|
 | Q001 |          |              |          |               |           |     | 1.0    |          |
 | Q002 |          |              |          |               |           |     | 1.0    |          |
-...
-| TOTAL|          |              |          |               |           |     |        |          |
+| Q003 |          |              |          |               |           |     | 1.0    |          |
+| Q004 |          |              |          |               |           |     | 1.0    |          |
+| Q005 |          |              |          |               |           |     | 1.0    |          |
+| Q006 |          |              |          |               |           |     | 1.0    |          |
+| Q007 |          |              |          |               |           |     | 1.0    |          |
+| Q008 |          |              |          |               |           |     | 1.5    |          |
+| Q009 |          |              |          |               |           |     | 1.5    |          |
+| Q010 |          |              |          |               |           |     | 1.5    |          |
+| Q011 |          |              |          |               |           |     | 1.5    |          |
+| Q012 |          |              |          |               |           |     | 1.5    |          |
+| Q013 |          |              |          |               |           |     | 1.5    |          |
+| Q014 |          |              |          |               |           |     | 1.5    |          |
+| Q015 |          |              |          |               |           |     | 1.5    |          |
+| Q016 |          |              |          |               |           |     | 1.5    |          |
+| Q017 |          |              |          |               |           |     | 1.5    |          |
+| Q018 |          |              |          |               |           |     | 1.5    |          |
+| Q019 |          |              |          |               |           |     | 2.0    |          |
+| Q020 |          |              |          |               |           |     | 2.0    |          |
+| Q021 |          |              |          |               |           |     | 2.0    |          |
+| Q022 |          |              |          |               |           |     | 2.0    |          |
+| Q023 |          |              |          |               |           |     | 2.0    |          |
+| Q024 |          |              |          |               |           |     | 2.0    |          |
+| Q025 |          |              |          |               |           |     | 2.0    |          |
+| Q026 |          |              |          |               |           |     | 2.0    |          |
+| Q027 |          |              |          |               |           |     | 2.5    |          |
+| Q028 |          |              |          |               |           |     | 2.5    |          |
+| Q029 |          |              |          |               |           |     | 2.5    |          |
+| Q030 |          |              |          |               |           |     | 2.5    |          |
+| Q031 |          |              |          |               |           |     | 1.0    |          |
+| Q032 |          |              |          |               |           |     | 1.0    |          |
+| Q033 |          |              |          |               |           |     | 1.5    |          |
+| Q034 |          |              |          |               |           |     | 1.5    |          |
+| Q035 |          |              |          |               |           |     | 1.5    |          |
+| Q036 |          |              |          |               |           |     | 1.5    |          |
+| Q037 |          |              |          |               |           |     | 1.5    |          |
+| Q038 |          |              |          |               |           |     | 2.0    |          |
+| Q039 |          |              |          |               |           |     | 2.0    |          |
+| Q040 |          |              |          |               |           |     | 2.0    |          |
+| Q041 |          |              |          |               |           |     | 2.5    |          |
+| Q042 |          |              |          |               |           |     | 2.5    |          |
+| TOTAL|          |              |          |               |           |     | 770    |          |
 ```
