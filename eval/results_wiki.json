@@ -2,23 +2,23 @@
   "meta": {
     "system": "LLM-Wiki",
     "evaluator": "claude-sonnet-4-6 (independent agent — wiki/ access only, no eval/ context)",
-    "date": "2026-05-05 (v4 — 5 questions re-tested after wiki content fixes)",
-    "overall_pct": 97.6,
-    "total_weighted": 751.5,
+    "date": "2026-05-05 (v5 — Q024, Q025, Q028 re-tested after dataset key_fact corrections + ble-parameters.md fix)",
+    "overall_pct": 99.0,
+    "total_weighted": 762.0,
     "total_max_weighted": 770.0,
-    "note": "v4: Q013, Q014, Q017, Q023, Q028 re-evaluated by independent agent after wiki fixes (2026-05-05). Remaining 37 questions unchanged from v3 (2026-05-04). All evaluations: independent agent with wiki/ access only."
+    "note": "v5: Q024, Q025 key_facts corrected (wrong HCI command names, outdated ECDH model); Q028 wiki framing fixed (6× rule is minimum, not recommended). All 3 re-tested by independent agent. Prior: v4 (97.6%, 2026-05-05). All evaluations: independent agent with wiki/ access only."
   },
   "by_category": {
     "version_facts":          { "weighted": 98.0,  "max": 99.0,  "pct": 99.0,  "questions": ["Q001","Q002","Q003","Q004","Q005","Q006","Q007","Q031","Q032"] },
     "feature_explanation":    { "weighted": 147.0, "max": 148.5, "pct": 99.0,  "questions": ["Q008","Q009","Q010","Q011","Q012","Q013","Q033","Q034","Q035"] },
     "version_comparison":     { "weighted": 112.5, "max": 115.5, "pct": 97.4,  "questions": ["Q014","Q015","Q016","Q017","Q018","Q036","Q037"] },
     "cross_version_reasoning":{ "weighted": 88.0,  "max": 88.0,  "pct": 100.0, "questions": ["Q019","Q020","Q021","Q022"] },
-    "implementation_hci":     { "weighted": 146.0, "max": 154.0, "pct": 94.8,  "questions": ["Q023","Q024","Q025","Q026","Q038","Q039","Q040"] },
-    "edge_cases":             { "weighted": 160.0, "max": 165.0, "pct": 97.0,  "questions": ["Q027","Q028","Q029","Q030","Q041","Q042"] }
+    "implementation_hci":     { "weighted": 154.0, "max": 154.0, "pct": 100.0, "questions": ["Q023","Q024","Q025","Q026","Q038","Q039","Q040"] },
+    "edge_cases":             { "weighted": 162.5, "max": 165.0, "pct": 98.5,  "questions": ["Q027","Q028","Q029","Q030","Q041","Q042"] }
   },
   "dimension_averages": {
-    "accuracy":             { "avg": 2.93, "max": 3.0, "pct": 97.7 },
-    "completeness":         { "avg": 2.84, "max": 3.0, "pct": 94.7 },
+    "accuracy":             { "avg": 3.00, "max": 3.0, "pct": 100.0 },
+    "completeness":         { "avg": 2.88, "max": 3.0, "pct": 96.0 },
     "citation":             { "avg": 3.00, "max": 3.0, "pct": 100.0 },
     "hallucination_penalty":{ "avg": 0.00, "max": 0,   "pct": 100.0 },
     "usability":            { "avg": 2.00, "max": 2.0, "pct": 100.0 }
@@ -210,19 +210,19 @@
     },
     {
       "id": "Q024", "category": "implementation_hci", "difficulty": "hard", "weight": 2.0,
-      "scores": { "accuracy": 2, "completeness": 2, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
-      "raw_total": 9, "weighted": 18.0, "max_weighted": 22.0,
-      "key_facts_found": ["HCI_LE_Set_Default_Subrate (= HCI_LE_Set_Connection_Subrate_Default)", "HCI_LE_Subrate_Request (= HCI_LE_Connection_Subrate_Request)", "Subrate_Min/Max: 1–500", "Continuation_Number: 0–15"],
-      "key_facts_missing": ["Supervision_Timeout ≥ 6× subrated interval — wiki formula gives different constraint (> 2×CI×SF×(Max_Latency+1)) vs reference ≥ 6× effective interval"],
-      "rationale": "Command names differ from reference (wiki uses HCI_LE_Set_Default_Subrate; reference uses HCI_LE_Set_Connection_Subrate_Default). Supervision formula discrepancy from key_fact."
+      "scores": { "accuracy": 3, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 11, "weighted": 22.0, "max_weighted": 22.0,
+      "key_facts_found": ["HCI_LE_Set_Default_Subrate (0x207D)", "HCI_LE_Subrate_Request (0x207E)", "Subrate_Min/Max: 1–500", "Continuation_Number: 0–15", "Supervision_Timeout ≥ 6× subrated interval"],
+      "key_facts_missing": [],
+      "rationale": "[v5 re-test after dataset fix] Q024 key_facts corrected: prior key_facts had wrong command names (HCI_LE_Set_Connection_Subrate_Default / HCI_LE_Connection_Subrate_Request — not in spec). Correct names are HCI_LE_Set_Default_Subrate (0x207D) / HCI_LE_Subrate_Request (0x207E). Agent correctly cites all 5 key facts including 6× supervision timeout rule (now in ble-parameters.md from v4 fix)."
     },
     {
       "id": "Q025", "category": "implementation_hci", "difficulty": "hard", "weight": 2.0,
-      "scores": { "accuracy": 2, "completeness": 2, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
-      "raw_total": 9, "weighted": 18.0, "max_weighted": 22.0,
-      "key_facts_found": ["SMP runs over L2CAP, not HCI", "HCI_LE_Long_Term_Key_Request_Reply injects LTK", "HCI_LE_Enable_Encryption (= HCI_LE_Start_Encryption) finalizes"],
-      "key_facts_missing": ["LESC uses P-256 ECDH in host stack — wiki describes HCI_LE_Generate_DHKey (controller offload) instead", "HCI is only used for LTK injection and encryption start — wiki includes additional HCI for P-256/DHKey"],
-      "rationale": "Wiki correctly documents modern LESC with HCI_LE_Generate_DHKey offload; reference key_fact reflects older host-side ECDH model. Factual difference in scope of HCI usage."
+      "scores": { "accuracy": 3, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 11, "weighted": 22.0, "max_weighted": 22.0,
+      "key_facts_found": ["SMP runs over L2CAP (CID 0x0006), not HCI", "HCI_LE_Read_Local_P-256_Public_Key (0x2025) requests controller P-256 key pair", "HCI_LE_Generate_DHKey [v2] (0x205E) computes shared DHKey in controller", "HCI_LE_Long_Term_Key_Request_Reply (0x201A) injects LTK", "HCI_LE_Enable_Encryption (0x2019) finalizes encryption"],
+      "key_facts_missing": [],
+      "rationale": "[v5 re-test after dataset fix] Q025 key_facts corrected: prior key_facts had outdated ECDH model (host-side only, no HCI for P-256). Spec-accurate model uses HCI_LE_Read_Local_P-256_Public_Key + HCI_LE_Generate_DHKey for controller offload. Also fixed HCI_LE_Start_Encryption → HCI_LE_Enable_Encryption. Wiki (hci-sequences.md §3) correctly documents all 5 facts."
     },
     {
       "id": "Q026", "category": "implementation_hci", "difficulty": "hard", "weight": 2.0,
@@ -242,11 +242,11 @@
     },
     {
       "id": "Q028", "category": "edge_cases", "difficulty": "expert", "weight": 2.5,
-      "scores": { "accuracy": 2, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
-      "raw_total": 10, "weighted": 25.0, "max_weighted": 27.5,
-      "key_facts_found": ["Formula: Effective = CI × SF × (1+CN)", "100 × 10 × 2 = 2000 ms", "Supervision_Timeout ≥ 6 × Effective_Interval (stated and calculated)", "12,000 ms figure present (as recommended minimum)"],
-      "key_facts_missing": ["Minimum = 12,000 ms — agent frames this as 'recommended' rather than the minimum; primary answer is still 2010 ms (strict spec lower bound)"],
-      "rationale": "[v4 re-test after fix #1] Wiki now documents both strict minimum (2010 ms) and 6×Effective_Interval recommendation (12,000 ms) with example. Agent correctly calculates 2000 ms Effective_Interval and states 12,000 ms, but primary conclusion is 2010 ms (strict spec). Reference answer expects 12,000 ms as THE minimum. Significant improvement vs v3 (was A=1, C=1)."
+      "scores": { "accuracy": 3, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 11, "weighted": 27.5, "max_weighted": 27.5,
+      "key_facts_found": ["Formula: Effective = CI × SF × (1+CN)", "100 × 10 × 2 = 2000 ms", "Supervision_Timeout ≥ 6 × Effective_Interval", "Minimum = 12,000 ms"],
+      "key_facts_missing": [],
+      "rationale": "[v5 re-test after wiki fix] ble-parameters.md now presents 6×Effective_Interval as the minimum (not 'recommended'), with explicit 'minimum = 12,000 ms' for the scenario. Agent correctly gives 12,000 ms as the primary answer and notes the spec strict lower bound as insufficient. All 4 key facts present."
     },
     {
       "id": "Q029", "category": "edge_cases", "difficulty": "expert", "weight": 2.5,

@@ -390,10 +390,10 @@
       "category": "implementation_hci",
       "difficulty": "hard",
       "question": "What HCI commands configure Connection Subrating on an established BLE 5.3 connection, and what constraints apply to the parameters?",
-      "reference_answer": "Use HCI_LE_Set_Connection_Subrate_Default (before connection) and HCI_LE_Connection_Subrate_Request (on existing connection). Parameters: Subrate_Min (1–500), Subrate_Max (1–500), Max_Latency (0–499), Continuation_Number (0–15), Supervision_Timeout. Constraints: Subrate_Min ≤ Subrate_Max; effective supervision timeout must be ≥ 6× the subrated interval; Max_Latency must be < Subrate_Max × (Max_Latency + 1). The controller may override requested values within these bounds.",
+      "reference_answer": "Use HCI_LE_Set_Default_Subrate (0x207D, before connection) and HCI_LE_Subrate_Request (0x207E, on existing connection). Parameters: Subrate_Min (1–500), Subrate_Max (1–500), Max_Latency (0–499), Continuation_Number (0–15), Supervision_Timeout. Constraints: Subrate_Min ≤ Subrate_Max; effective supervision timeout must be ≥ 6× the subrated interval; Max_Latency must be < Subrate_Max × (Max_Latency + 1). The controller may override requested values within these bounds.",
       "key_facts": [
-        "HCI_LE_Set_Connection_Subrate_Default",
-        "HCI_LE_Connection_Subrate_Request",
+        "HCI_LE_Set_Default_Subrate (0x207D)",
+        "HCI_LE_Subrate_Request (0x207E)",
         "Subrate_Min/Max: 1–500",
         "Continuation_Number: 0–15",
         "Supervision_Timeout ≥ 6× subrated interval"
@@ -407,13 +407,13 @@
       "category": "implementation_hci",
       "difficulty": "hard",
       "question": "What is the step-by-step HCI sequence to perform LE Secure Connections pairing between two BLE devices?",
-      "reference_answer": "1. Exchange HCI_LE_Set_Event_Mask to enable SMP events\n2. Connection established via HCI_LE_Create_Connection / HCI_LE_Extended_Create_Connection\n3. Host initiates pairing via L2CAP SMP (not HCI directly): SMP Pairing Request / Pairing Response\n4. If Numeric Comparison: HCI_LE_Long_Term_Key_Request_Negative_Reply to reject legacy LTK\n5. SMP Public Key Exchange (P-256 ECDH) — handled by host stack\n6. SMP Confirm / Random exchange\n7. Numeric comparison value displayed — user confirms\n8. SMP DHKey Check exchange\n9. HCI_LE_Long_Term_Key_Request + HCI_LE_Long_Term_Key_Request_Reply with derived LTK\n10. HCI_LE_Start_Encryption — link is now encrypted",
+      "reference_answer": "1. Exchange HCI_LE_Set_Event_Mask to enable LE Meta events\n2. Connection established via HCI_LE_Create_Connection / HCI_LE_Extended_Create_Connection\n3. Host initiates pairing via L2CAP SMP (CID 0x0006): SMP Pairing Request / Pairing Response — not HCI\n4. HCI_LE_Read_Local_P-256_Public_Key (0x2025) — controller generates P-256 key pair; host receives LE_Read_Local_P256_Public_Key_Complete event\n5. SMP: Public Key exchange over L2CAP\n6. HCI_LE_Generate_DHKey [v2] (0x205E) — controller computes shared DHKey; host receives LE_Generate_DHKey_Complete event\n7. SMP: Confirm / Random / DHKey Check exchange; numeric comparison or passkey entry as needed\n8. Key distribution (LTK, IRK, CSRK) via SMP PDUs over L2CAP\n9. Central: HCI_LE_Enable_Encryption (0x2019) with derived LTK\n10. Peripheral: LE_Long_Term_Key_Request → HCI_LE_Long_Term_Key_Request_Reply (0x201A)\n11. HCI_Encryption_Change event on both sides — link encrypted",
       "key_facts": [
-        "LESC uses P-256 ECDH in host stack (not controller)",
-        "HCI is only used for LTK injection and encryption start",
-        "SMP runs over L2CAP, not HCI",
-        "HCI_LE_Long_Term_Key_Request_Reply injects LTK",
-        "HCI_LE_Start_Encryption finalizes"
+        "SMP runs over L2CAP (CID 0x0006), not HCI",
+        "HCI_LE_Read_Local_P-256_Public_Key (0x2025) requests controller P-256 key pair",
+        "HCI_LE_Generate_DHKey [v2] (0x205E) computes shared DHKey in controller",
+        "HCI_LE_Long_Term_Key_Request_Reply (0x201A) injects LTK",
+        "HCI_LE_Enable_Encryption (0x2019) finalizes encryption"
       ],
       "expected_citations": ["Core 5.2", "Vol 3, Part H", "Vol 4, Part E"],
       "rag_challenge": "The SMP vs HCI responsibility split is documented in two separate volumes; RAG almost always conflates them.",

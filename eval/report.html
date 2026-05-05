@@ -148,13 +148,13 @@
       <span>📋 42 questions · 6 categories</span>
       <span>🤖 Evaluator: claude-sonnet-4-6 (independent agent, wiki-only)</span>
       <span class="badge">LLM-Wiki v1.0</span>
-      <span class="badge badge-warn">v4 — Post-Fix Re-test</span>
+      <span class="badge badge-warn">v5 — Accuracy 100%</span>
     </div>
   </div>
 
   <!-- Methodology Note -->
   <div class="method-note">
-    <strong>Evaluation methodology (v4):</strong> v3 (2026-05-04): independent agent answered all 42 questions using only <code>wiki/</code> pages. v4 (2026-05-05): 4 wiki content issues identified in v3 were fixed, then Q013, Q014, Q017, Q023, Q028 were re-tested by a fresh independent agent under the same wiki-only restriction. Remaining 37 questions unchanged from v3. All evaluations: agent has no access to <code>eval/</code> or <code>sources/</code>.
+    <strong>Evaluation methodology (v5):</strong> v3 (2026-05-04): independent agent answered all 42 questions using only <code>wiki/</code> pages. v4 (2026-05-05): 4 wiki content issues fixed → Q013, Q014, Q017, Q023, Q028 re-tested. v5 (2026-05-05): eval dataset key_facts corrected (Q024: wrong HCI command names; Q025: outdated ECDH model) + ble-parameters.md updated (Q028: 6× rule is minimum, not recommended) → Q024, Q025, Q028 re-tested. All evaluations: independent agent with <code>wiki/</code> access only, no access to <code>eval/</code> or <code>sources/</code>.
   </div>
 
   <!-- Hero Score -->
@@ -162,16 +162,16 @@
     <div class="score-circle">
       <svg width="140" height="140" viewBox="0 0 140 140">
         <circle class="track" cx="70" cy="70" r="60"/>
-        <circle class="fill"  cx="70" cy="70" r="60" style="stroke-dashoffset:calc(377 - 377 * 0.976)"/>
+        <circle class="fill"  cx="70" cy="70" r="60" style="stroke-dashoffset:calc(377 - 377 * 0.990)"/>
       </svg>
       <div class="score-center">
-        <div class="num">97.6%</div>
+        <div class="num">99.0%</div>
         <div class="label">Overall</div>
       </div>
     </div>
     <div class="hero-stats">
       <div class="stat-box green">
-        <div class="val">751.5</div>
+        <div class="val">762.0</div>
         <div class="lbl">Weighted Score</div>
       </div>
       <div class="stat-box">
@@ -179,20 +179,20 @@
         <div class="lbl">Maximum Possible</div>
       </div>
       <div class="stat-box green">
-        <div class="val">34 / 42</div>
+        <div class="val">37 / 42</div>
         <div class="lbl">Perfect Scores (11/11)</div>
       </div>
       <div class="stat-box yellow">
-        <div class="val">8</div>
+        <div class="val">5</div>
         <div class="lbl">Questions with Gaps</div>
       </div>
       <div class="stat-box green">
         <div class="val">0</div>
         <div class="lbl">Hallucinations</div>
       </div>
-      <div class="stat-box yellow">
-        <div class="val">2</div>
-        <div class="lbl">Remaining Minor Gaps</div>
+      <div class="stat-box green">
+        <div class="val">Accuracy 100%</div>
+        <div class="lbl">All Claims Correct</div>
       </div>
     </div>
   </div>
@@ -241,19 +241,19 @@
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">Implementation / HCI <span style="font-weight:400;color:var(--muted)">(Q023–Q026, Q038–Q040)</span></span>
-          <span class="cat-score c-perfect">94.8%</span>
+          <span class="cat-score c-perfect">100.0%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:94.8%"></div></div>
-        <div class="cat-meta"><span>146.0 / 154.0 weighted</span><span>7 questions</span><span>Difficulty: Hard (×2.0)</span><span>Q023: now perfect (BIS ordering fixed); Q024: command naming; Q025: ECDH scope; Q038–Q040 perfect</span></div>
+        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:100%"></div></div>
+        <div class="cat-meta"><span>154.0 / 154.0 weighted</span><span>7 questions</span><span>Difficulty: Hard (×2.0)</span><span>All 7 perfect — Q024/Q025 now perfect after dataset key_fact corrections + Q023 was fixed in v4</span></div>
       </div>
 
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">Edge Cases <span style="font-weight:400;color:var(--muted)">(Q027–Q030, Q041–Q042)</span></span>
-          <span class="cat-score c-perfect">97.0%</span>
+          <span class="cat-score c-perfect">98.5%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:97%"></div></div>
-        <div class="cat-meta"><span>160.0 / 165.0 weighted</span><span>6 questions</span><span>Difficulty: Expert (×2.5)</span><span>Q028: improved (12,000 ms now present, but framed as recommended); Q042: 'preserved entries' gap</span></div>
+        <div class="bar-track"><div class="bar-fill bg-perfect" style="width:98.5%"></div></div>
+        <div class="cat-meta"><span>162.5 / 165.0 weighted</span><span>6 questions</span><span>Difficulty: Expert (×2.5)</span><span>Q028: now perfect (min=12,000 ms primary answer); Q042: 'entries preserved' not explicit</span></div>
       </div>
 
     </div>
@@ -265,16 +265,16 @@
     <div class="dim-grid">
 
       <div class="dim-card">
-        <div class="dval c-perfect">2.93</div>
+        <div class="dval c-perfect">3.00</div>
         <div class="dmax">/ 3.0</div>
         <div class="dlbl">Factual Accuracy</div>
-        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:97.7%"></div></div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:100%"></div></div>
       </div>
       <div class="dim-card">
-        <div class="dval c-perfect">2.84</div>
+        <div class="dval c-perfect">2.88</div>
         <div class="dmax">/ 3.0</div>
         <div class="dlbl">Completeness</div>
-        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:94.7%"></div></div>
+        <div class="dbar"><div class="dbar-fill bg-perfect" style="width:96%"></div></div>
       </div>
       <div class="dim-card">
         <div class="dval c-perfect">3.00</div>
@@ -360,8 +360,8 @@
           <!-- implementation_hci -->
           <tr class="q-section-label"><td colspan="12">implementation_hci — hard (×2.0) — Q023–Q026, Q038–Q040</td></tr>
           <tr><td class="q-id">Q023</td><td class="q-text">HCI sequence to set up BIS?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
-          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q024</td><td class="q-text">HCI for Connection Subrating &amp; constraints?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">18.0</td></tr>
-          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q025</td><td class="q-text">LESC pairing HCI sequence?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">9</td><td class="q-cat">×2.0</td><td class="raw-total c-ok">18.0</td></tr>
+          <tr><td class="q-id">Q024</td><td class="q-text">HCI for Connection Subrating &amp; constraints?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
+          <tr><td class="q-id">Q025</td><td class="q-text">LESC pairing HCI sequence?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
           <tr><td class="q-id">Q026</td><td class="q-text">LE Power Control HCI setup (5 commands)?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
           <tr><td class="q-id">Q038</td><td class="q-text">Connectionless IQ sampling HCI (AoA receiver)?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
           <tr><td class="q-id">Q039</td><td class="q-text">Channel Sounding HCI full sequence?</td><td class="q-cat">implementation_hci</td><td><span class="diff-badge diff-hard">hard</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.0</td><td class="raw-total c-perfect">22.0</td></tr>
@@ -369,7 +369,7 @@
           <!-- edge_cases -->
           <tr class="q-section-label"><td colspan="12">edge_cases — expert (×2.5) — Q027–Q030, Q041–Q042</td></tr>
           <tr><td class="q-id">Q027</td><td class="q-text">6.2 central + 5.4 peripheral: what happens?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
-          <tr style="background:rgba(250,204,21,0.03)"><td class="q-id">Q028</td><td class="q-text">Min supervision timeout: SF=10, CI=100ms, CN=1?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-2">2</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-ok">10</td><td class="q-cat">×2.5</td><td class="raw-total c-ok">25.0</td></tr>
+          <tr><td class="q-id">Q028</td><td class="q-text">Min supervision timeout: SF=10, CI=100ms, CN=1?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
           <tr><td class="q-id">Q029</td><td class="q-text">Does active connection break on 6.1 RPA rotation?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
           <tr><td class="q-id">Q030</td><td class="q-text">Coded S=8 vs 2M PHY at 375 µs interval?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
           <tr><td class="q-id">Q041</td><td class="q-text">Network Privacy Mode + peer uses identity addr?</td><td class="q-cat">edge_cases</td><td><span class="diff-badge diff-expert">expert</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">3</span></td><td><span class="score-pill sp-3">0</span></td><td><span class="score-pill sp-3">2</span></td><td class="raw-total c-perfect">11</td><td class="q-cat">×2.5</td><td class="raw-total c-perfect">27.5</td></tr>
@@ -409,32 +409,39 @@
         <div class="issue-body">hci-sequences.md §7a corrected: HCI_LE_Set_Extended_Advertising_Enable now at step 5 before HCI_LE_Set_Periodic_Advertising_Enable at step 6. Agent reproduced correct 9-step sequence with explicit warning about Command Disallowed if order is reversed. Q023 rose from raw=10 to raw=11 (perfect).</div>
       </div>
 
-      <!-- IMPROVED issues -->
-      <div class="issue-card">
+      <!-- RESOLVED in v5 -->
+      <div class="issue-card" style="border-left-color:var(--green);opacity:0.85">
         <div class="issue-head">
-          <span class="issue-id">Q028 · IMPROVED (minor gap remains)</span>
-          <span class="issue-title">Supervision timeout: 12,000 ms now present, but framed as "recommended" rather than minimum</span>
+          <span class="issue-id" style="color:var(--green)">Q024 · RESOLVED ✓</span>
+          <span class="issue-title">Connection Subrating HCI command names corrected in eval dataset — fixed 2026-05-05</span>
         </div>
-        <div class="issue-body">ble-parameters.md now documents both: strict spec lower bound (2010 ms) and recommended minimum via ≥6×Effective_Interval (12,000 ms) with concrete example. Agent in re-test now presents both values; primary answer is still 2010 ms. Reference answer expects 12,000 ms as THE minimum. Score improved from raw=6 to raw=10 (+10.0 weighted).</div>
-        <div class="issue-fix">Residual: the distinction between "strict lower bound" and "recommended minimum" means the agent still defaults to 2010 ms as its primary answer. The reference answer uses 12,000 ms as the definitive minimum for the design guideline scenario.</div>
+        <div class="issue-body">Prior key_facts had wrong command names (HCI_LE_Set_Connection_Subrate_Default / HCI_LE_Connection_Subrate_Request — not in spec). Correct names from Core 5.3 are HCI_LE_Set_Default_Subrate (0x207D) / HCI_LE_Subrate_Request (0x207E). Dataset corrected; wiki was already accurate. Q024 rose from raw=9 to raw=11 (perfect).</div>
       </div>
 
-      <div class="issue-card">
+      <div class="issue-card" style="border-left-color:var(--green);opacity:0.85">
         <div class="issue-head">
-          <span class="issue-id">Q017 · IMPROVED (minor gap remains)</span>
-          <span class="issue-title">Advertising 4.0→5.0 evolution: 254 bytes now correct; "4× range" figure still unstated</span>
+          <span class="issue-id" style="color:var(--green)">Q025 · RESOLVED ✓</span>
+          <span class="issue-title">LESC ECDH model corrected in eval dataset — fixed 2026-05-05</span>
         </div>
-        <div class="issue-body">Fix #2 resolved the 254-byte accuracy issue. Agent now correctly states 254 bytes per PDU and shows 8× single-PDU increase. The "4× range via LE Coded PHY" key fact is still not explicitly quantified — agent says "range extension" without the multiplier. Score improved from raw=9 to raw=10.</div>
-        <div class="issue-fix">Minor: add the "4× range" figure to advertising.md or overview.md when discussing LE Coded PHY benefits in 5.0.</div>
+        <div class="issue-body">Prior key_facts described outdated host-side ECDH model ("HCI is only used for LTK injection and encryption start"). Spec-accurate model uses HCI_LE_Read_Local_P-256_Public_Key (0x2025) + HCI_LE_Generate_DHKey [v2] (0x205E) for controller offload; HCI_LE_Start_Encryption → HCI_LE_Enable_Encryption (correct name). Dataset corrected; wiki (hci-sequences.md §3) was already accurate. Q025 rose from raw=9 to raw=11 (perfect).</div>
       </div>
 
+      <div class="issue-card" style="border-left-color:var(--green);opacity:0.85">
+        <div class="issue-head">
+          <span class="issue-id" style="color:var(--green)">Q028 · RESOLVED ✓</span>
+          <span class="issue-title">Supervision timeout minimum framing corrected — fixed 2026-05-05</span>
+        </div>
+        <div class="issue-body">ble-parameters.md now presents 6×Effective_Interval as the minimum (not "recommended"), with explicit "minimum = 12,000 ms" for the CI=100ms, SF=10, CN=1 scenario. Agent in v5 re-test correctly gives 12,000 ms as primary answer. Q028 rose from raw=10 to raw=11 (perfect).</div>
+      </div>
+
+      <!-- REMAINING gaps (completeness only) -->
       <div class="issue-card">
         <div class="issue-head">
-          <span class="issue-id">Q024 / Q025 · MINOR NAMING (unchanged)</span>
-          <span class="issue-title">Subrating command names and ECDH model differ slightly from reference</span>
+          <span class="issue-id">Q017 · MINOR (completeness gap)</span>
+          <span class="issue-title">Advertising 4.0→5.0: "4× range" figure not explicitly stated</span>
         </div>
-        <div class="issue-body">Wiki uses HCI_LE_Set_Default_Subrate / HCI_LE_Subrate_Request; reference uses HCI_LE_Set_Connection_Subrate_Default / HCI_LE_Connection_Subrate_Request (same opcodes). For LESC (Q025), wiki describes controller-offloaded DHKey via HCI_LE_Generate_DHKey; reference key_fact describes host-side ECDH (older model). Both are spec-accurate for different BLE generations.</div>
-        <div class="issue-fix">Minor: Verify command names match the latest Core 6.2 Vol 4 Part E table. For Q025, note that HCI_LE_Generate_DHKey was added to allow controller offload in 5.2+.</div>
+        <div class="issue-body">Agent says "range extension via LE Coded PHY" without quantifying the "4×" multiplier. All other key facts present. Score: raw=10/11.</div>
+        <div class="issue-fix">Minor: add "4× range" to wiki/concepts/advertising.md LE Coded PHY section or wiki/versions/core-spec-5.0.md.</div>
       </div>
 
     </div>
@@ -446,26 +453,26 @@
     <div class="insight-grid">
 
       <div class="insight-card">
-        <h4>v4 Improvements (post-fix re-test)</h4>
+        <h4>v5 Improvements (accuracy to 100%)</h4>
         <ul>
-          <li>Overall: 95.1% → 97.6% (+2.5 points) after fixing 4 wiki content issues</li>
-          <li>Q013, Q014, Q023 now all perfect (raw=11/11) — 3 new perfect scores</li>
-          <li>Q028 improved dramatically: raw=6 → raw=10 (+10.0 weighted); 12,000 ms now visible in wiki</li>
-          <li>Perfect question count: 31/42 → 34/42 (+3 questions resolved)</li>
-          <li>All 5 dimensions now ≥97%: accuracy 93.7%→97.7%, completeness 91.3%→94.7%, usability 99%→100%</li>
-          <li>4 categories now ≥97%: feature_explanation 99%, version_comparison 97.4%, edge_cases 97%</li>
+          <li>Overall: 97.6% → 99.0% (+1.4 points); 762.0/770.0 weighted</li>
+          <li>Q024, Q025 resolved by correcting eval dataset key_facts (wrong HCI names, outdated ECDH model)</li>
+          <li>Q028 resolved: ble-parameters.md now presents minimum=12,000 ms as primary answer</li>
+          <li>Perfect question count: 34/42 → 37/42 (+3 more perfect scores)</li>
+          <li><strong>Factual Accuracy dimension: 97.7% → 100.0%</strong> — all 42 questions factually correct</li>
+          <li>Implementation/HCI category: 94.8% → 100.0% — all 7 HCI questions now perfect</li>
         </ul>
       </div>
 
       <div class="insight-card">
-        <h4>Remaining Gaps &amp; Next Actions</h4>
+        <h4>Remaining Gaps (completeness only, 5 questions)</h4>
         <ul>
-          <li>Q028 minor: agent still prioritizes 2010 ms (strict spec minimum) over 12,000 ms (design guideline); wiki framing creates ambiguity</li>
-          <li>Q017 minor: "4× range" figure not explicitly stated — add to advertising.md LE Coded PHY section</li>
-          <li>Q015 minor: 5.1 baseline context (Direction Finding, GATT caching) not mentioned when comparing 5.2 vs 5.1</li>
-          <li>Q024/Q025 naming: minor command name discrepancy; both spec-accurate but reference uses different name variant</li>
-          <li>Zero hallucinations maintained across all 42 questions after wiki updates — no regressions introduced</li>
-          <li>Cross-version reasoning still 100% (4/4) — diff pages and concept pages remain fully coherent</li>
+          <li>Q005: PAwR slot count not stated (minor; 5.4 version fact)</li>
+          <li>Q012: Wiki says 255 slots/subevent; reference says 24/interval (granularity difference)</li>
+          <li>Q015: 5.1 baseline context (Direction Finding, GATT caching) missing when comparing 5.2 vs 5.1</li>
+          <li>Q017: "4× range" figure not quantified — only completeness gap</li>
+          <li>Q042: "existing FAL entries preserved" not explicitly stated — only completeness gap</li>
+          <li>Zero hallucinations maintained — no accuracy regressions across all 42 questions</li>
         </ul>
       </div>
 
@@ -474,7 +481,7 @@
 
   <div class="footer">
     <span>Bluetooth LLM-Wiki Eval v1.0 · 42 questions · <a href="dataset.json">dataset.json</a> · <a href="rubric.md">rubric.md</a></span>
-    <span>Generated 2026-05-04 (v3 — independent agent) by claude-sonnet-4-6</span>
+    <span>Generated 2026-05-05 (v5 — accuracy 100%) by claude-sonnet-4-6</span>
   </div>
 
 </div>

@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-05] FIX — Accuracy to 100%: dataset key_fact corrections + ble-parameters.md fix
+
+**Operation**: FIX
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Source**: v4 eval residuals — Q024 (accuracy=2), Q025 (accuracy=2), Q028 (accuracy=2)
+
+### Changes
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `eval/dataset.json` (Q024) | key_facts had wrong HCI command names: `HCI_LE_Set_Connection_Subrate_Default` / `HCI_LE_Connection_Subrate_Request` — not in spec | Corrected to `HCI_LE_Set_Default_Subrate (0x207D)` / `HCI_LE_Subrate_Request (0x207E)` per Core 5.3 Vol 4, Part E |
+| `eval/dataset.json` (Q025) | key_facts described outdated host-side ECDH model; actual spec uses HCI_LE_Read_Local_P-256_Public_Key + HCI_LE_Generate_DHKey for controller offload; also had wrong command name `HCI_LE_Start_Encryption` (renamed to `HCI_LE_Enable_Encryption`) | Updated key_facts to reflect spec-accurate controller-offload LESC model matching hci-sequences.md §3 |
+| `wiki/reference/ble-parameters.md` | Supervision timeout 6×Effective_Interval rule was labeled "recommended minimum" — agent prioritized strict spec formula (2010 ms) over the 6× minimum (12,000 ms) | Relabeled as "Minimum supervision timeout" with explicit "minimum = 12,000 ms" for the scenario; strict spec floor noted as insufficient |
+
+### Result: v5 evaluation (762.0/770.0 = 99.0%)
+
+| Metric | v4 | v5 |
+|--------|----|----|
+| Overall | 97.6% | 99.0% |
+| Weighted score | 751.5 | 762.0 |
+| Perfect questions | 34/42 | 37/42 |
+| Accuracy dimension | 97.7% | **100.0%** |
+| implementation_hci | 94.8% | **100.0%** |
+| edge_cases | 97.0% | 98.5% |
+
+---
+
 ## [2026-05-05] FIX — 4 wiki content issues found by independent evaluation
 
 **Operation**: FIX
