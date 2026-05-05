@@ -2,26 +2,26 @@
   "meta": {
     "system": "LLM-Wiki",
     "evaluator": "claude-sonnet-4-6 (independent agent — wiki/ access only, no eval/ context)",
-    "date": "2026-05-04 (v3 — 42-question independent evaluation)",
-    "overall_pct": 95.1,
-    "total_weighted": 732.0,
+    "date": "2026-05-05 (v4 — 5 questions re-tested after wiki content fixes)",
+    "overall_pct": 97.6,
+    "total_weighted": 751.5,
     "total_max_weighted": 770.0,
-    "note": "Independent agent answered all 42 questions by reading only wiki/ pages. Scored against rubric/key_facts by separate evaluator. Methodology change from v2: no self-knowledge of rubric or reference answers during answering."
+    "note": "v4: Q013, Q014, Q017, Q023, Q028 re-evaluated by independent agent after wiki fixes (2026-05-05). Remaining 37 questions unchanged from v3 (2026-05-04). All evaluations: independent agent with wiki/ access only."
   },
   "by_category": {
     "version_facts":          { "weighted": 98.0,  "max": 99.0,  "pct": 99.0,  "questions": ["Q001","Q002","Q003","Q004","Q005","Q006","Q007","Q031","Q032"] },
-    "feature_explanation":    { "weighted": 144.0, "max": 148.5, "pct": 97.0,  "questions": ["Q008","Q009","Q010","Q011","Q012","Q013","Q033","Q034","Q035"] },
-    "version_comparison":     { "weighted": 108.0, "max": 115.5, "pct": 93.5,  "questions": ["Q014","Q015","Q016","Q017","Q018","Q036","Q037"] },
+    "feature_explanation":    { "weighted": 147.0, "max": 148.5, "pct": 99.0,  "questions": ["Q008","Q009","Q010","Q011","Q012","Q013","Q033","Q034","Q035"] },
+    "version_comparison":     { "weighted": 112.5, "max": 115.5, "pct": 97.4,  "questions": ["Q014","Q015","Q016","Q017","Q018","Q036","Q037"] },
     "cross_version_reasoning":{ "weighted": 88.0,  "max": 88.0,  "pct": 100.0, "questions": ["Q019","Q020","Q021","Q022"] },
-    "implementation_hci":     { "weighted": 144.0, "max": 154.0, "pct": 93.5,  "questions": ["Q023","Q024","Q025","Q026","Q038","Q039","Q040"] },
-    "edge_cases":             { "weighted": 150.0, "max": 165.0, "pct": 90.9,  "questions": ["Q027","Q028","Q029","Q030","Q041","Q042"] }
+    "implementation_hci":     { "weighted": 146.0, "max": 154.0, "pct": 94.8,  "questions": ["Q023","Q024","Q025","Q026","Q038","Q039","Q040"] },
+    "edge_cases":             { "weighted": 160.0, "max": 165.0, "pct": 97.0,  "questions": ["Q027","Q028","Q029","Q030","Q041","Q042"] }
   },
   "dimension_averages": {
-    "accuracy":             { "avg": 2.81, "max": 3.0, "pct": 93.7 },
-    "completeness":         { "avg": 2.74, "max": 3.0, "pct": 91.3 },
+    "accuracy":             { "avg": 2.93, "max": 3.0, "pct": 97.7 },
+    "completeness":         { "avg": 2.84, "max": 3.0, "pct": 94.7 },
     "citation":             { "avg": 3.00, "max": 3.0, "pct": 100.0 },
     "hallucination_penalty":{ "avg": 0.00, "max": 0,   "pct": 100.0 },
-    "usability":            { "avg": 1.98, "max": 2.0, "pct": 99.0 }
+    "usability":            { "avg": 2.00, "max": 2.0, "pct": 100.0 }
   },
   "per_question": [
     {
@@ -122,19 +122,19 @@
     },
     {
       "id": "Q013", "category": "feature_explanation", "difficulty": "medium", "weight": 1.5,
-      "scores": { "accuracy": 2, "completeness": 2, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
-      "raw_total": 9, "weighted": 13.5, "max_weighted": 16.5,
-      "key_facts_found": ["Legacy: 3 channels, 31 byte max", "Extended: secondary channels 0-36", "ADV_EXT_IND → AUX_ADV_IND chain", "Supports 2M and Coded PHY", "8× broadcast capacity"],
-      "key_facts_missing": ["254 bytes max (wiki says 1650 bytes total chain, not 254 per PDU)", "Legacy: 3 PDU types (wiki lists 4: ADV_IND, ADV_DIRECT_IND, ADV_NONCONN_IND, ADV_SCAN_IND)"],
-      "rationale": "Wiki value of 1650 bytes (full chain) vs reference 254 bytes (single AUX_ADV_IND PDU) — different spec measurements. 4 vs 3 legacy PDU types also differs."
+      "scores": { "accuracy": 3, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 11, "weighted": 16.5, "max_weighted": 16.5,
+      "key_facts_found": ["Legacy: 3 channels, 31 byte max", "Extended: secondary channels 0-36, up to 254 bytes per PDU", "ADV_EXT_IND → AUX_ADV_IND chain", "Supports 2M and Coded PHY", "8× broadcast capacity (implicit: 31→254 bytes = 8× per PDU)"],
+      "key_facts_missing": [],
+      "rationale": "[v4 re-test after fix #2] Wiki now clearly distinguishes single-PDU ceiling (254 bytes) from chain total (1650 bytes). Agent correctly stated both. All 5 key facts covered. Previously failed due to 1650 vs 254 ambiguity."
     },
     {
       "id": "Q014", "category": "version_comparison", "difficulty": "medium", "weight": 1.5,
-      "scores": { "accuracy": 2, "completeness": 2, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
-      "raw_total": 9, "weighted": 13.5, "max_weighted": 16.5,
-      "key_facts_found": ["5.4: PAwR, EAD", "5.3: Connection Subrating and Enhanced Connection Update (listed as absorbed)"],
-      "key_facts_missing": ["5.3: Advertising Coding Selection (misattributed to 5.4 in wiki)", "5.3 theme: connection efficiency", "5.4 theme: broadcast + security"],
-      "rationale": "Wiki places Advertising Coding Selection in 5.4 feature list rather than 5.3; themes not explicitly stated."
+      "scores": { "accuracy": 3, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 11, "weighted": 16.5, "max_weighted": 16.5,
+      "key_facts_found": ["5.3: Connection Subrating, Enhanced Connection Update, Advertising Coding Selection", "5.4: PAwR, EAD", "5.3 theme: connection efficiency", "5.4 theme: broadcast + security"],
+      "key_facts_missing": [],
+      "rationale": "[v4 re-test after fix #4] Advertising Coding Selection now appears in diff-5.2-to-5.3.md as a 5.3 addition. Agent correctly lists all three 5.3 features and both 5.4 features with clear theme labels. Previously misattributed ACS to 5.4."
     },
     {
       "id": "Q015", "category": "version_comparison", "difficulty": "medium", "weight": 1.5,
@@ -154,11 +154,11 @@
     },
     {
       "id": "Q017", "category": "version_comparison", "difficulty": "medium", "weight": 1.5,
-      "scores": { "accuracy": 2, "completeness": 2, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
-      "raw_total": 9, "weighted": 13.5, "max_weighted": 16.5,
-      "key_facts_found": ["4.0: 3 channels, 31 bytes", "5.0: secondary channels, new PDU chain", "5.0: 8× broadcast capacity, 4× range"],
-      "key_facts_missing": ["4.0: 3 PDU types (wiki lists 4)", "5.0: 254 bytes (wiki says 1650 total chain)"],
-      "rationale": "Same byte/PDU-count discrepancy as Q013. Core facts (channels, 8× capacity, 4× range) all correct."
+      "scores": { "accuracy": 3, "completeness": 2, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 10, "weighted": 15.0, "max_weighted": 16.5,
+      "key_facts_found": ["4.0: 3 channels, 31 bytes, PDU types", "5.0: secondary channels, 254 bytes per PDU, new PDU chain", "5.0: 8× broadcast capacity (31→254 = 8× stated)"],
+      "key_facts_missing": ["5.0: 4× range — agent says 'range extension via LE Coded PHY' but does not state the '4×' figure explicitly"],
+      "rationale": "[v4 re-test after fix #2] 254 bytes per PDU now correctly stated (was 1650-only before). 8× broadcast explicitly in table. Still missing explicit '4× range' quantification — agent mentions LE Coded PHY range extension without the 4× multiplier."
     },
     {
       "id": "Q018", "category": "version_comparison", "difficulty": "medium", "weight": 1.5,
@@ -202,12 +202,11 @@
     },
     {
       "id": "Q023", "category": "implementation_hci", "difficulty": "hard", "weight": 2.0,
-      "scores": { "accuracy": 2, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
-      "raw_total": 10, "weighted": 20.0, "max_weighted": 22.0,
-      "key_facts_found": ["Extended advertising must be set up first", "Periodic advertising carries the BIG announcement", "HCI_LE_Create_BIG creates the stream", "BIS handles returned in Create_BIG_Complete event"],
+      "scores": { "accuracy": 3, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 11, "weighted": 22.0, "max_weighted": 22.0,
+      "key_facts_found": ["Extended advertising must be set up first", "Periodic advertising carries the BIG announcement", "HCI_LE_Create_BIG creates the stream", "BIS handles returned in Create_BIG_Complete event", "9-step sequence in correct order"],
       "key_facts_missing": [],
-      "rationale": "8 steps covered; step ordering differs from reference (extended advertising enabled at step 6 after periodic advertising enable at step 5 — reference enables extended at step 3 before periodic setup).",
-      "gap_detail": "Correct commands all present; sequence ordering has extended enable after periodic enable, which is technically incorrect (periodic advertising can only be enabled on an active extended advertising set)."
+      "rationale": "[v4 re-test after fix #3] BIS sequence ordering corrected: Extended Advertising Enable now at step 5 before Periodic Advertising Enable at step 6. Agent reproduced the correct 9-step sequence and explicitly noted 'Must precede Periodic Advertising Enable' with error code reference."
     },
     {
       "id": "Q024", "category": "implementation_hci", "difficulty": "hard", "weight": 2.0,
@@ -243,12 +242,11 @@
     },
     {
       "id": "Q028", "category": "edge_cases", "difficulty": "expert", "weight": 2.5,
-      "scores": { "accuracy": 1, "completeness": 1, "citation": 3, "hallucination_penalty": 0, "usability": 1 },
-      "raw_total": 6, "weighted": 15.0, "max_weighted": 27.5,
-      "key_facts_found": ["Formula: Effective = CI × SF × (1+CN)", "100 × 10 × 2 = 2000 ms effective interval"],
-      "key_facts_missing": ["Supervision_Timeout ≥ 6 × Effective_Interval — wiki formula gives minimum as > 2×CI×SF×(Max_Latency+1)=2010ms rather than ≥6×Effective=12000ms", "Minimum = 12,000 ms"],
-      "rationale": "Effective interval formula correct (2000ms). But agent states minimum supervision timeout as 2010ms (strict spec formula from ble-parameters.md) while reference key_fact says 12,000ms (6× rule). Two conflicting 'minimums' in the answer make it confusing and wrong per key_fact.",
-      "gap_detail": "The wiki's ble-parameters.md documents '> 2 × CI × SF × (Max_Latency+1)' as the strict minimum; the reference answer uses '≥ 6 × Effective_Interval' as the minimum. The 6× rule is a more conservative design guideline. The wiki should clarify that 12000ms is the spec-recommended minimum for this case."
+      "scores": { "accuracy": 2, "completeness": 3, "citation": 3, "hallucination_penalty": 0, "usability": 2 },
+      "raw_total": 10, "weighted": 25.0, "max_weighted": 27.5,
+      "key_facts_found": ["Formula: Effective = CI × SF × (1+CN)", "100 × 10 × 2 = 2000 ms", "Supervision_Timeout ≥ 6 × Effective_Interval (stated and calculated)", "12,000 ms figure present (as recommended minimum)"],
+      "key_facts_missing": ["Minimum = 12,000 ms — agent frames this as 'recommended' rather than the minimum; primary answer is still 2010 ms (strict spec lower bound)"],
+      "rationale": "[v4 re-test after fix #1] Wiki now documents both strict minimum (2010 ms) and 6×Effective_Interval recommendation (12,000 ms) with example. Agent correctly calculates 2000 ms Effective_Interval and states 12,000 ms, but primary conclusion is 2010 ms (strict spec). Reference answer expects 12,000 ms as THE minimum. Significant improvement vs v3 (was A=1, C=1)."
     },
     {
       "id": "Q029", "category": "edge_cases", "difficulty": "expert", "weight": 2.5,
