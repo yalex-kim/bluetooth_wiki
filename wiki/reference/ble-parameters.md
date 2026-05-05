@@ -71,10 +71,22 @@ Example: Interval=50 ms, Latency=4 → Timeout must be > 500 ms.
 | Max_Latency (subrated) | 0x0000 – 0x01F3 | subrated events | 0 – 499 | Like Peripheral_Latency but in subrated event units |
 | Continuation_Number | 0x0000 – 0x000F | — | 0 – 15 | Extra consecutive base events to stay active after a non-empty subrated exchange; does not multiply the wakeup interval |
 
-**Effective Supervision_Timeout constraint with subrating**:
+**Effective Interval** (actual wakeup cycle including continuation):
+```
+Effective_Interval (ms) = Connection_Interval × Subrate_Factor × (1 + Continuation_Number)
+```
+
+**Strict lower bound** (spec minimum — prevents false supervision timeout):
 ```
 Supervision_Timeout > 2 × Connection_Interval × Subrate_Factor × (Max_Latency + 1)
 ```
+
+**Recommended minimum** (accounts for Continuation_Number and allows headroom):
+```
+Supervision_Timeout ≥ 6 × Effective_Interval
+```
+Example: CI=100 ms, SF=10, CN=1 → Effective_Interval = 2000 ms → recommended minimum = **12,000 ms** (12 s).
+The strict spec lower bound for this example (Max_Latency=0): > 2×100×10×1 = 2000 ms — the recommended 12,000 ms is 6× larger to tolerate packet loss bursts.
 
 ---
 
@@ -165,13 +177,14 @@ Supervision_Timeout > 2 × Connection_Interval × Subrate_Factor × (Max_Latency
 Supervision_Timeout_min (ms) = 2 × Interval (ms) × (Peripheral_Latency + 1) + 10
 
 # Effective interval with Connection Subrating
-#   Continuation_Number (0–15) extends the active window per anchor cycle
 Effective_Interval (ms) = Interval (ms) × Subrate_Factor × (1 + Continuation_Number)
 #   e.g. CI=100ms, SF=10, CN=1 → 100 × 10 × 2 = 2000 ms
-#   Recommended supervision timeout: ≥ 6 × Effective_Interval
 
-# Subrated supervision timeout minimum  (strict lower bound, uses Max_Latency)
-Supervision_Timeout_min (ms) = 2 × Interval (ms) × Subrate_Factor × (Max_Latency + 1) + 10
+# Subrated supervision timeout — strict lower bound (spec minimum)
+Supervision_Timeout_strict_min (ms) = 2 × Interval (ms) × Subrate_Factor × (Max_Latency + 1) + 10
+# Subrated supervision timeout — recommended minimum (design guideline)
+Supervision_Timeout_recommended (ms) = 6 × Effective_Interval
+#   e.g. SF=10, CI=100ms, CN=1 → recommended ≥ 12,000 ms
 
 # Maximum BLE throughput (approximate)
 Throughput (bps) ≈ (TX_Octets × 8) / Connection_Interval

@@ -35,7 +35,7 @@ per the spec header; the Bluetooth SIG Board adoption date is 2023-02-02.
 | Periodic Advertising with Responses (PAwR) | Bidirectional periodic advertising; devices reply in assigned slots using AUX_SYNC_SUBEVENT_IND/RSP PDUs | [Core 5.4, Vol 6, Part B, §4.6.38–4.6.39] |
 | Encrypted Advertising Data (EAD) | AES-128-CCM encrypted advertising payload; AD type Encrypted Data wraps payload | [Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10] |
 | LE GATT Security Levels Characteristic | New GATT characteristic (UUID 0x2BF5) exposing server's highest LE security requirement | [Core 5.4, Vol 3, Part C, §12.7](../../sources/specs/5.4/Core_v5.4.md#L29050) |
-| Advertising Coding Selection | Host control over S=2 or S=8 data coding for LE Coded PHY advertising | [Core 5.4, Vol 6, Part B, §4.6.37](../../sources/specs/5.4/Core_v5.4.md#L60276) |
+| Advertising Coding Selection (from 5.3) | Host control over S=2 or S=8 data coding for LE Coded PHY advertising — introduced in withdrawn 5.3, absorbed by 5.4 | [Core 5.4, Vol 6, Part B, §4.6.37](../../sources/specs/5.4/Core_v5.4.md#L60276) |
 | Connection Subrating (from 5.3) | Reduce connection event frequency while maintaining connection — inherited from withdrawn 5.3 | [Core 5.4, Vol 6, Part B] |
 | LE Enhanced Connection Update (from 5.3) | Controller-initiated connection parameter updates — inherited from withdrawn 5.3 | [Core 5.4, Vol 6, Part B] |
 

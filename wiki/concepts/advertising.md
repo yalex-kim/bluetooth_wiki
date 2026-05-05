@@ -92,6 +92,11 @@ The `Fragment_Preference` hint (`0x00` = may fragment, `0x01` = minimize fragmen
 
 Each `HCI_LE_Set_Extended_Advertising_Data` call carries up to 251 bytes. For larger payloads, chain multiple calls with `Operation` 0x01 → 0x00 → ... → 0x02. The Controller assembles the chain into `AUX_ADV_IND` + `AUX_CHAIN_IND` PDUs on-air.
 
+> **On-air capacity breakdown** [Core 6.2, Vol 6, Part B, §2.3.1.6, §4.4.2.11]:
+> - A single `AUX_ADV_IND` or `AUX_CHAIN_IND` PDU payload is at most 255 bytes; with the mandatory 1-byte Extended Header field, up to **254 bytes** are available for AdvData in a minimally-headered PDU. Typical headers (AdvA, SyncInfo, AuxPtr) reduce this further.
+> - The full **chain total** (`AUX_ADV_IND` + all `AUX_CHAIN_IND` continuations) can carry up to **1650 bytes** of advertising data.
+> - "Up to 1650 bytes" describes the chain capacity; "254 bytes" describes the single-PDU ceiling.
+
 ---
 
 ## AD Types (Assigned Numbers)

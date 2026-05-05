@@ -295,10 +295,11 @@ Requires an extended advertising set configured as non-connectable non-scannable
    → `HCI_Command_Complete`: Status=0x00
    > The BASE (Basic Audio Announcement) LTV structure here tells receivers how to join and decode the BIG. Required before enabling periodic advertising.
 
-5. `HCI_LE_Set_Periodic_Advertising_Enable` (0x2040) — Enable=0x01, Advertising_Handle=0x00
+5. `HCI_LE_Set_Extended_Advertising_Enable` (0x2039) — Enable=0x01, Num_Sets=1, Advertising_Handle=0x00
    → `HCI_Command_Complete`: Status=0x00
+   > **Must precede Periodic Advertising Enable.** The periodic train rides on the extended advertising set; enabling periodic advertising before the extended set is active returns `Command Disallowed`. [Core 5.2, Vol 6, Part B, §4.4.6]
 
-6. `HCI_LE_Set_Extended_Advertising_Enable` (0x2039) — Enable=0x01, Num_Sets=1, Advertising_Handle=0x00
+6. `HCI_LE_Set_Periodic_Advertising_Enable` (0x2040) — Enable=0x01, Advertising_Handle=0x00
    → `HCI_Command_Complete`: Status=0x00
 
 7. `HCI_LE_Create_BIG` (0x2068)

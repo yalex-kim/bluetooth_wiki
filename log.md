@@ -5,6 +5,25 @@
 
 ---
 
+## [2026-05-05] FIX — 4 wiki content issues found by independent evaluation
+
+**Operation**: FIX
+**By**: Claude (claude-sonnet-4-6)
+**Session**: bluetooth-spec-wiki-FikPs
+**Source**: Issues identified by independent-agent evaluation (eval/results_wiki.json v3, 95.1% score)
+
+### Changes
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `wiki/reference/ble-parameters.md` | Supervision timeout recommended minimum was only in a comment; Q028 failed because agent found strict min (2010 ms) vs expected design guideline (12,000 ms = 6 × Effective_Interval) | Added explicit recommended minimum formula and concrete example to Connection Subrating section and Key Formulas |
+| `wiki/concepts/advertising.md` | "Up to 1650 bytes" in intro misleads readers who need single-PDU capacity (254 bytes max AdvData) | Added on-air capacity breakdown note distinguishing single-PDU (254 bytes) from chain total (1650 bytes) |
+| `wiki/reference/hci-sequences.md §7a` | BIS Broadcaster sequence had `HCI_LE_Set_Periodic_Advertising_Enable` at step 5 BEFORE `HCI_LE_Set_Extended_Advertising_Enable` at step 6 — spec violation | Swapped steps 5 and 6; extended enable must precede periodic enable per [Core 5.2, Vol 6, Part B, §4.4.6] |
+| `wiki/version-diff/diff-5.2-to-5.3.md` | Advertising Coding Selection (§4.6.37) was missing from 5.3 Added section | Added entry; it was introduced in 5.3, absorbed into 5.4 when 5.3 was withdrawn |
+| `wiki/versions/core-spec-5.4.md` | Advertising Coding Selection row lacked "(from 5.3)" annotation, implying 5.4 originated it | Added "(from 5.3)" annotation to New Features table row |
+
+---
+
 ## [2026-05-04] UPDATE — Eval dataset extended to 42 questions
 
 **Operation**: UPDATE

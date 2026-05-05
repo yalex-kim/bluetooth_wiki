@@ -43,6 +43,7 @@ A **global terminology change** replaced "master/slave" with "Central/Peripheral
 | **Channel Classification Enable procedure** | Central sends LL_CHANNEL_REPORTING_IND to enable/disable reporting | Vol 6, Part B, §5.1.21 |
 | **Channel Classification Reporting procedure** | Peripheral sends LL_CHANNEL_STATUS_IND with channel quality map | Vol 6, Part B, §5.1.22 |
 | **Periodic Advertising ADI Support** | ADI field added to AUX_SYNC_IND PDUs; allows duplicate detection for periodic advertising | Vol 6, Part B, §4.6.34 |
+| **Advertising Coding Selection** | Host can explicitly select S=2 or S=8 coding for LE Coded PHY advertising sets, overriding Controller default | Vol 6, Part B, §4.6.37 |
 | **Host-to-Controller Encryption Key Control** | Host can specify minimum encryption key size to Controller | Vol 4, Part E |
 | **GAP Connection Subrate procedure** | Host-level procedure for initiating connection subrating | Vol 3, Part C, §9.3.16 |
 | **Feature bit 4.6.35** | Connection Subrating (Controller) | Vol 6, Part B, §4.6.35 |
