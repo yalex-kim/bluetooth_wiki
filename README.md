@@ -58,10 +58,19 @@ bluetooth_wiki/
 │   ├── results_wiki.json           ← LLM-Wiki baseline results (95.8%, 2026-05-04)
 │   └── report.html                 ← Visual evaluation dashboard
 │
+├── agent/                          ← Embedded agent loop (Phase 1, Python)
+│   ├── agent.py                    ← BluetoothWikiAgent.ask() — single entry point
+│   ├── system_prompt.md            ← Citation rules + anti-hallucination prompt
+│   ├── tools.py                    ← list_index, search_wiki, read_page, read_source
+│   ├── citations.py                ← Citation ↔ hosted-site URL mapping
+│   └── config.py                   ← Env-driven config (model, paths, limits)
+│
 ├── scripts/
 │   ├── download_spec_documents.py  ← Download PDFs from bluetooth.com
 │   ├── convert_to_md.py            ← Convert PDF → Markdown + figure PNGs via PyMuPDF
-│   └── ingest.py                   ← Workflow for reflecting new specs into the wiki
+│   ├── ingest.py                   ← Workflow for reflecting new specs into the wiki
+│   ├── eval_one.py                 ← Run one eval question through agent + LLM judge
+│   └── smoke_test_agent.py         ← End-to-end agent smoke test
 │
 └── guide/
     └── claude-code-integration.md  ← Claude Code integration guide
@@ -127,6 +136,32 @@ python scripts/ingest.py --status
 claude
 > Ingest Core Spec X.Y from sources/specs/X.Y/Core_vX.Y.md into the wiki
 ```
+
+---
+
+## Agent (Phase 1)
+
+The `agent/` package wraps the wiki in an embedded agentic loop so any client (HTTP, MCP, web sidebar) gets the same answer quality. Built on [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk).
+
+```bash
+python3 -m venv .venv --without-pip
+curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python
+.venv/bin/pip install -e .
+
+cp .env.example .env  # fill in ANTHROPIC_API_KEY, SITE_BASE_URL
+.venv/bin/python scripts/smoke_test_agent.py "Which version introduced Channel Sounding?"
+```
+
+Per-question evaluation:
+
+```bash
+.venv/bin/python scripts/eval_one.py Q027 --save
+# → score breakdown + saves to eval/results_agent.json
+```
+
+Tunable env vars: `BT_AGENT_MODEL` (default `claude-opus-4-7`), `BT_AGENT_MAX_TURNS`, `SITE_BASE_URL`.
+
+The agent emits citations as `{label, file_path}` and `agent/citations.py` resolves them to deep-link URLs into a hosted MkDocs site (planned Phase 3).
 
 ---
 

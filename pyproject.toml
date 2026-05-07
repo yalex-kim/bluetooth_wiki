@@ -1,0 +1,34 @@
+[project]
+name = "bluetooth-wiki-agent"
+version = "0.1.0"
+description = "Bluetooth Spec Wiki Agent — internal agent loop with HTTP and MCP entry points"
+requires-python = ">=3.10"
+dependencies = [
+    "claude-agent-sdk>=0.1.0",
+    "anthropic>=0.39.0",
+    "mcp>=1.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "python-dotenv>=1.0.1",
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+]
+
+[project.scripts]
+bluetooth-wiki-agent-http = "server.http:main"
+bluetooth-wiki-agent-mcp = "server.mcp:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agent*", "server*"]
+exclude = ["wiki*", "sources*", "eval*", "scripts*"]

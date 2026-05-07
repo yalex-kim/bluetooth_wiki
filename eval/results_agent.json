@@ -1,0 +1,983 @@
+{
+  "per_question": {
+    "Q001": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": -1,
+        "usability": 2
+      },
+      "raw_total": 10,
+      "rationales": {
+        "accuracy": "All core facts are correct: 375 µs minimum, 125 µs tick size, replaces 7.5 ms minimum, and HCI_LE_Connection_Rate_Request command.",
+        "completeness": "All four key facts from the reference are explicitly present in the system answer.",
+        "citation": "Detailed citations to Core 6.2 with specific volume, part, and section references throughout (Vol 6 Part B §4.5.2, Vol 4 Part E §7.8.154, etc.).",
+        "hallucination_penalty": "Minor hallucination: claims 'Connection Subrating must be supported' as a prerequisite, which is not mentioned in the reference answer and appears to be additional unverified detail.",
+        "usability": "Exceptionally well-structured with tables, clear sections, and actionable engineering details including commands, events, and constraints."
+      },
+      "key_facts_missing": [],
+      "answer": "## Minimum BLE Connection Interval in Bluetooth Core Spec 6.2\n\n**375 µs** — a 20× reduction from the previous minimum of 7.5 ms.\n\n### Background\n\nPrior to 6.2, the minimum LE ACL connection interval was **7.5 ms**, defined as N × 1.25 ms with N ≥ 6 [Core 6.2, Vol 6, Part B, §4.5.2]. This limit reflected the original BLE design targeting low-power sensor applications.\n\n### What Changed in 6.2\n\nBluetooth 6.2 introduces the **Shorter Connection Intervals** feature, which changes the connection interval tick unit from 1.25 ms to **125 µs** and sets the new minimum at N × 125 µs with **N ≥ 3**:\n\n| Parameter | Pre-6.2 | 6.2+ |\n|-----------|---------|------|\n| Tick unit | 1.25 ms | 125 µs |\n| Minimum N | 6 | 3 |\n| Minimum interval | 7.5 ms | **375 µs** |\n| Maximum interval | 4 s | 4 s (unchanged) |\n\n[Core 6.2, Vol 4, Part E, §7.8.154; Vol 6, Part B, §4.6.50]\n\n### Mechanism\n\nShort intervals use a **separate, parallel negotiation path** — not the existing `HCI_LE_Connection_Update`. The existing 1.25 ms commands remain unchanged for backward compatibility.\n\n**New LL PDUs:**\n- `LL_CONNECTION_RATE_REQ` — either Central or Peripheral requests a rate change\n- `LL_CONNECTION_RATE_IND` — Central sends confirmed parameters to Peripheral\n\n**New HCI commands:**\n\n| Command | OCF | Purpose |\n|---------|-----|--------|\n| `HCI_LE_Connection_Rate_Request` | 0x00A1 | Request connection rate change (125 µs units) |\n| `HCI_LE_Set_Default_Rate_Parameters` | 0x00A2 | Set Central's acceptable defaults for incoming Peripheral requests |\n| `HCI_LE_Read_Minimum_Supported_Connection_Interval` | 0x00A3 | Query the controller's hardware-minimum supported interval |\n\n**Completion event**: `LE_Connection_Rate_Change` (subevent 0x37).\n\n[Core 6.2, Vol 4, Part E, §7.8.154–7.8.156; Vol 6, Part B, §5.1.32–5.1.33]\n\n### Prerequisites and Constraints\n\n1. **Connection Subrating (5.3+) must be supported** — Shorter Connection Intervals is built on top of the subrating mechanism and requires this feature bit on both devices.\n2. **Controller hardware varies** — not all 6.2 controllers will reach the 375 µs floor. Always call `HCI_LE_Read_Minimum_Supported_Connection_Interval` (0x00A3) to determine the actual hardware minimum before requesting short intervals.\n3. **Supervision timeout constraint** (mandatory): `Connection_Interval_Max × Subrate_Max × (Max_Latency + 1) < Supervision_Timeout × 40` — becomes critical to satisfy at very short intervals.\n4. **Feature advertisement**: Both devices must have the `Connection Rate (Host Support)` LE feature bit set.\n\n[Core 6.2, Vol 6, Part B, §4.6.50; Vol 4, Part E, §7.8.154]\n\n### Target Use Cases\n\nGaming peripherals targeting sub-1 ms perceived latency, real-time haptic feedback, industrial BLE control loops, and USB-replacement scenarios where proprietary approaches were previously required.",
+      "citations": [
+        {
+          "label": "Core 6.2, Vol 6, Part B, §4.6.50 (Shorter Connection Intervals feature)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 6, Part B, §5.1.32–5.1.33 (LL_CONNECTION_RATE_REQ / _IND procedures)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 4, Part E, §7.8.154–7.8.156 (new HCI commands)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Wiki: Bluetooth Core Specification 6.2",
+          "file_path": "wiki/versions/core-spec-6.2.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-6.2/"
+        },
+        {
+          "label": "Diff 6.1 → 6.2",
+          "file_path": "wiki/version-diff/diff-6.1-to-6.2.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-6.1-to-6.2/"
+        },
+        {
+          "label": "Wiki: BLE Connection Management",
+          "file_path": "wiki/concepts/connection-management.md",
+          "url": "http://localhost:8888/wiki/concepts/connection-management/"
+        }
+      ]
+    },
+    "Q002": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": 0,
+        "usability": 2
+      },
+      "raw_total": 11,
+      "rationales": {
+        "accuracy": "All stated facts are correct: Bluetooth 5.1 introduced Direction Finding with AoA/AoD modes, requires antenna arrays, uses CTE with IQ sampling, and the technical details provided are accurate.",
+        "completeness": "All five key facts are explicitly present: Version 5.1, AoA and AoD modes, antenna array requirement, Constant Tone Extension (CTE), and IQ sampling hardware.",
+        "citation": "Excellent citations provided including Core 5.1 with specific volume and part references (Vol 6, Part B, §6.1, §6.2, §2.5, §4.6.16–4.6.21).",
+        "hallucination_penalty": "No fabricated facts detected; all information is verifiable and the additional details (release date, reference period, feature bits, backward compatibility) enrich rather than contradict the reference.",
+        "usability": "The answer is exceptionally well-structured with tables, clear organization, and actionable information for engineers including feature bits and implementation guidance."
+      },
+      "key_facts_missing": [],
+      "answer": "## Direction Finding (AoA / AoD) — Introduction and Hardware Requirements\n\n**Introduced in**: **Bluetooth Core Specification 5.1** (released 2019-01-21) [Wiki: core-spec-5.1]\n\n---\n\n### The Two Modes\n\n| Mode | Antenna Array Location | How It Works |\n|------|----------------------|--------------|\n| **AoA (Angle of Arrival)** | **Receiver** (e.g., fixed anchor/locator) | Transmitter sends a single-antenna CTE; receiver switches across its antenna array and samples the phase shift to compute the incoming angle. [Core 5.1, Vol 6, Part B, §6.1] |\n| **AoD (Angle of Departure)** | **Transmitter** (e.g., fixed beacon) | Transmitter switches antennas during CTE; single-antenna receiver measures the phase variation to calculate the departure angle. [Core 5.1, Vol 6, Part B, §6.2] |\n\n---\n\n### The Hardware Requirement: Antenna Array with RF Switching\n\nDirection Finding is **a hardware feature** — it cannot be implemented in software alone. It requires:\n\n1. **Multi-element antenna array** physically integrated with the radio controller.\n2. **RF antenna switching circuitry** capable of switching antennas on 1 µs or 2 µs slot boundaries during the Constant Tone Extension (CTE).\n3. **IQ sampling hardware (ADC)** in the controller to capture the In-phase (I) and Quadrature (Q) signal components in each sample slot.\n\nThe **Constant Tone Extension (CTE)** is the carrier mechanism: a fixed-frequency unwhitened tone appended after the CRC of an LE PDU (16 µs – 160 µs, in 8 µs increments, on LE 1M or LE 2M PHYs). It is not encrypted, ensuring a stable carrier for phase measurement. [Core 5.1, Vol 6, Part B, §2.5]\n\nThe first 8 µs of the CTE is the **Reference Period** — no antenna switching occurs here, giving the receiver a phase/frequency baseline before switching begins. [Wiki: direction-finding]\n\n---\n\n### Feature Bits to Check at Runtime\n\nQuery the controller's `LE Features` bitmask for these bits before using DF:\n\n- `Connectionless CTE Transmitter` / `Connectionless CTE Receiver`\n- `Connection CTE Request` / `Connection CTE Response`\n- `Antenna Switching During CTE Transmission (AoD)`\n- `Antenna Switching During CTE Reception (AoA)`\n- `Receiving Constant Tone Extensions` / `Sampling Received CTE`\n\n[Core 5.1, Vol 6, Part B, §4.6.16–4.6.21]\n\n---\n\n### Backward Compatibility\n\nBecause the CTE is appended **after** the CRC, Bluetooth 5.0 and earlier devices simply ignore it — the feature is fully non-breaking. [Diff 5.0 → 5.1]\n\n---\n\n### Delivery Modes\n\n| Mode | PDU Type | Use Case |\n|------|----------|----------|\n| **Connectionless CTE** | `AUX_SYNC_IND` (periodic advertising) | Infrastructure positioning — no connection required |\n| **Connection CTE** | `LL_CTE_REQ` / `LL_CTE_RSP` | Peer-to-peer ranging over an established connection |",
+      "citations": [
+        {
+          "label": "Wiki: direction-finding",
+          "file_path": "wiki/concepts/direction-finding.md",
+          "url": "http://localhost:8888/wiki/concepts/direction-finding/"
+        },
+        {
+          "label": "Wiki: core-spec-5.1",
+          "file_path": "wiki/versions/core-spec-5.1.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-5.1/"
+        },
+        {
+          "label": "Diff 5.0 → 5.1",
+          "file_path": "wiki/version-diff/diff-5.0-to-5.1.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.0-to-5.1/"
+        }
+      ]
+    },
+    "Q003": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "usability": 2,
+        "hallucination_penalty": 0
+      },
+      "raw_total": 11,
+      "rationales": {
+        "accuracy": "All stated facts about LC3, Bluetooth 5.2, isochronous channels (CIS/BIS), and ISOAL are correct and verifiable against the reference.",
+        "completeness": "All key facts are present: LC3 codec, Bluetooth 5.2, Isochronous Channels (CIS/BIS), and Basic Audio Profile pillar (referenced as part of the LE Audio framework).",
+        "citation": "The answer provides specific Core 5.2 references with volume and section numbers (e.g., Vol 6, Part B, §4.5.13), exceeding the minimum requirement.",
+        "hallucination_penalty": 0,
+        "usability": "The answer is well-structured with tables and clear sections, highly actionable for engineers, though some additional technical detail goes beyond the basic question scope."
+      },
+      "key_facts_missing": [],
+      "answer": "## LE Audio Codec and Version Introduction\n\n### Codec: LC3 (Low Complexity Communication Codec)\n\nLE Audio mandates **LC3** as its audio codec, replacing SBC from the Classic Bluetooth (BR/EDR) audio stack.\n\n| Property | Value |\n|----------|-------|\n| **Sampling rates** | 8, 16, 24, 32, 44.1, 48 kHz |\n| **Bitrates** | 16–320 kbps per channel (typical: 64–96 kbps voice; 128–192 kbps music) |\n| **Frame durations** | 7.5 ms (low-latency mode) or 10 ms (efficiency mode) |\n| **Bit depth** | 16, 24, 32-bit signed integer |\n| **Efficiency** | At 160 kbps, perceived quality ≈ SBC at 345 kbps |\n| **Robustness** | Built-in PLC (Packet Loss Concealment) |\n\n`[LC3 Specification v1.0, Bluetooth SIG]` `[Wiki: LE Audio Framework]`\n\n---\n\n### Introduced In: **Bluetooth Core Spec 5.2** (released 2019-12-31)\n\nLE Audio was the headline feature of Core Spec 5.2, resting on three pillars:\n\n1. **LC3 codec** — the mandatory audio codec described above.\n2. **LE Isochronous Channels** — CIS (Connected Isochronous Stream, point-to-point) and BIS (Broadcast Isochronous Stream, one-to-many). `[Core 5.2, Vol 6, Part B, §4.5.13]` `[Core 5.2, Vol 6, Part B, §4.4.6]`\n3. **ISOAL** (Isochronous Adaptation Layer) — fragments codec SDUs into radio PDUs. `[Core 5.2, Vol 6, Part G]`\n\nLE Audio is purely additive — Classic Bluetooth audio (SCO/eSCO + SBC via A2DP) was **not** removed in 5.2 and continues to exist alongside it. `[Wiki: core-spec-5.2]`",
+      "citations": [
+        {
+          "label": "Core 5.2, Vol 6, Part B, §4.5.13 (CIS)",
+          "file_path": "sources/specs/5.2/Core_v5.2.md",
+          "url": "http://localhost:8888/sources/5.2/Core_v5.2/"
+        },
+        {
+          "label": "Core 5.2, Vol 6, Part B, §4.4.6 (BIS/BIG)",
+          "file_path": "sources/specs/5.2/Core_v5.2.md",
+          "url": "http://localhost:8888/sources/5.2/Core_v5.2/"
+        },
+        {
+          "label": "Core 5.2, Vol 6, Part G (ISOAL)",
+          "file_path": "sources/specs/5.2/Core_v5.2.md",
+          "url": "http://localhost:8888/sources/5.2/Core_v5.2/"
+        },
+        {
+          "label": "Wiki: LE Audio Framework",
+          "file_path": "wiki/concepts/le-audio.md",
+          "url": "http://localhost:8888/wiki/concepts/le-audio/"
+        },
+        {
+          "label": "Wiki: core-spec-5.2",
+          "file_path": "wiki/versions/core-spec-5.2.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-5.2/"
+        }
+      ]
+    },
+    "Q004": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": -1,
+        "usability": 2
+      },
+      "raw_total": 10,
+      "rationales": {
+        "accuracy": "All core facts are correct: EATT introduced in Bluetooth 5.2, uses multiple L2CAP channels, enables concurrent operations, and solves the sequential bottleneck.",
+        "completeness": "All five key facts are present: Enhanced Attribute Protocol explicitly stated, version 5.2 confirmed, multiple parallel L2CAP channels described, concurrent GATT operations explained, and single-request bottleneck removal clearly articulated.",
+        "citation": "Precise citations provided including Core 5.2, Vol 3, Part F, §5.3 and Vol 3, Part A, meeting the highest citation standard.",
+        "hallucination_penalty": "Minor additional details like specific PDU opcodes (0x20, 0x21, 0x23), feature bits, and PSM 0x0027 go beyond the reference but are verifiable technical facts from the spec, warranting only a minor penalty.",
+        "usability": "Extremely well-structured with tables, code examples, and clear section headers making it highly actionable for engineers."
+      },
+      "key_facts_missing": [],
+      "answer": "## EATT — Enhanced ATT Bearer\n\n### Introduction\nEATT (**Enhanced Attribute Protocol** bearer) was introduced in **Core Spec 5.2** (December 2019). It is defined in [Core 5.2, Vol 3, Part F, §5.3], with its L2CAP transport layer defined in [Core 5.2, Vol 3, Part A].\n\n---\n\n### The Problem with Classic ATT\n\nClassic ATT operates on a **single, fixed L2CAP channel** (CID `0x0004`) per connection. This design has one critical constraint:\n\n> **Only one ATT request can be outstanding at a time.**\n\nEvery operation (Read, Write, Find, etc.) follows a strict sequential request/response model. If the client is waiting for an `ATT_READ_RSP`, it cannot issue another `ATT_WRITE_REQ` until the first completes. On high-latency or loaded links, this is a throughput bottleneck — especially for LE Audio and other real-time GATT-heavy profiles introduced alongside EATT in 5.2.\n\n---\n\n### How EATT Solves It\n\nEATT replaces the single fixed channel with **multiple dynamic L2CAP Credit-Based Flow Control (CoC) channels**, all multiplexed over PSM `0x0027`. Each channel is an independent ATT bearer with its own request/response queue.\n\n| Property | Classic ATT Bearer | EATT Bearer |\n|---|---|---|\n| L2CAP channel | Fixed CID `0x0004` | Dynamic CoC, PSM `0x0027` |\n| Channels per connection | **1** | **Multiple** (negotiated, up to 5 via single request) |\n| Request parallelism | Sequential — 1 outstanding | **Parallel** across separate bearers |\n| Minimum ATT_MTU | 23 bytes | **64 bytes** |\n| `ATT_SIGNED_WRITE_CMD` (0xD2) | Allowed | **Prohibited** |\n| Transport | LE | LE + BR/EDR |\n\n[Wiki: ATT and GATT — Protocol Deep Dive], [Wiki: L2CAP]\n\n---\n\n### Establishing EATT\n\nEATT uses **Enhanced Credit-Based Flow Control (ECBFC)** — also new in 5.2 — which allows opening up to 5 channels in a single L2CAP `Credit_Based_Connection_Request` (signal code `0x17`):\n\n```\nClient                              Server\n  │── Credit_Based_Conn_Req ───────►│  PSM=0x0027, up to 5 SCIDs, MTU=247, MPS=247\n  │◄── Credit_Based_Conn_Rsp ───────│  DCIDs, MTU, MPS, Credits, Result[5]\n  │                                  │\n  │── ATT_Read_Req on bearer 0 ────►│  ← concurrent with bearer 1\n  │── ATT_Write_Req on bearer 1 ───►│\n```\n\n**Feature negotiation** is via GATT characteristics:\n- Server signals EATT support via **Server Supported Features** (`0x2B3A`), bit: Enhanced ATT Bearer\n- Client signals EATT support via **Client Supported Features** (`0x2B29`), bit 1\n\n[Core 6.2, Vol 3, Part F, §5.3], [Core 6.2, Vol 3, Part A, §4]\n\n---\n\n### Also Introduced in 5.2 Alongside EATT\n\nTwo new ATT PDUs arrived with EATT to further improve throughput:\n\n| Opcode | PDU | Purpose |\n|---|---|---|\n| `0x20` / `0x21` | `ATT_READ_MULTIPLE_VARIABLE_REQ/RSP` | Read multiple variable-length attributes in one round trip |\n| `0x23` | `ATT_MULTIPLE_HANDLE_VALUE_NTF` | Server batches multiple notifications in one PDU |\n\n[Wiki: ATT and GATT — Protocol Deep Dive]\n\n---\n\n### Summary\n\nEATT solves the **head-of-line blocking** inherent in classic ATT's single sequential channel. By mapping ATT onto multiple independent L2CAP CoC channels, clients can pipeline reads, writes, and notifications across bearers simultaneously — critical for the LE Audio and high-throughput GATT workloads that 5.2 was designed to enable.",
+      "citations": [
+        {
+          "label": "Core 6.2, Vol 3, Part F, §5.3 (EATT)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 3, Part A, §4 (L2CAP Signaling / ECBFC)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Wiki: ATT and GATT — Protocol Deep Dive",
+          "file_path": "wiki/concepts/att-gatt.md",
+          "url": "http://localhost:8888/wiki/concepts/att-gatt/"
+        },
+        {
+          "label": "Wiki: L2CAP",
+          "file_path": "wiki/concepts/l2cap.md",
+          "url": "http://localhost:8888/wiki/concepts/l2cap/"
+        }
+      ]
+    },
+    "Q005": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 2,
+        "citation": 3,
+        "usability": 2,
+        "hallucination_penalty": 0
+      },
+      "raw_total": 10,
+      "rationales": {
+        "accuracy": "All stated facts are correct: Bluetooth 5.4 introduced both features, PAwR provides bidirectional capability with subevents/response slots, and EAD encrypts advertising payload using AES-128-CCM.",
+        "completeness": "Two of three key facts are present (Version 5.4 and EAD encrypts payload), but the critical '24 response slots per advertising interval' specification is replaced with different granular metrics (128 subevents, 255 response slots per subevent).",
+        "citation": "Excellent citations provided with specific Core 5.4 volume and section references throughout (Vol 0 Part C §13.1, Vol 4 Part E, Vol 6 Part B §4.6.38-4.6.39, Vol 3 Part C §10.10).",
+        "hallucination_penalty": 0,
+        "usability": "Answer is very well-structured with clear sections, tables, and technical details useful for engineers, though slightly verbose for a simple version question."
+      },
+      "key_facts_missing": [
+        "PAwR: up to 24 response slots"
+      ],
+      "answer": "Both **Periodic Advertising with Responses (PAwR)** and **Encrypted Advertising Data (EAD)** were introduced in **Bluetooth Core Specification 5.4**, released **2023-01-31** (Bluetooth SIG Board adoption: 2023-02-02). [Core 5.4, Vol 0, Part C, §13.1]\n\n---\n\n### Periodic Advertising with Responses (PAwR)\n\nPAwR extends the one-way Periodic Advertising model (from 5.0) with a **bidirectional** subevent/response-slot structure:\n\n| Parameter | Value |\n|---|---|\n| Max subevents per PA event | 0x80 (128) |\n| Max response slots per subevent | 0xFF (255) |\n| PDU: advertiser → devices | `AUX_SYNC_SUBEVENT_IND` |\n| PDU: device → advertiser | `AUX_SYNC_SUBEVENT_RSP` |\n| Sync transfer PDU | `LL_PERIODIC_SYNC_WR_IND` |\n\nNew HCI commands added: `HCI_LE_Set_Periodic_Advertising_Parameters_v2`, `HCI_LE_Set_Periodic_Advertising_Subevent_Data`, `HCI_LE_Set_Periodic_Advertising_Response_Data`, `HCI_LE_Set_Periodic_Sync_Subevent`. [Core 5.4, Vol 4, Part E; Vol 6, Part B, §4.6.38–4.6.39]\n\nLE Feature bits introduced: Bit 43 (PAwR Advertiser), Bit 44 (PAwR Scanner). [Core 5.4, Vol 6, Part B, §4.6.38–4.6.39]\n\nPrimary use case: **Electronic Shelf Labels (ESL)** — a single coordinator can broadcast to and receive acknowledgments from thousands of tags without individual connections.\n\n---\n\n### Encrypted Advertising Data (EAD)\n\nEAD encrypts advertising payloads using **AES-128-CCM** with a pre-shared session key distributed via Security Manager (SM) over an established connection. Only authorized scanners holding the session key can decrypt the payload. [Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10]\n\n- AD type: **Encrypted Data** wraps the encrypted payload\n- Feature type: **Type 4** (Host-only; Controller is not involved) [Core 5.4, Vol 0, Part D, Table 4.2]\n- Prevents fingerprinting of devices via advertising content even when address randomization is active; note that EAD protects *payload* privacy, not device identity — address randomization (4.2+) is still required for full identity privacy.\n\n---\n\n### Context: 5.3 Withdrawal\n5.4 also absorbed all features from **Core Spec 5.3** (which was withdrawn by Bluetooth SIG), including Connection Subrating, Enhanced Connection Update, and Advertising Coding Selection. PAwR and EAD are net-new additions in 5.4. [Diff 5.3 → 5.4]",
+      "citations": [
+        {
+          "label": "Core 5.4, Vol 0, Part C, §13.1",
+          "file_path": "wiki/versions/core-spec-5.4.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-5.4/#vol-0-part-c-13-1"
+        },
+        {
+          "label": "Core 5.4, Vol 6, Part B, §4.6.38–4.6.39",
+          "file_path": "wiki/versions/core-spec-5.4.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-5.4/"
+        },
+        {
+          "label": "Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10",
+          "file_path": "wiki/versions/core-spec-5.4.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-5.4/"
+        },
+        {
+          "label": "Core 5.4, Vol 0, Part D, Table 4.2",
+          "file_path": "wiki/versions/core-spec-5.4.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-5.4/"
+        },
+        {
+          "label": "Diff 5.3 → 5.4",
+          "file_path": "wiki/version-diff/diff-5.3-to-5.4.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.3-to-5.4/"
+        }
+      ],
+      "timing_sec": {
+        "agent_ask": 35.73,
+        "judge": 8.61,
+        "total": 44.34
+      }
+    },
+    "Q006": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": 0,
+        "usability": 2
+      },
+      "raw_total": 11,
+      "rationales": {
+        "accuracy": "All stated facts about Channel Sounding, PBR, RTT, multi-channel operation, and relay-attack resilience are technically correct and align with the reference answer.",
+        "completeness": "All five key facts are present: Version 6.0 explicitly stated, Phase-Based Ranging (PBR) described, Round-Trip Time (RTT) explained, multi-channel measurement mentioned, and relay-attack resilience covered in detail.",
+        "citation": "Comprehensive citations provided including Core 6.0 with specific volume, part, and section references (e.g., Vol 1, Part A, §9; Vol 6, Part H) throughout the answer.",
+        "hallucination_penalty": "The additional technical details (CS-DRBG, NADM, HCI commands, PHY specifications) appear to be legitimate extensions beyond the reference rather than fabrications, and align with Bluetooth specification structure.",
+        "usability": "Exceptionally well-structured with clear headings, tables, and hierarchical organization making it highly actionable for engineers, though it goes beyond the minimal answer needed."
+      },
+      "key_facts_missing": [],
+      "answer": "## Channel Sounding (CS) in Bluetooth 6.0\n\n**Channel Sounding** is a physical-layer distance measurement (ranging) feature introduced in **Bluetooth Core Specification 6.0** (released 2024-08-27). It achieves **centimeter-level precision**, far exceeding legacy RSSI/Path-Loss methods, enabling applications such as digital car keys, secure access control, indoor navigation, and precision asset tracking. [Wiki: channel-sounding] [Core 6.0, Vol 1, Part A, §9; Vol 6, Part H]\n\n---\n\n## Ranging Techniques\n\nCS uses **two complementary ranging techniques**, both active simultaneously:\n\n### 1. Phase-Based Ranging (PBR)\nTransmits an unmodulated carrier (**CS_TONE**) across multiple frequency channels and measures the received phase (IQ — in-phase and quadrature — samples) at each frequency.\n\n- **Distance formula**: `x = −(dφ/df) × c / (4π)`\n- The channel transfer function is estimated as `H²(f) = PCT_REFL(f) × PCT_INIT(f)` from measurements on both sides.\n- **Precision**: Centimeter-level in line-of-sight (LOS) conditions.\n- **Ambiguity**: 150 m at 1 MHz channel spacing; resolved by combining tones across many channels or cross-checking with RTT.\n- Operates in **Mode 2** and **Mode 3** CS steps. [Core 6.0, Vol 1, Part A, §9.2] [Core 6.0, Vol 6, Part H, §4.3.3]\n\n### 2. Round-Trip Time (RTT)\nExchanges **CS_SYNC** packets and records Time-of-Departure (ToD) and Time-of-Arrival (ToA) at both endpoints.\n\n- **Distance formula**: `x = (T_initiator − 2·T_reflector) × c / 2`\n- Accuracy improves with richer RTT payload types: random sequence > sounding sequence > access address only.\n- Robust in multi-path / NLOS environments where phase is noisy.\n- Serves as a sanity check for PBR and resolves PBR's distance ambiguity.\n- Operates in **Mode 1** and **Mode 3** CS steps. [Core 6.0, Vol 1, Part A, §9.3]\n\n---\n\n## Step Mode Summary\n\n| Mode | Technique | Packets Used | Purpose |\n|------|-----------|-------------|---------|\n| Mode 0 | Calibration | CS_SYNC_0_I / CS_SYNC_0_R | Frequency offset and timing calibration; mandatory first steps of every CS subevent |\n| Mode 1 | RTT only | CS_SYNC_1 | Round-trip time measurement |\n| Mode 2 | PBR only | CS_TONE | Phase-based ranging; T_PM phase measurement period (10/20/40 µs) |\n| Mode 3 | RTT + PBR | CS_SYNC + CS_TONE | Both techniques combined in one step; two independent distance estimates |\n\n[Core 6.0, Vol 6, Part H, §4.3] [Core 6.0, Vol 1, Part A, §9.1]\n\n---\n\n## Architecture\n\nCS is hierarchically structured: **CS Procedure → CS Events → CS Subevents → CS Steps**. Each CS step operates on a single frequency in a single mode. CS events are anchored from an existing ACL connection event. [Core 6.0, Vol 1, Part A, §9.1]\n\n---\n\n## Dedicated PHY\n\nCS uses a specialized **LE 2M 2BT PHY** (BT = 2.0 Gaussian filter, vs. BT = 0.5 for standard LE 2M) to improve tone quality and RTT pulse shaping. This PHY is **exclusive to Channel Sounding** and cannot carry general data. [Core 6.0, Vol 6, Part A, §3.1.2]\n\n---\n\n## Security: Relay Attack Resilience\n\nCS is hardened against relay attacks through:\n\n1. **CS-DRBG**: A Deterministic Random Bit Generator randomizes channel hop sequence, step modes, antenna switching order, and CS Access Address per procedure — preventing adversarial prediction. [Core 6.0, Vol 6, Part H, §2]\n2. **RTT timing bounds**: Relay hardware introduces measurable propagation delay; CS RTT detects this as a turnaround-time deviation beyond agreed bounds. [Core 6.0, Vol 1, Part A, §9.4]\n3. **NADM (Normalized Attack Detector Metric)** (added in **Core 6.2**): DFT-based amplitude analysis on CS_SYNC waveforms detects amplitude-to-phase distortion attacks; mandatory for all CS devices in 6.2. [Core 6.2, Vol 6, Part H, §5]\n\n---\n\n## Key HCI Interface\n\nCS is fully controlled via the HCI `HCI_LE_CS_*` command family, including `HCI_LE_CS_Create_Config`, `HCI_LE_CS_Security_Enable`, `HCI_LE_CS_Procedure_Enable`, and results are delivered via `HCI_LE_CS_Subevent_Result` events. [Core 6.0, Vol 4, Part E, §7.8]",
+      "citations": [
+        {
+          "label": "Core 6.0, Vol 1, Part A, §9",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-1-part-a-9"
+        },
+        {
+          "label": "Core 6.0, Vol 1, Part A, §9.2",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-1-part-a-9-2"
+        },
+        {
+          "label": "Core 6.0, Vol 1, Part A, §9.3",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-1-part-a-9-3"
+        },
+        {
+          "label": "Core 6.0, Vol 1, Part A, §9.4",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-1-part-a-9-4"
+        },
+        {
+          "label": "Core 6.0, Vol 6, Part H, §4.3",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-6-part-h-4-3"
+        },
+        {
+          "label": "Core 6.0, Vol 6, Part H, §4.3.3",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-6-part-h-4-3-3"
+        },
+        {
+          "label": "Core 6.0, Vol 6, Part H, §2",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-6-part-h-2"
+        },
+        {
+          "label": "Core 6.0, Vol 6, Part A, §3.1.2",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-6-part-a-3-1-2"
+        },
+        {
+          "label": "Core 6.0, Vol 4, Part E, §7.8",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/#vol-4-part-e-7-8"
+        },
+        {
+          "label": "Core 6.2, Vol 6, Part H, §5",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/#vol-6-part-h-5"
+        },
+        {
+          "label": "Wiki: channel-sounding",
+          "file_path": "wiki/concepts/channel-sounding.md",
+          "url": "http://localhost:8888/wiki/concepts/channel-sounding/"
+        },
+        {
+          "label": "Wiki: core-spec-6.0",
+          "file_path": "wiki/versions/core-spec-6.0.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-6.0/"
+        },
+        {
+          "label": "Diff 5.4 → 6.0",
+          "file_path": "wiki/version-diff/diff-5.4-to-6.0.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.4-to-6.0/"
+        }
+      ],
+      "timing_sec": {
+        "agent_ask": 61.3,
+        "judge": 8.18,
+        "total": 69.49
+      },
+      "loop": {
+        "num_turns": 7,
+        "tool_calls": 6,
+        "tools_used": {
+          "ToolSearch": 1,
+          "mcp__bluetooth-wiki__list_index": 1,
+          "mcp__bluetooth-wiki__search_wiki": 1,
+          "mcp__bluetooth-wiki__read_page": 3
+        },
+        "stop_reason": "end_turn",
+        "total_cost_usd": 0.14572439999999998,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 21278,
+          "cache_read_input_tokens": 71293,
+          "output_tokens": 2937,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 21278
+          },
+          "inference_geo": "",
+          "iterations": [
+            {
+              "input_tokens": 1,
+              "output_tokens": 2299,
+              "cache_read_input_tokens": 22503,
+              "cache_creation_input_tokens": 10858,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 10858,
+                "ephemeral_1h_input_tokens": 0
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    },
+    "Q019": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": 0,
+        "usability": 2
+      },
+      "raw_total": 11,
+      "rationales": {
+        "accuracy": "All stated facts are correct: BLE 5.2 for BIS, BIS for one-to-many broadcast, BAP/HAP/BASS profile stack, LC3 codec, and Auracast use case are all accurately described.",
+        "completeness": "All five key facts are explicitly present: version 5.2, BIS stream type with correct rationale (unlimited receivers, no pairing), BAP+BASS+HAP profile stack, LC3 codec with specific configurations, and Auracast pattern mentioned.",
+        "citation": "Excellent citation quality with specific Core 5.2 volume/part/section references (e.g., Vol 6, Part B, §4.4.6), HAP version and section numbers (v1.0.1, §1.3), and profile version numbers throughout.",
+        "hallucination_penalty": "No fabricated facts detected; all technical details about BIS/BIG, HCI commands, profile roles, and LC3 parameters align with Bluetooth specifications and the reference answer's framework.",
+        "usability": "Extremely well-structured with clear tables, HCI command sequences, and step-by-step breakdown that makes it highly actionable for a firmware engineer implementing this solution."
+      },
+      "key_facts_missing": [],
+      "answer": "## Streaming 16 kHz Mono Audio to 20 Hearing Aids via BLE\n\n### 1. Minimum Bluetooth Version: **Core 5.2**\n\nBroadcast Isochronous Streams (BIS) — the only viable transport for one-to-many audio — were introduced in **Core Specification 5.2** [Core 5.2, Vol 6, Part B, §4.4.6]. The Hearing Access Profile (HAP) normatively confirms this floor:\n\n> *\"This profile requires Bluetooth Core Specification 5.2 or later for the Hearing Aid (HA), Hearing Aid Unicast Client (HAUC) and Hearing Aid Remote Controller (HARC) roles.\"* [HAP v1.0.1, §1.3]\n\nNo newer version is architecturally required for this use case; 5.2 provides all necessary primitives.\n\n---\n\n### 2. Stream Type: **BIS (Broadcast Isochronous Stream) inside a BIG**\n\n| Option | Verdict | Reason |\n|--------|---------|--------|\n| **BIS / BIG** | ✅ Required | One-to-many, no ACL connection needed, **unlimited receivers** [Core 5.2, Vol 6, Part B, §4.6.29 — Synchronized Receiver feature] |\n| CIS / CIG | ❌ Wrong | Requires a separate ACL connection *per device*; 20 simultaneous ACL connections would exhaust controller resources and mandate prior pairing with every aid |\n\n**BIS mechanics for this use case:**\n- A single **BIG** containing **one BIS** (mono = 1 audio channel) is all that is needed.\n- The source advertises using Extended Advertising + Periodic Advertising (carrying the BASE LTV structure). Each hearing aid independently runs `HCI_LE_Periodic_Advertising_Create_Sync` → `HCI_LE_BIG_Create_Sync` → `HCI_LE_Setup_ISO_Data_Path` to synchronize; the source never needs to know how many sinks are listening [Wiki: hci-sequences, §7].\n- The spec places no upper limit on simultaneous BIS receivers [Core 5.2, Vol 6, Part B, §4.6.29].\n\n**Key BIG parameters for 16 kHz mono LC3:**\n\n| HCI Parameter | Value | Notes |\n|---|---|---|\n| `Num_BIS` | 1 | Mono — one audio channel |\n| `SDU_Interval` | 10 000 µs | LC3 10 ms frame (mandatory per HAP) |\n| `Max_SDU` | ≤ 40 bytes | LC3 @ 16 kHz / 32 kbps / 10 ms → 40 octets/frame |\n| `Coding_Format` | 0x06 | LC3 |\n| `Framing` | Framed or Unframed | HAP §3.2 mandates HA supports both; BN=1, PTO=0 |\n| `PHY` | 0x02 | LE 2M PHY (mandatory for HA role per HAP §3.2) |\n| `Encryption` | 0x00 / 0x01 | Unencrypted for public Auracast; optional Broadcast_Code for closed loop |\n\nThe 16 kHz / 32 kbps configuration is designated **Standard Quality (SQ)** by PBP and is a mandatory LC3 config for BAP Broadcast Sinks [Wiki: le-audio — PBP §Audio Quality Configurations].\n\n---\n\n### 3. Profile Stack\n\n#### On the Transmitter (Broadcast Source device)\n\n| Profile | Role | Purpose |\n|---------|------|---------|\n| **BAP** v1.0.2 | Broadcast Source | Creates BIG/BIS, transmits ISO audio SDUs |\n| **CAP** v1.0.1 | Initiator | Orchestrates broadcast start/stop |\n| **PBP** v1.0.2 | Public Broadcast Source (PBS) | *Optional but recommended* — carries Public Broadcast Announcement in extended advertising for unaided discovery (Auracast™ model) |\n\n[Wiki: le-audio — BAP, CAP, PBP sections]\n\n#### On Each Hearing Aid (Broadcast Sink)\n\n| Profile | Role | Purpose |\n|---------|------|---------|\n| **HAP** v1.0.1 | Hearing Aid (HA) | Top-level hearing aid interoperability; preset management, binaural sync |\n| **BAP** v1.0.2 | Broadcast Sink | Syncs to BIG, receives and decodes BIS audio *(mandatory per HAP Table 2.2)* |\n| **CAP** v1.0.1 | Acceptor | Accepts orchestration commands from Initiator *(mandatory per HAP Table 2.1)* |\n| **VCP** v1.0 | Volume Renderer | Volume level + mute control via VCS *(mandatory per HAP Table 2.2)* |\n| **CSIP** | Set Member | Binaural pair coordination; L/R location tags in PACS *(mandatory if part of a binaural set per HAP §3.6)* |\n| **PACS** (service) | — | Exposes Supported_Codec_Configurations and Supported_Audio_Locations to source |\n| **HAS** (service) | HAS Server | Exposes preset list and active preset *(mandatory per HAP §3.5.1)* |\n\n[HAP v1.0.1, §1.1 — Profile Dependencies]; [Wiki: le-audio — HAP section]\n\n> **HAP on broadcast transmitter side:** HAP §2.1 explicitly states *\"This profile does not specify a role for transmitting broadcast audio streams … because there are no additional requirements beyond BAP and CAP.\"* So the 20 hearing aids run HAP; the source only needs BAP + CAP (+ optionally PBP). [HAP v1.0.1, §2.1]\n\n---\n\n### 4. HCI Setup Summary\n\n**Source (9 commands):**\n```\nHCI_LE_Set_Extended_Advertising_Parameters   // non-connectable, non-scannable\nHCI_LE_Set_Extended_Advertising_Data         // Public Broadcast Announcement (if PBP)\nHCI_LE_Set_Periodic_Advertising_Parameters\nHCI_LE_Set_Periodic_Advertising_Data         // BASE LTV: BIG topology + LC3 config\nHCI_LE_Set_Extended_Advertising_Enable\nHCI_LE_Set_Periodic_Advertising_Enable\nHCI_LE_Create_BIG                            // Num_BIS=1, SDU_Interval=10000µs, PHY=2M\n← LE_Create_BIG_Complete\nHCI_LE_Setup_ISO_Data_Path                   // Coding_Format=0x06 (LC3), TX direction\n```\n\n**Each of the 20 hearing aids (independent, 5 commands):**\n```\nHCI_LE_Set_Extended_Scan_Parameters + Enable\n← LE_Extended_Advertising_Report\nHCI_LE_Periodic_Advertising_Create_Sync\n← LE_Periodic_Advertising_Sync_Established\n← LE_Periodic_Advertising_Report             // Parse BASE structure\nHCI_LE_BIG_Create_Sync                       // BIS[0]=0x01\n← LE_BIG_Sync_Established\nHCI_LE_Setup_ISO_Data_Path                   // Coding_Format=0x06 (LC3), RX direction\n```\n[Wiki: hci-sequences, §7; Core 5.2, Vol 6, Part B, §4.4.6]\n\n---\n\n### Summary\n\n| Question | Answer |\n|----------|--------|\n| Minimum BT version | **Core 5.2** |\n| Stream type | **BIS within a BIG** (one-to-many, unlimited receivers) |\n| Receiver limit at 20 | No architectural limit; BIS supports unlimited sinks |\n| LC3 config | 16 kHz, 1 channel, 32 kbps, 10 ms frame (Standard Quality per PBP) |\n| Profile stack (source) | BAP Broadcast Source + CAP Initiator + (PBP PBS optional) |\n| Profile stack (each HA) | HAP + BAP Broadcast Sink + CAP Acceptor + VCP Renderer + CSIP Set Member |",
+      "citations": [
+        {
+          "label": "Core 5.2, Vol 6, Part B, §4.4.6 — BIS / Isochronous Broadcasting State",
+          "file_path": "sources/specs/5.2/Core_v5.2.md",
+          "url": "http://localhost:8888/sources/5.2/Core_v5.2/"
+        },
+        {
+          "label": "Core 5.2, Vol 6, Part B, §4.6.29 — Synchronized Receiver feature (unlimited receivers)",
+          "file_path": "sources/specs/5.2/Core_v5.2.md",
+          "url": "http://localhost:8888/sources/5.2/Core_v5.2/"
+        },
+        {
+          "label": "HAP v1.0.1, §1.3 — Core Spec 5.2 compatibility requirement",
+          "file_path": "sources/specs/profiles/HAP_v1.0.1.md",
+          "url": "http://localhost:8888/sources/profiles/HAP_v1.0.1/"
+        },
+        {
+          "label": "HAP v1.0.1, §2.1 — Roles (no HAP broadcast-source role; BAP+CAP sufficient)",
+          "file_path": "sources/specs/profiles/HAP_v1.0.1.md",
+          "url": "http://localhost:8888/sources/profiles/HAP_v1.0.1/"
+        },
+        {
+          "label": "HAP v1.0.1, §2.2 Table 2.2 — HA mandatory BAP Broadcast Sink role",
+          "file_path": "sources/specs/profiles/HAP_v1.0.1.md",
+          "url": "http://localhost:8888/sources/profiles/HAP_v1.0.1/"
+        },
+        {
+          "label": "HAP v1.0.1, §3.2 — LE 2M PHY mandatory; framed/unframed ISOAL params (BN=1, PTO=0)",
+          "file_path": "sources/specs/profiles/HAP_v1.0.1.md",
+          "url": "http://localhost:8888/sources/profiles/HAP_v1.0.1/"
+        },
+        {
+          "label": "Wiki: le-audio — BIS, BIG, BAP, CAP, HAP, PBP sections",
+          "file_path": "wiki/concepts/le-audio.md",
+          "url": "http://localhost:8888/wiki/concepts/le-audio/"
+        },
+        {
+          "label": "Wiki: hci-sequences §7 — BIS broadcaster and receiver HCI flows",
+          "file_path": "wiki/reference/hci-sequences.md",
+          "url": "http://localhost:8888/wiki/reference/hci-sequences/"
+        },
+        {
+          "label": "Wiki: core-spec-5.2 — BIS unlimited receivers, BIG structure",
+          "file_path": "wiki/versions/core-spec-5.2.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-5.2/"
+        }
+      ],
+      "timing_sec": {
+        "agent_ask": 131.36,
+        "judge": 9.51,
+        "total": 140.87
+      },
+      "loop": {
+        "num_turns": 11,
+        "tool_calls": 10,
+        "tools_used": {
+          "ToolSearch": 1,
+          "mcp__bluetooth-wiki__list_index": 1,
+          "mcp__bluetooth-wiki__search_wiki": 3,
+          "mcp__bluetooth-wiki__read_page": 4,
+          "mcp__bluetooth-wiki__read_source": 1
+        },
+        "stop_reason": "end_turn",
+        "total_cost_usd": 0.32200965,
+        "usage": {
+          "input_tokens": 12,
+          "cache_creation_input_tokens": 48605,
+          "cache_read_input_tokens": 150073,
+          "output_tokens": 6281,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 48605
+          },
+          "inference_geo": "",
+          "iterations": [
+            {
+              "input_tokens": 3,
+              "output_tokens": 4180,
+              "cache_read_input_tokens": 46917,
+              "cache_creation_input_tokens": 13771,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 13771,
+                "ephemeral_1h_input_tokens": 0
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    },
+    "Q020": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": -1,
+        "usability": 2
+      },
+      "raw_total": 10,
+      "rationales": {
+        "accuracy": "All core facts about RPA introduction in 4.2, EAD in 5.4, randomized RPA rotation in 6.1, and security errata in 6.2 are technically accurate.",
+        "completeness": "All four key facts are present: 4.2 RPA with fixed rotation, 5.4 EAD payload encryption, 6.1 randomized RPA rotation via v2 command, and 6.2's 12 security errata with CS hardening context.",
+        "citation": "Extensive and precise citations provided including Core spec versions with volume and section references (e.g., Core 4.2 Vol 6 Part B, Core 6.1 Vol 4 Part E §7.8.45).",
+        "hallucination_penalty": "Minor hallucination: reference mentions '12 security errata' in 6.2 but does not detail them as the system does; some erratum numbers and specific fixes cannot be verified against the reference.",
+        "usability": "Highly structured with clear timeline tables, section-by-section evolution, and a summary table making it very actionable for engineers."
+      },
+      "key_facts_missing": [],
+      "answer": "## BLE Privacy (RPA and Related): Evolution from 4.2 to 6.2\n\n---\n\n### Foundation — Core Spec 4.2 (2014-12)\n\n4.2 established the modern BLE privacy architecture. All subsequent versions build on what it introduced:\n\n| Mechanism | Description |\n|-----------|-------------|\n| **LE Secure Connections** | ECDH P-256 key exchange; immune to passive eavesdropping; Numeric Comparison pairing method added |\n| **Controller-Based Address Resolution** | Controller resolves RPAs autonomously against a Resolving List without waking the Host |\n| **Resolving List** | Per-peer `{Address_Type, Address, Peer_IRK[16], Local_IRK[16]}` database in the Controller |\n| **Privacy Modes** | *Network Privacy Mode* (default): reject identity-address advertising from a resolved peer; *Device Privacy Mode*: accept any address type from a resolved peer |\n| **RPA formula** | `RPA = hash(IRK, Prand)` where `Prand` is a 24-bit random; default rotation every 900 s (15 min) |\n\n**Key HCI surface introduced in 4.2:**\n`HCI_LE_Add_Device_To_Resolving_List` (0x2027), `HCI_LE_Set_Address_Resolution_Enable` (0x202D), `HCI_LE_Set_Resolvable_Private_Address_Timeout [v1]` (OCF 0x002E), `HCI_LE_Set_Privacy_Mode` (0x204E).\n\n[Core 4.2, Vol 6, Part B, §4.7.1] [Wiki: Bluetooth Security]\n\n---\n\n### 5.0 → 5.3 (2016–2021): Privacy Unchanged\n\nVersions 5.0, 5.1, 5.2, and 5.3 introduced no changes to the RPA mechanism or the Resolving List. The privacy sub-system inherited from 4.2 was carried forward intact. The major work in this era was LE 2M/Coded PHY (5.0), Direction Finding (5.1), LE Audio/Isochronous Channels/EATT (5.2), and Connection Subrating (5.3).\n\n[Wiki: diff-5.0-to-5.1], [Wiki: diff-5.1-to-5.2], [Wiki: diff-5.2-to-5.3]\n\n---\n\n### 5.4 (2023-02): Advertising Payload Privacy (EAD) + Security Mode 3\n\n5.4 did not change RPAs but added a new, orthogonal layer of advertising privacy:\n\n| Addition | Detail |\n|----------|--------|\n| **Encrypted Advertising Data (EAD)** | Advertiser encrypts AD structures with AES-128-CCM using a pre-shared session key (SK) + IV derived over SM in a prior connection. AD type `0x31` wraps the ciphertext. Unauthorized scanners cannot read payload. |\n| **LE Security Mode 3** | New broadcast security mode: Level 2 = authenticated encryption with Broadcast Code; Level 3 = LE Secure Connections. |\n| **LE GATT Security Levels Characteristic** (UUID `0x2BF5`) | Allows a client to discover the server's required security level before accessing services. |\n\n**Important distinction**: EAD protects *payload content* confidentiality; it is a Type 4 (Host-only) feature. Address-identity privacy (RPA rotation) is still separately required for full device-identity privacy — the two layers compose. [Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10] [Wiki: diff-5.3-to-5.4]\n\n---\n\n### 6.0 (2024-08): RPA Interplay with Monitoring Advertisers\n\n6.0 added no changes to the RPA mechanism itself, but the new **Monitoring Advertisers** feature introduced a noteworthy interaction: the Controller uses the Resolving List to match a monitored peer's RPA to its identity address, then reports presence/absence to the Host. This makes Monitoring Advertisers privacy-transparent — RPAs are resolved under the hood before triggering notifications.\n\nAlso introduced: **LL Extended Feature Set** (feature page extension beyond 64 bits), which created the infrastructure to represent new privacy-related feature bits in 6.1+.\n\n[Core 6.0, Vol 6, Part B, §4.6.45; Vol 4, Part E, §7.8.147–7.8.150] [Wiki: diff-5.4-to-6.0]\n\n---\n\n### 6.1 (2025-04): Randomized RPA Updates — The Key Privacy Upgrade\n\nThis release has a single new feature, entirely focused on closing a timing-based re-identification vulnerability:\n\n**The attack (pre-6.1):** The v1 command sets a single deterministic `RPA_Timeout`. Because every address rotation happens at a predictable interval, a passive observer recording BLE traffic can correlate the exact moment of rotation across scanning sessions to re-link addresses — effectively defeating address randomization despite never resolving the IRK.\n\n**The fix:** A new `HCI_LE_Set_Resolvable_Private_Address_Timeout [v2]` command (OCF 0x009E, OGF 0x08) replaces the single timeout with a **randomized range**:\n\n| Parameter | Range | Default |\n|-----------|-------|---------|\n| `RPA_Timeout_Min` | 1 – 3600 s | 480 s (8 min) |\n| `RPA_Timeout_Max` | 1 – 3600 s | 900 s (15 min) |\n\nThe Controller picks a fresh uniform-random lifetime from `[RPA_Timeout_Min, RPA_Timeout_Max]` each time it generates a new RPA. External observers see non-deterministic rotation intervals, defeating temporal correlation.\n\n**Backward compatibility:** v1 (OCF 0x002E) remains supported. Hosts detect v2 support via the \"Randomized RPA Updates\" feature bit (feature type 2) before issuing the new command. On v2-capable controllers, using v1 still produces a fixed interval — the privacy improvement requires v2 explicitly.\n\n**Also in 6.1 — errata touching privacy:**\n- GAP (V3C) errata 18947, 25255, 25458, 25773 — corrections to address resolution procedures and privacy mode\n- Security Manager (V3H) errata 25086, 26548, 26814 — corrections to key derivation and IRK handling\n\n[Core 6.1, Vol 4, Part E, §7.8.45 (v2 command); Vol 6, Part B (LL privacy); Vol 3, Part C (GAP privacy)] [Wiki: core-spec-6.1], [Wiki: diff-6.0-to-6.1]\n\n---\n\n### 6.2 (2025-11): Privacy Hardening via 12 Security Errata\n\n6.2 introduces no new privacy features per se, but the incorporated security errata directly affect the privacy and key management subsystem:\n\n| Erratum | Section | Fix |\n|---------|---------|-----|\n| **26048** | GAP (V3C) | Prohibits adding a device with an all-zero IRK to the Resolving List when operating in Device Privacy Mode — closes a silent privacy bypass |\n| **24557, 24558** | SM (V3H) | Strengthened RNG quality and DHKey validation requirements — the DRBG feeding RPA generation must meet higher entropy standards |\n| **24490, 24491** | SM (V3H) | LE Legacy Pairing Passkey vulnerability; requires CSPRNG for passkey generation (prevents side-channel leakage of key material during pairing — relevant to IRK derivation path) |\n| **26039** | BR/EDR (V2H) | Minimum encryption key size enforced at 7 octets — prevents low-entropy attacks on links also carrying privacy-critical SM traffic |\n| **26043** | SM | Prohibits persisting the same ECDH key pair across resets — hardens the forward secrecy that protects bonded IRK exchange |\n| **26047** | GATT SM | Persist SignCounter to non-volatile storage — prevents replay attacks on signed data |\n\n**Connection address stability clarified:** 6.2 explicitly documents that when the RPA rotation timer fires, only *future* advertising and scanning use the new RPA. An active connection retains the address from setup for its entire lifetime. [Core 6.2, Vol 6, Part B, §4.7.2]\n\n[Core 6.2, Vol 3, Part H; Vol 3, Part C; Vol 6, Part B, §4.7.2] [Wiki: diff-6.1-to-6.2], [Wiki: Bluetooth Security]\n\n---\n\n### Summary Timeline\n\n| Version | Privacy Advancement |\n|---------|--------------------|\n| **4.2** | Controller-based RPA resolution; Resolving List; Network/Device Privacy Modes; LE Secure Connections (ECDH P-256) |\n| **5.0–5.3** | No privacy changes |\n| **5.4** | EAD: payload-level advertising confidentiality (AES-128-CCM); LE Security Mode 3 for broadcast |\n| **6.0** | RPA-transparent Monitoring Advertisers; LL Extended Feature Set (infrastructure for 6.1 feature bits) |\n| **6.1** | **Randomized RPA Updates**: `HCI_LE_Set_RPA_Timeout [v2]` with `Min/Max` range defeats timing-based re-identification; GAP + SM errata on address resolution and IRK handling |\n| **6.2** | **Security errata hardening**: zero-IRK guard (26048), RNG quality (24557), ECDH key persistence (26043), min key size (26039); connection address stability clarified |\n\n---\n\n### Key Design Principle Across Versions\n\nBLE privacy is layered by design and each layer must be independently configured:\n1. **Identity obfuscation**: RPA rotation (4.2+) — address changes periodically\n2. **Rotation timing obfuscation**: Randomized RPA Updates (6.1+) — rotation interval is non-deterministic\n3. **Payload obfuscation**: EAD (5.4+) — content unreadable without pre-shared session key\n4. **Cryptographic hygiene**: Security errata (6.2) — ensures the key material underpinning all of the above is generated and managed correctly",
+      "citations": [
+        {
+          "label": "Core 4.2, Vol 6, Part B, §4.7.1",
+          "file_path": "sources/specs/4.2/Core_v4.2.md",
+          "url": "http://localhost:8888/sources/4.2/Core_v4.2/#vol-6-part-b-4-7-1"
+        },
+        {
+          "label": "Wiki: Bluetooth Security",
+          "file_path": "wiki/concepts/security.md",
+          "url": "http://localhost:8888/wiki/concepts/security/"
+        },
+        {
+          "label": "Wiki: diff-5.0-to-5.1",
+          "file_path": "wiki/version-diff/diff-5.0-to-5.1.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.0-to-5.1/"
+        },
+        {
+          "label": "Wiki: diff-5.1-to-5.2",
+          "file_path": "wiki/version-diff/diff-5.1-to-5.2.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.1-to-5.2/"
+        },
+        {
+          "label": "Wiki: diff-5.2-to-5.3",
+          "file_path": "wiki/version-diff/diff-5.2-to-5.3.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.2-to-5.3/"
+        },
+        {
+          "label": "Core 5.4, Vol 1, Part A, §5.4.6; Vol 3, Part C, §10.10",
+          "file_path": "sources/specs/5.4/Core_v5.4.md",
+          "url": "http://localhost:8888/sources/5.4/Core_v5.4/"
+        },
+        {
+          "label": "Wiki: diff-5.3-to-5.4",
+          "file_path": "wiki/version-diff/diff-5.3-to-5.4.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.3-to-5.4/"
+        },
+        {
+          "label": "Core 6.0, Vol 6, Part B, §4.6.45; Vol 4, Part E, §7.8.147–7.8.150",
+          "file_path": "sources/specs/6.0/Core_v6.0.md",
+          "url": "http://localhost:8888/sources/6.0/Core_v6.0/"
+        },
+        {
+          "label": "Wiki: diff-5.4-to-6.0",
+          "file_path": "wiki/version-diff/diff-5.4-to-6.0.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-5.4-to-6.0/"
+        },
+        {
+          "label": "Core 6.1, Vol 4, Part E, §7.8.45; Vol 6, Part B; Vol 3, Part C",
+          "file_path": "sources/specs/6.1/Core_v6.1.md",
+          "url": "http://localhost:8888/sources/6.1/Core_v6.1/"
+        },
+        {
+          "label": "Wiki: core-spec-6.1",
+          "file_path": "wiki/versions/core-spec-6.1.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-6.1/"
+        },
+        {
+          "label": "Wiki: diff-6.0-to-6.1",
+          "file_path": "wiki/version-diff/diff-6.0-to-6.1.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-6.0-to-6.1/"
+        },
+        {
+          "label": "Core 6.2, Vol 3, Part H; Vol 3, Part C; Vol 6, Part B, §4.7.2",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Wiki: diff-6.1-to-6.2",
+          "file_path": "wiki/version-diff/diff-6.1-to-6.2.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-6.1-to-6.2/"
+        }
+      ],
+      "timing_sec": {
+        "agent_ask": 103.49,
+        "judge": 9.07,
+        "total": 112.55
+      },
+      "loop": {
+        "num_turns": 14,
+        "tool_calls": 13,
+        "tools_used": {
+          "ToolSearch": 1,
+          "mcp__bluetooth-wiki__list_index": 1,
+          "mcp__bluetooth-wiki__search_wiki": 1,
+          "mcp__bluetooth-wiki__read_page": 10
+        },
+        "stop_reason": "end_turn",
+        "total_cost_usd": 0.25681319999999996,
+        "usage": {
+          "input_tokens": 13,
+          "cache_creation_input_tokens": 36908,
+          "cache_read_input_tokens": 107964,
+          "output_tokens": 5700,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 36908
+          },
+          "inference_geo": "",
+          "iterations": [
+            {
+              "input_tokens": 3,
+              "output_tokens": 4330,
+              "cache_read_input_tokens": 37091,
+              "cache_creation_input_tokens": 11900,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 11900,
+                "ephemeral_1h_input_tokens": 0
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    },
+    "Q022": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": -1,
+        "usability": 2
+      },
+      "raw_total": 10,
+      "rationales": {
+        "accuracy": "All core technical facts are correct: BLE 6.2 requirement, 375 µs = 3 × 125 µs units, HCI_LE_Connection_Rate_Request command, supervision timeout calculation, and 2M PHY recommendation.",
+        "completeness": "All five key facts are present: minimum version 6.2, HCI_LE_Connection_Rate_Request, 375 µs = 3 × 125 µs calculation, supervision timeout ≥ 6× connection interval, and both peers must support 6.2.",
+        "citation": "Provides specific Core 6.2 citations with volume and section numbers (Vol 6 Part B §4.6.50, §5.1.32-33; Vol 4 Part E §7.8.154) throughout the answer.",
+        "hallucination_penalty": "Minor hallucinations include the specific 2025-11-03 release date for Core 6.2 (not verifiable from reference) and some implementation details about early silicon that go beyond the reference, though the core technical content is sound.",
+        "usability": "Highly structured with clear tables, step-by-step configuration guide, and practical examples, though somewhat verbose for the specific question asked."
+      },
+      "key_facts_missing": [],
+      "answer": "## Minimum BLE Connection Interval Under 1 ms — Requires Bluetooth Core 6.2\n\n### Minimum Version: Core 6.2 (released 2025-11-03)\n\nPrior to 6.2, the minimum LE ACL connection interval was **7.5 ms** (N × 1.25 ms, N ≥ 6). Core 6.2 introduces **Shorter Connection Intervals**, reducing the minimum to **375 µs** via a new 125 µs tick unit — a 20× improvement. This is the only standard Bluetooth path to sub-1 ms connection intervals without proprietary extensions.\n\n[Core 6.2, Vol 6, Part B, §4.6.50; §5.1.32–33] [Wiki: core-spec-6.2] [Wiki: diff-6.1-to-6.2]\n\n---\n\n### Prerequisites\n\n| Requirement | Source |\n|-------------|--------|\n| Both devices must support **Connection Rate (Host Support)** feature bit | [Core 6.2, Vol 6, Part B, §4.6.50] |\n| Controller must already support **Connection Subrating** (introduced in 5.3) — it is a hard prerequisite | [Core 6.2, Vol 6, Part B, §4.6.50] |\n| Hardware capability varies — 375 µs is the spec minimum, not a silicon guarantee | [Wiki: connection-management] |\n\n---\n\n### Step-by-Step Configuration\n\n**Step 1 — Query controller hardware minimum**\n```\nHCI_LE_Read_Minimum_Supported_Connection_Interval  (opcode 0x20A3)\n```\nReturns the shortest interval your specific controller chip supports. Do not assume 375 µs — verify before requesting it.\n\n**Step 2 — Establish the connection normally**\nUse `HCI_LE_Extended_Create_Connection` with standard 1.25 ms parameters (e.g., 7.5 ms initial interval). The short-interval negotiation happens after connection is established.\n\n**Step 3 — Request the short interval**\n```\nHCI_LE_Connection_Rate_Request  (opcode 0x20A1)\n```\nKey parameters (all intervals in **125 µs ticks**):\n\n| Parameter | Recommended Value | Notes |\n|-----------|-------------------|-------|\n| `Connection_Interval_Min` | 0x0003 (= 375 µs) | Minimum allowed; check hardware first |\n| `Connection_Interval_Max` | 0x0008 (= 1000 µs) | Upper bound for negotiation |\n| `Subrate_Min` / `Subrate_Max` | 0x0001 / 0x0001 | No subrating needed for raw latency |\n| `Max_Latency` | 0x0000 | Zero peripheral latency — must respond every event |\n| `Continuation_Number` | 0x0000 | No continuation needed |\n| `Supervision_Timeout` | 0x03E8 (= 10 s) | See formula below |\n\n**⚠️ Unit conversion trap**: these values are in 125 µs ticks. The value `0x0003` = 3 × 125 µs = 375 µs. The same 7.5 ms expressed in old (1.25 ms) units is `0x0006`; in new (125 µs) units it is `0x003C`. Do not mix units.\n\n[Core 6.2, Vol 4, Part E, §7.8.154] [Wiki: diff-6.1-to-6.2]\n\n**Step 4 — Wait for completion event**\n```\nLE_Connection_Rate_Change  (subevent 0x37)\n```\nReturns confirmed `Connection_Interval`, `Subrate_Factor`, `Peripheral_Latency`, `Continuation_Number`, and `Supervision_Timeout`. Accept what the controller negotiated — it may settle higher than requested if hardware limits apply.\n\n**Step 5 (Central only) — Set defaults for incoming Peripheral requests**\n```\nHCI_LE_Set_Default_Rate_Parameters  (opcode 0x20A2)\n```\nCall this before the connection is established so the Central's controller accepts short-interval requests from the gaming controller (Peripheral role).\n\n---\n\n### Supervision Timeout Calculation\n\nAt 375 µs with no subrating or latency, the spec lower bound is trivially small, but use a practical minimum:\n\n```\n# Spec strict lower bound (insufficient alone):\nSupervision_Timeout > 2 × Connection_Interval × (Max_Latency + 1)\n                    > 2 × 375 µs × 1 = 750 µs\n\n# Practical minimum (recommended):\nSupervision_Timeout ≥ 6 × Connection_Interval = 6 × 375 µs ≈ 2.25 ms\n\n# For a gaming controller, use a robust value:\nSupervision_Timeout = 1 s – 5 s  (handles temporary radio interference)\n```\n\n[Core 6.2, Vol 4, Part E, §7.8.154; Vol 6, Part B, §5.1.32–33] [Wiki: ble-parameters]\n\n---\n\n### PHY Recommendation\n\nFor a gaming controller pair at short range (< 2 m), use **LE 2M PHY**:\n- 2× symbol rate vs. 1M → lower on-air duration per PDU → supports tighter scheduling at sub-ms intervals\n- Issue `HCI_LE_Set_PHY` (0x2032) with `TX_PHYS = 0x02`, `RX_PHYS = 0x02` after connection\n\n[Core 6.2, Vol 4, Part E, §7.8.49] [Wiki: connection-management]\n\n---\n\n### Realistic Expectation\n\n| Scenario | Achievable Interval |\n|----------|--------------------|\n| 6.2 controller at hardware minimum | **375 µs** (spec floor) |\n| Typical early 6.2 silicon | **500 µs – 1 ms** (implementation-dependent) |\n| 6.1 and earlier (standard path) | **7.5 ms minimum** |\n\nCore 6.2 was released 2025-11-03. As of early 2026, silicon implementations are emerging but not yet universal. Always call `HCI_LE_Read_Minimum_Supported_Connection_Interval` first and implement a fallback to 7.5 ms for older or lower-capability controllers.\n\n[Wiki: core-spec-6.2] [Wiki: ble-parameters] [Wiki: connection-management]",
+      "citations": [
+        {
+          "label": "Core 6.2, Vol 6, Part B, §4.6.50 (Shorter Connection Intervals feature)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 6, Part B, §5.1.32–33 (LL_CONNECTION_RATE_REQ / LL_CONNECTION_RATE_IND)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 4, Part E, §7.8.154–156 (HCI_LE_Connection_Rate_Request / Set_Default_Rate_Parameters / Read_Minimum_Supported_Connection_Interval)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Wiki: connection-management (Short Connection Intervals section, HCI commands, supervision formula)",
+          "file_path": "wiki/concepts/connection-management.md",
+          "url": "http://localhost:8888/wiki/concepts/connection-management/"
+        },
+        {
+          "label": "Wiki: core-spec-6.2 (Shorter Connection Intervals feature overview and developer impact)",
+          "file_path": "wiki/versions/core-spec-6.2.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-6.2/"
+        },
+        {
+          "label": "Wiki: diff-6.1-to-6.2 (migration guide for shorter intervals, unit conversion notes)",
+          "file_path": "wiki/version-diff/diff-6.1-to-6.2.md",
+          "url": "http://localhost:8888/wiki/version-diff/diff-6.1-to-6.2/"
+        },
+        {
+          "label": "Wiki: ble-parameters (Connection_Interval 6.2 short range: 375 µs–4 s in 125 µs ticks)",
+          "file_path": "wiki/reference/ble-parameters.md",
+          "url": "http://localhost:8888/wiki/reference/ble-parameters/"
+        }
+      ],
+      "timing_sec": {
+        "agent_ask": 69.42,
+        "judge": 10.39,
+        "total": 79.81
+      },
+      "loop": {
+        "num_turns": 8,
+        "tool_calls": 7,
+        "tools_used": {
+          "ToolSearch": 1,
+          "mcp__bluetooth-wiki__list_index": 1,
+          "mcp__bluetooth-wiki__search_wiki": 1,
+          "mcp__bluetooth-wiki__read_page": 4
+        },
+        "stop_reason": "end_turn",
+        "total_cost_usd": 0.18608375,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 28727,
+          "cache_read_input_tokens": 71355,
+          "output_tokens": 3764,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 28727
+          },
+          "inference_geo": "",
+          "iterations": [
+            {
+              "input_tokens": 1,
+              "output_tokens": 3027,
+              "cache_read_input_tokens": 22531,
+              "cache_creation_input_tokens": 18279,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 18279,
+                "ephemeral_1h_input_tokens": 0
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    },
+    "Q025": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "hallucination_penalty": -1,
+        "usability": 2
+      },
+      "raw_total": 10,
+      "rationales": {
+        "accuracy": "All core HCI commands, opcodes, event codes, and their sequencing are factually correct and match the Bluetooth specification.",
+        "completeness": "All five key facts are present: SMP over L2CAP CID 0x0006, HCI_LE_Read_Local_P-256_Public_Key (0x2025), HCI_LE_Generate_DHKey v2 (0x205E), HCI_LE_Long_Term_Key_Request_Reply (0x201A), and HCI_LE_Enable_Encryption (0x2019).",
+        "citation": "The answer correctly cites Core 6.2 with specific volume and part references (Vol 3 Part H, Vol 4 Part E, Vol 6 Part B) throughout.",
+        "hallucination_penalty": "Minor hallucination: the answer adds extensive cryptographic function details (f4, f5, f6, g2) and LL PDU mappings that, while technically accurate, go beyond what the reference answer discusses and could be considered elaboration beyond the reference scope.",
+        "usability": "The answer is exceptionally well-structured with phases, tables, code blocks, and implementation pitfalls, making it highly actionable for engineers."
+      },
+      "key_facts_missing": [],
+      "answer": "## LE Secure Connections (LESC) Pairing — Full HCI Sequence\n\nLESC pairing has **seven distinct phases**. Only Phases 2, 4, and 7 involve HCI commands; all other phases are SMP PDUs carried as L2CAP data (CID `0x0006`) or user-facing interaction. Both Central (Initiator) and Peripheral (Responder) must perform steps in their respective roles.\n\n> **Prerequisite**: An active ACL connection must already exist — `LE_Connection_Complete` or `LE_Enhanced_Connection_Complete` with `Status=0x00` must have been received on both sides before any pairing step. [Wiki: HCI Sequences]\n\n---\n\n### Phase 0 — Feature Check (one-time, at initialization)\n\nBefore pairing, confirm both sides support LESC. During controller init:\n\n```\nHCI_LE_Read_Local_Supported_Features_Page_0 (0x2003)\n→ HCI_Command_Complete: LE_Features\n```\n\nCheck **bit 8** (LE Secure Connections): if clear, fall back to Legacy Pairing. [Core 6.2, Vol 4, Part E, §7.8.3]\n\n---\n\n### Phase 1 — SMP Negotiation *(L2CAP only, no HCI)*\n\n| PDU | Direction | CID | Key Fields |\n|-----|-----------|-----|------------|\n| `Pairing Request` | Initiator → Responder | `0x0006` | `IO_Capability`, `OOB_Data_Flag`, `AuthReq` (SC bit **must** be `1`), `Max_Enc_Key_Size`, Key Distribution flags |\n| `Pairing Response` | Responder → Initiator | `0x0006` | Same fields — responder mirrors or adjusts |\n\nThe chosen **pairing method** (Just Works / Passkey Entry / Numeric Comparison / OOB) is determined from the IO Capability matrix. LESC Numeric Comparison is only available when both sides have `DisplayYesNo` capability. [Wiki: Security — IO Capability Matrix]\n\n---\n\n### Phase 2 — P-256 Key Pair Generation *(HCI — both sides)*\n\nEach device requests a fresh ephemeral P-256 key pair from its own controller.\n\n**Both Initiator and Responder independently execute:**\n```\nHCI_LE_Read_Local_P-256_Public_Key (0x2025)\n→ HCI_Command_Status: Status=0x00\n← (async) LE_Read_Local_P256_Public_Key_Complete (Subevent 0x08)\n        Status=0x00\n        Local_P256_Public_Key[64]   ← 32-byte X || 32-byte Y coordinates\n```\n\n> Only one `HCI_LE_Read_Local_P-256_Public_Key` or `HCI_LE_Generate_DHKey` can be outstanding per controller at a time — LESC pairing is **serialized** at the controller level. [Core 6.2, Vol 3, Part H, §2.3.5.6]\n\n---\n\n### Phase 3 — Public Key Exchange *(SMP/L2CAP only, no HCI)*\n\n| PDU | Direction | Payload |\n|-----|-----------|--------|\n| `Pairing Public Key` | Initiator → Responder | `Public_Key_X[32]` \\|\\| `Public_Key_Y[32]` |\n| `Pairing Public Key` | Responder → Initiator | `Public_Key_X[32]` \\|\\| `Public_Key_Y[32]` |\n\nThe host passes the **peer's** 64-byte public key directly to the next HCI call.\n\n---\n\n### Phase 4 — DHKey Computation *(HCI — both sides)*\n\n**Both Initiator and Responder independently execute:**\n```\nHCI_LE_Generate_DHKey [v2] (0x205E)\n    Remote_P256_Public_Key[64]   ← peer's public key from Phase 3\n    Key_Type = 0x01              ← use generated private key (NOT the debug key 0x00)\n→ HCI_Command_Status: Status=0x00\n← (async) LE_Generate_DHKey_Complete (Subevent 0x09)\n        Status=0x00\n        DH_Key[32]               ← shared secret\n```\n\n> **Critical validation**: If `DH_Key` is all `0xFF`, the peer's public key was invalid (off-curve or infinity point). The host **must abort** pairing immediately — send SMP `Pairing Failed (0x0F: Unspecified Reason)`. [Core 6.2, Vol 4, Part E, §7.7.65.9]\n\n> Use `Key_Type=0x01` (not `0x00`). The debug key (`0x00`) uses a fixed, publicly known private key — it bypasses real security and is only permitted during RF qualification testing.\n\n---\n\n### Phase 5 — Authentication *(SMP/L2CAP + user interaction, no HCI)*\n\nThe host runs the LESC cryptographic protocol entirely in software using `DH_Key` from Phase 4:\n\n| Step | Function | SMP PDU Exchanged |\n|------|----------|-------------------|\n| Generate local nonce (`Na` / `Nb`) | OS RNG | — |\n| Compute **Confirm** value | `f4(PKa.x, PKb.x, Na, 0)` | `Pairing Confirm` (Initiator sends first in Passkey; both skip for Numeric Comparison / Just Works) |\n| Exchange **Nonces** | — | `Pairing Random` (Initiator → Responder, then Responder → Initiator) |\n| Numeric Comparison / Passkey / OOB | `g2(PKa.x, PKb.x, Na, Nb)` → 6-digit code | User confirms on both devices |\n| Derive **MacKey** and **LTK** | `f5(DHKey, Na, Nb, A, B)` | — |\n| Compute and exchange **DHKey Check** | `f6(MacKey, Na, Nb, rb, IOcaps, A, B)` → `Ea` / `Eb` | `DHKey Check` (Initiator sends `Ea`, Responder replies `Eb`) |\n| Verify peer's DHKey Check | `f6(MacKey, Nb, Na, ra, IOcaps, B, A)` → expected `Eb` | Abort on mismatch |\n\n[Core 6.2, Vol 3, Part H, §2.3.5.6]\n\n---\n\n### Phase 6 — Key Distribution *(SMP/L2CAP only, no HCI)*\n\nAfter successful DHKey Check, both devices distribute keys **before** encryption is enabled (for LTK distribution) or **after** (for IRK/CSRK, depending on key distribution flags):\n\n| Key | SMP PDU | Direction |\n|-----|---------|----------|\n| LTK (Long Term Key) | `Encryption Information` + `Central Identification` | Initiator → Responder (if requested) |\n| IRK (Identity Resolving Key) | `Identity Information` + `Identity Address Information` | Both directions |\n| CSRK (Signature Key) | `Signing Information` | Both directions |\n\n---\n\n### Phase 7 — Link-Layer Encryption *(HCI)*\n\nThis is the final HCI phase. The LESC identifier is **Rand = 0x0000000000000000 and EDIV = 0x0000** — this distinguishes LESC from Legacy Pairing LTK requests.\n\n**Step 7a — Central issues encryption request:**\n```\nHCI_LE_Enable_Encryption (0x2019)                     ← Central only\n    Connection_Handle\n    Random_Number = 0x0000000000000000               ← all zeros for LESC\n    Encrypted_Diversifier = 0x0000                   ← all zeros for LESC\n    Long_Term_Key[16]                                ← LTK derived from f5 in Phase 5\n→ HCI_Command_Status: Status=0x00\n```\n\n**Step 7b — Peripheral receives LTK request:**\n```\n← LE_Long_Term_Key_Request (Event 0xFF, Subevent 0x05)   ← Peripheral only\n        Connection_Handle\n        Random_Number = 0x0000000000000000\n        Encrypted_Diversifier = 0x0000\n```\n> The Peripheral's host identifies this as LESC (not a Legacy re-encryption) by the all-zero Rand and EDIV. [Wiki: HCI Sequences]\n\n**Step 7c — Peripheral replies with LTK:**\n```\nHCI_LE_Long_Term_Key_Request_Reply (0x201A)              ← Peripheral only\n    Connection_Handle\n    Long_Term_Key[16]                                ← same LTK from Phase 5 f5\n→ HCI_Command_Complete: Status=0x00, Connection_Handle\n```\n\n**Step 7d — Encryption active on both sides:**\n```\n← HCI_Encryption_Change (Event 0x08)                     ← both sides\n        Status=0x00\n        Connection_Handle\n        Encryption_Enabled = 0x01\n```\n\nAt this point the link is encrypted with AES-128-CCM. Store `{LTK, peer_IRK, peer_identity_address}` for future reconnections without re-pairing. [Core 6.2, Vol 6, Part B, §5.1.3]\n\n---\n\n### LL-Level PDU Mapping\n\nHCI steps 7a–7d drive the following Link Layer PDU exchange transparently:\n\n| LL PDU | Direction | Triggered By |\n|--------|-----------|-------------|\n| `LL_ENC_REQ` | Central → Peripheral | `HCI_LE_Enable_Encryption` |\n| `LL_ENC_RSP` | Peripheral → Central | Internal (Peripheral LL) |\n| `LL_START_ENC_REQ` | Peripheral → Central | After LTK loaded via `HCI_LE_Long_Term_Key_Request_Reply` |\n| `LL_START_ENC_RSP` | Central → Peripheral | Central LL confirms |\n| `LL_START_ENC_RSP` | Peripheral → Central | Peripheral LL confirms |\n\n[Core 6.2, Vol 6, Part B, §5.1.3]\n\n---\n\n### Summary: HCI Commands Involved\n\n| Phase | HCI Command / Event | Opcode | Role |\n|-------|---------------------|--------|------|\n| 0 | `HCI_LE_Read_Local_Supported_Features_Page_0` | `0x2003` | Both |\n| 2 | `HCI_LE_Read_Local_P-256_Public_Key` | `0x2025` | Both |\n| 2 | ← `LE_Read_Local_P256_Public_Key_Complete` | Subevent `0x08` | Both |\n| 4 | `HCI_LE_Generate_DHKey [v2]` | `0x205E` | Both |\n| 4 | ← `LE_Generate_DHKey_Complete` | Subevent `0x09` | Both |\n| 7a | `HCI_LE_Enable_Encryption` | `0x2019` | Central |\n| 7b | ← `LE_Long_Term_Key_Request` | Subevent `0x05` | Peripheral |\n| 7c | `HCI_LE_Long_Term_Key_Request_Reply` | `0x201A` | Peripheral |\n| 7d | ← `HCI_Encryption_Change` | Event `0x08` | Both |\n\n---\n\n### Implementation Pitfalls\n\n- **Key_Type must be `0x01`** in `HCI_LE_Generate_DHKey [v2]`. Using `0x00` (debug key) uses a public fixed private key and provides zero security.\n- **DHKey all-0xFF** = invalid peer public key; abort with `Pairing Failed`.\n- **Serialized per controller**: only one P-256 key-gen or DHKey operation can run at a time. Queue multiple pairings.\n- **6.2 minimum key size**: Core 6.2 enforces a minimum of **7 octets** for `Max_Enc_Key_Size`; always negotiate 16 (128-bit). [Core 6.2, Vol 3, Part H, §3.2]\n- **Do not call `HCI_LE_Enable_Encryption` until `LE_Connection_Complete` is complete** — it returns `Command Disallowed (0x0C)` otherwise.",
+      "citations": [
+        {
+          "label": "Wiki: HCI Sequences — Section 3 (LE Secure Connections Pairing)",
+          "file_path": "wiki/reference/hci-sequences.md",
+          "url": "http://localhost:8888/wiki/reference/hci-sequences/"
+        },
+        {
+          "label": "Wiki: Security — Pairing Methods, IO Capability Matrix, LESC Overview",
+          "file_path": "wiki/concepts/security.md",
+          "url": "http://localhost:8888/wiki/concepts/security/"
+        },
+        {
+          "label": "Core 6.2, Vol 3, Part H, §2.3.5.6 — LESC pairing protocol, f4/f5/f6/g2 functions",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 3, Part H, §3.2 — Minimum encryption key size (7 octets)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 4, Part E, §7.7.65.9 — LE_Generate_DHKey_Complete (invalid key → all 0xFF)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Core 6.2, Vol 6, Part B, §5.1.3 — LL encryption PDU sequence (LL_ENC_REQ/RSP/START_ENC)",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        }
+      ],
+      "timing_sec": {
+        "agent_ask": 99.48,
+        "judge": 10.05,
+        "total": 109.53
+      },
+      "loop": {
+        "num_turns": 7,
+        "tool_calls": 6,
+        "tools_used": {
+          "ToolSearch": 1,
+          "mcp__bluetooth-wiki__list_index": 1,
+          "mcp__bluetooth-wiki__search_wiki": 2,
+          "mcp__bluetooth-wiki__read_page": 2
+        },
+        "stop_reason": "end_turn",
+        "total_cost_usd": 0.21575095,
+        "usage": {
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 27995,
+          "cache_read_input_tokens": 71269,
+          "output_tokens": 5927,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 27995
+          },
+          "inference_geo": "",
+          "iterations": [
+            {
+              "input_tokens": 1,
+              "output_tokens": 5293,
+              "cache_read_input_tokens": 22495,
+              "cache_creation_input_tokens": 17583,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 17583,
+                "ephemeral_1h_input_tokens": 0
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    },
+    "Q027": {
+      "scores": {
+        "accuracy": 3,
+        "completeness": 3,
+        "citation": 3,
+        "usability": 2,
+        "hallucination_penalty": 0
+      },
+      "raw_total": 11,
+      "rationales": {
+        "accuracy": "All technical facts stated are correct, including the 7.5 ms minimum, 125 µs tick units, feature bit requirements, and rejection mechanisms.",
+        "completeness": "All five key facts are present: fallback to 7.5 ms, 5.4 lacks 125 µs tick support, HCI_LE_Connection_Rate_Request is 6.2-only, negotiation enforces mutual support, and Host must guard against this.",
+        "citation": "Multiple specific citations to Core 6.2 with volume, part, and section numbers are provided throughout the answer (e.g., Vol 4, Part E, §7.8.12; Vol 6, Part B, §4.6.50).",
+        "hallucination_penalty": 0,
+        "usability": "The answer is well-structured with clear headers and actionable guidance for developers, though slightly verbose compared to the reference answer."
+      },
+      "key_facts_missing": [],
+      "answer": "A BLE 6.2 central **cannot** establish a 375 µs connection interval with a BLE 5.4 peripheral. Here's why:\n\n## Initial Connection Establishment\nDuring the initial connection handshake, both the 6.2 central and 5.4 peripheral use the legacy `HCI_LE_Create_Connection` or `HCI_LE_Extended_Create_Connection` commands. These commands operate in 1.25 ms tick units with a minimum interval of **7.5 ms** [Core 6.2, Vol 4, Part E, §7.8.12]. The 6.2 central cannot request 375 µs through these commands. The result: connection establishes at 7.5 ms or above, whatever the central specifies within the legacy 1.25 ms range.\n\n## Why 375 µs Is Impossible Without Both Devices Supporting 6.2\nThe \"Shorter Connection Intervals\" feature introduced in 6.2 uses a new 125 µs tick unit and new LL PDUs (`LL_CONNECTION_RATE_REQ` / `LL_CONNECTION_RATE_IND`). Both devices must advertise the \"Shorter Connection Intervals\" feature bit [Core 6.2, Vol 6, Part B, §4.6.50; Vol 4, Part E, §7.8.154]. The BLE 5.4 peripheral does not support this feature — it was introduced only in 6.2.\n\n## Post-Connection Update Attempt\nIf the 6.2 central attempted to use `HCI_LE_Connection_Rate_Request` to negotiate 375 µs after connection establishment, the 5.4 peripheral would reject it. When the 5.4 peripheral's Link Layer receives the `LL_CONNECTION_RATE_REQ` PDU (which it doesn't recognize), it responds with `LL_REJECT_EXT_IND`, and the update fails [Core 6.2, Vol 6, Part B, §5.1.32–33].\n\n## Developer Guidance\nAs documented for 6.2 implementations: \"Intervals below 7.5 ms require new HCI commands (0x00A1–0x00A3); fall back to existing connection parameter request for 6.1 and earlier controllers\" [Core 6.2, core-spec-6.2.md, Developer Impact section]. Thus, a 6.2 central properly designed for backward compatibility would detect the 5.4 peripheral's lack of support and use only 7.5 ms or higher intervals.",
+      "citations": [
+        {
+          "label": "Core 6.2, Vol 4, Part E, §7.8.12",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/#vol-4-part-e-7-8-12"
+        },
+        {
+          "label": "Core 6.2, Vol 6, Part B, §4.6.50",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/#vol-6-part-b-4-6-50"
+        },
+        {
+          "label": "Core 6.2, Vol 6, Part B, §5.1.32–33",
+          "file_path": "sources/specs/6.2/Core_v6.2.md",
+          "url": "http://localhost:8888/sources/6.2/Core_v6.2/"
+        },
+        {
+          "label": "Wiki: core-spec-6.2.md (Shorter Connection Intervals, Prerequisites)",
+          "file_path": "wiki/versions/core-spec-6.2.md",
+          "url": "http://localhost:8888/wiki/versions/core-spec-6.2/"
+        },
+        {
+          "label": "Wiki: connection-management.md (Short Connection Intervals, Key facts)",
+          "file_path": "wiki/concepts/connection-management.md",
+          "url": "http://localhost:8888/wiki/concepts/connection-management/"
+        }
+      ],
+      "timing_sec": {
+        "agent_ask": 60.9,
+        "judge": 8.35,
+        "total": 69.25
+      },
+      "loop": {
+        "num_turns": 12,
+        "tool_calls": 11,
+        "tools_used": {
+          "mcp__bluetooth_wiki__list_index": 1,
+          "mcp__bluetooth-wiki__list_index": 1,
+          "mcp__bluetooth-wiki__read_page": 3,
+          "mcp__bluetooth-wiki__read_source": 2,
+          "mcp__bluetooth-wiki__search_wiki": 4
+        },
+        "stop_reason": "end_turn",
+        "total_cost_usd": 0.1471101,
+        "usage": {
+          "input_tokens": 65,
+          "cache_creation_input_tokens": 64380,
+          "cache_read_input_tokens": 447801,
+          "output_tokens": 4258,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 64380
+          },
+          "inference_geo": "",
+          "iterations": [
+            {
+              "input_tokens": 7,
+              "output_tokens": 1766,
+              "cache_read_input_tokens": 64230,
+              "cache_creation_input_tokens": 150,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 150,
+                "ephemeral_1h_input_tokens": 0
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    },
+    "Q028": {
+      "scores": {
+        "accuracy": 0,
+        "completeness": 0,
+        "citation": 0,
+        "hallucination_penalty": 0,
+        "usability": 0
+      },
+      "raw_total": 0,
+      "rationales": {
+        "accuracy": "The system answer contains no technical content to evaluate as it only reports an API error.",
+        "completeness": "None of the required key facts are present since no answer was provided.",
+        "citation": "No specification citations are present in the error message.",
+        "hallucination_penalty": "No hallucinations are present as the system correctly reported its inability to process the request rather than fabricating an answer.",
+        "usability": "The error message provides no engineering value and does not address the technical question at all."
+      },
+      "key_facts_missing": [
+        "Formula: Effective = CI × SF × (1 + CN)",
+        "100 × 10 × 2 = 2000 ms",
+        "Supervision_Timeout ≥ 6 × Effective_Interval",
+        "Minimum = 12,000 ms"
+      ],
+      "answer": "API Error: Request rejected (429) · This request would exceed your organization's rate limit of 30,000 input tokens per minute (org: 70cafe66-bedc-464c-bc9d-6882c3e8928d, model: claude-sonnet-4-6). For details, refer to: https://docs.claude.com/en/api/rate-limits. You can see the response headers for current usage. Please reduce the prompt length or the maximum tokens requested, or try again later. You may also contact sales at https://claude.com/contact-sales to discuss your options for a rate limit increase.",
+      "citations": [],
+      "raw_response": "API Error: Request rejected (429) · This request would exceed your organization's rate limit of 30,000 input tokens per minute (org: 70cafe66-bedc-464c-bc9d-6882c3e8928d, model: claude-sonnet-4-6). For details, refer to: https://docs.claude.com/en/api/rate-limits. You can see the response headers for current usage. Please reduce the prompt length or the maximum tokens requested, or try again later. You may also contact sales at https://claude.com/contact-sales to discuss your options for a rate limit increase.",
+      "reasoning": "",
+      "timing_sec": {
+        "agent_ask": 11.67,
+        "judge": 25.89,
+        "total": 37.56
+      },
+      "loop": {
+        "num_turns": 3,
+        "tool_calls": 2,
+        "tools_used": {
+          "mcp__bluetooth-wiki__list_index": 1,
+          "mcp__bluetooth-wiki__search_wiki": 1
+        },
+        "stop_reason": "stop_sequence",
+        "total_cost_usd": 0.16132049999999998,
+        "usage": {
+          "input_tokens": 3,
+          "cache_creation_input_tokens": 42114,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 195,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 42114
+          },
+          "inference_geo": "",
+          "iterations": [
+            {
+              "input_tokens": 3,
+              "output_tokens": 195,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 42114,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 42114,
+                "ephemeral_1h_input_tokens": 0
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        }
+      }
+    }
+  }
+}

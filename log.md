@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-05-08] FEAT — Phase 1 agent: embedded Claude Agent SDK loop + per-question eval harness
+
+**Operation**: FEAT
+**Scope**: New `agent/` package; new `scripts/eval_one.py` and `scripts/smoke_test_agent.py`; `pyproject.toml`; `.env.example`.
+
+### What was added
+- `agent/agent.py` — `BluetoothWikiAgent.ask(question)` returns `{answer, citations, reasoning, num_turns, tool_calls, tools_used, duration, cost}` from the Claude Agent SDK loop.
+- `agent/system_prompt.md` — strict citation rules: every numeric value / opcode / event / error code requires `[Core X.Y, Vol N, Part P, §S]`; at least one spec-level citation per answer; no fabricated formulas or parameters.
+- `agent/tools.py` — pure-logic helpers (`_list_index`, `_search_wiki`, `_read_page`, `_read_source`) wrapped by SDK `@tool` decorators. Path traversal blocked. Vol/Part heading lookup is hierarchical (`[Vol N]` parent → `Part X:` child within scope).
+- `agent/citations.py` — single source of truth for citation → hosted-site URL mapping. Anchor scheme: `/sources/X.Y/Core_vX.Y/#vol-N-part-p-s-s-s`.
+- `scripts/eval_one.py` — runs one dataset question through the agent then scores via Claude Sonnet 4.6 LLM-as-Judge using the existing rubric. Saves to `eval/results_agent.json`.
+- `scripts/smoke_test_agent.py` — end-to-end smoke test.
+- `pyproject.toml` — `claude-agent-sdk`, `anthropic`, `mcp`, `fastapi`, `pydantic`, `python-dotenv`.
+
+### Eval observations (partial run, 2026-05-08)
+- Easy/medium questions (Q001–Q006): agent passes 10–11 / 11 with both Sonnet 4.6 and Haiku 4.5 once `setting_sources=[]` and `disallowed_tools=[…]` block the SDK's built-in `ToolSearch`/`Bash`/etc.
+- Hard cross-version questions (Q019, Q020, Q022, Q025): Sonnet 4.6 passes 10–11 / 11. Typical loop: 7–14 turns, 6–13 tool calls, ~$0.20–0.30 / answer.
+- Expert edge cases — Q027 (375 µs / 5.4 interop) passes 11/11 with Haiku 4.5 + strengthened prompt; Q028 (subrating supervision-timeout math) below threshold on Haiku because the model derives an alternate Max_Latency-based formula instead of the spec's `Effective = CI × SF × (1 + CN)`. Sonnet 4.6 retries blocked by org-tier 30 K input-tokens-per-minute rate limit.
+- Built-in `ToolSearch` was being injected by Claude Code defaults until `setting_sources=[]` + an explicit `disallowed_tools` list was added — surfaced as a leak in the loop trace (`mcp__bluetooth-wiki__list_index: 1, ToolSearch: 1`).
+
+### Known limitations (carry-over)
+- `read_source(version, vol, part)` only finds Vol/Part headings inside the converted spec's acknowledgments section, not the actual content body. The agent compensates with `search_wiki(scope="sources")`. Real fix: enhance `scripts/convert_to_md.py` to inject Vol/Part anchors throughout the body.
+- Citation anchor extraction handles single-section labels (`§4.4.2`) but not compound ones (`§9.1–9.4`, `§4.6.41; §5.1.23–5.1.29`); compound forms resolve to the page-level URL without a fragment.
+
+### Phased delivery (post Phase 1)
+2. HTTP + MCP server adapters (`server/http.py`, `server/mcp.py`) — same `BluetoothWikiAgent.ask()` behind both
+3. MkDocs Material site with separated `/wiki/` and `/sources/` sections + origin badges
+4. Custom annotation backend (text-anchored selections → GitHub Issues)
+5. "Ask the agent" sidebar + side-by-side wiki/source view
+   *(auth/access control handled at infra layer, intentionally out of project scope)*
+
+---
+
 ## [2026-05-05] FIX — Accuracy to 100%: dataset key_fact corrections + ble-parameters.md fix
 
 **Operation**: FIX

@@ -1,4 +1,8 @@
 
+# Local secrets (API keys, etc.)
+.env
+.env.local
+
 # Generated prompt files
 .prompts/
 
@@ -12,6 +16,7 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+*.egg-info/
 
 # Node (for MCP server)
 node_modules/
@@ -31,3 +36,4 @@ convert_log.txt
 debug_*.png
 .java/
 scratch/
+.venv/

@@ -80,10 +80,20 @@ bluetooth_wiki/
 │   ├── judge_prompt.md                ← LLM-as-Judge prompt + Python run_evaluation() helper
 │   ├── results_wiki.json              ← LLM-Wiki baseline scores (95.8% overall, 2026-05-04)
 │   └── report.html                    ← Visual evaluation dashboard
+├── agent/
+│   ├── agent.py                       ← BluetoothWikiAgent — embedded Claude Agent SDK loop
+│   ├── system_prompt.md               ← Citation rules + anti-hallucination prompt
+│   ├── tools.py                       ← list_index, search_wiki, read_page, read_source
+│   ├── citations.py                   ← Citation ↔ hosted-site URL mapping (single source of truth)
+│   └── config.py                      ← Env-driven config (model, paths, limits)
 ├── scripts/
 │   ├── download_spec_documents.py     ← Downloads PDFs from bluetooth.com
 │   ├── convert_to_md.py               ← Converts PDFs → markdown + figure PNGs via PyMuPDF
-│   └── ingest.py                      ← Ingests new source docs into the wiki
+│   ├── ingest.py                      ← Ingests new source docs into the wiki
+│   ├── eval_one.py                    ← Run one eval question through agent + LLM judge
+│   └── smoke_test_agent.py            ← End-to-end agent smoke test
+├── pyproject.toml                     ← Python deps: claude-agent-sdk, anthropic, mcp, fastapi
+├── .env.example                       ← Env template (ANTHROPIC_API_KEY, BT_AGENT_MODEL, …)
 └── guide/
     └── claude-code-integration.md     ← How to use this wiki with Claude Code
 ```
