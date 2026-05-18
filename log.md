@@ -3,6 +3,33 @@
 > This is an **append-only** log. Never delete entries. Add new entries at the top.
 > Format: `## [YYYY-MM-DD] [Operation] — [Summary]`
 
+## [2026-05-18] QUERY — HCI_LE_Add_Device_To_Filter_Accept_List error when scanning active with Scanning_Filter_Policy=0x01
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/security.md`, `wiki/reference/hci-commands.md`, `wiki/reference/error-codes.md`
+**Answer**: Controller returns 0x0C (Command Disallowed). FAL cannot be modified while a scan using a FAL-referencing filter policy is active. Correct procedure: disable scan → add device → re-enable scan.
+
+---
+
+## [2026-05-18] QUERY — L2CAP mechanism, PSM, and minimum MTU for EATT bearers in BLE 5.2
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/l2cap.md`, `wiki/concepts/att-gatt.md`
+**Answer**: EATT bearers are established using Enhanced Credit-Based Flow Control (ECBFC, signal code 0x17) on the LE Signaling Channel (CID 0x0005), with PSM 0x0027 and a minimum MTU of 64 bytes. Up to 5 channels can be requested in a single Credit_Based_Connection_Request. No wiki gaps identified.
+
+---
+
+## [2026-05-18] QUERY — Step-by-step HCI sequence for Channel Sounding (CS) distance measurement on a BLE 6.0 connection
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/channel-sounding.md`, `wiki/reference/hci-sequences.md`
+**Summary**: Provided the full 3-phase HCI flow (capability/security setup → config → procedure execution) for CS ranging, covering HCI_LE_CS_Read_Remote_Supported_Capabilities, HCI_LE_CS_Security_Enable, HCI_LE_CS_Set_Default_Settings, HCI_LE_CS_Create_Config, HCI_LE_CS_Set_Procedure_Parameters, HCI_LE_CS_Procedure_Enable, and LE_CS_Subevent_Result interpretation. Included 6.2 NADM/amplitude-attack hardening note. No wiki gaps identified.
+
+---
+
 ## [2026-05-18] QUERY — L2CAP Connection Parameter Update vs. BLE 5.3 Connection Subrating for peripheral-initiated event frequency reduction
 
 **Operation**: QUERY

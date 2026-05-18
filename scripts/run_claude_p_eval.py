@@ -18,8 +18,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import anthropic
-
 REPO = Path(__file__).resolve().parent.parent
 DATASET_PATH = REPO / "eval" / "dataset.json"
 RESULTS_PATH = REPO / "eval" / "results_claude_p.json"
@@ -132,7 +130,8 @@ def extract_json(text: str) -> dict:
     raise ValueError("Unbalanced JSON in judge response")
 
 
-def judge_answer(client: anthropic.Anthropic, question: dict, system_answer: str) -> dict:
+def judge_answer(question: dict, system_answer: str) -> dict:
+    """Judge via claude -p with system+user prompt concatenated."""
     user = JUDGE_TEMPLATE.format(
         question=question["question"],
         reference=question["reference_answer"],
@@ -140,20 +139,20 @@ def judge_answer(client: anthropic.Anthropic, question: dict, system_answer: str
         expected_citations=", ".join(question["expected_citations"]),
         system_answer=system_answer,
     )
-    msg = client.messages.create(
-        model=JUDGE_MODEL,
-        max_tokens=2048,
-        system=JUDGE_SYSTEM,
-        messages=[{"role": "user", "content": user}],
+    full_prompt = JUDGE_SYSTEM + "\n\n" + user
+    result = subprocess.run(
+        ["claude", "-p", full_prompt],
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
-    text = "".join(b.text for b in msg.content if hasattr(b, "text"))
-    return extract_json(text)
+    return extract_json(result.stdout)
 
 
 # ── main pipeline ─────────────────────────────────────────────────────────────
 
 def generate_answers(dataset: dict, existing: dict) -> dict:
-    """Run claude -p for each question and return {qid: answer}."""
+    """Run claude -p for each question and return {qid: answer}. Saves after each answer."""
     answers = existing.copy()
     questions = dataset["questions"]
     total = len(questions)
@@ -171,12 +170,22 @@ def generate_answers(dataset: dict, existing: dict) -> dict:
         elapsed = time.perf_counter() - t0
         answers[qid] = ans
         print(f" {elapsed:.1f}s ({len(ans)} chars)")
+        # Save answers incrementally so a crash doesn't lose progress
+        _save_answers(answers)
     return answers
+
+
+def _save_answers(answers: dict) -> None:
+    if RESULTS_PATH.exists():
+        saved = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+    else:
+        saved = {}
+    saved["answers"] = answers
+    RESULTS_PATH.write_text(json.dumps(saved, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def judge_all(dataset: dict, answers: dict, existing_scores: dict) -> list[dict]:
     """Judge all answers. Returns list of per-question result dicts."""
-    client = anthropic.Anthropic()
     questions = dataset["questions"]
     total = len(questions)
     results = []
@@ -191,7 +200,7 @@ def judge_all(dataset: dict, answers: dict, existing_scores: dict) -> list[dict]
         ans = answers.get(qid, "")
         print(f"  [{i:2}/{total}] {qid} — judging …", end="", flush=True)
         t0 = time.perf_counter()
-        verdict = judge_answer(client, q, ans)
+        verdict = judge_answer(q, ans)
         elapsed = time.perf_counter() - t0
         s = verdict["scores"]
         hall = s.get("hallucination_penalty", s.get("hallucination", 0))
