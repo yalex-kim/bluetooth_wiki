@@ -3,6 +3,119 @@
 > This is an **append-only** log. Never delete entries. Add new entries at the top.
 > Format: `## [YYYY-MM-DD] [Operation] — [Summary]`
 
+## [2026-05-18] QUERY — HCI_LE_Add_Device_To_Filter_Accept_List error while scanning active (FAL modify constraint)
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/security.md`, `wiki/reference/hci-commands.md`, `wiki/reference/error-codes.md`
+**Answer**: `HCI_LE_Add_Device_To_Filter_Accept_List` returns `0x0C Command Disallowed` when called while scanning is active with `Scanning_Filter_Policy=0x01` (FAL-referenced). Correct procedure: disable scanning → add device → re-enable scanning. Cited: `[Core 6.2, Vol 4, Part E, §7.8.15–7.8.17; Vol 6, Part B, §4.3.1]`
+
+---
+
+## [2026-05-18] QUERY — BLE 6.2 central + BLE 5.4 peripheral: 375 µs connection interval interop
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/connection-management.md`, `wiki/versions/core-spec-6.2.md`, `wiki/version-diff/diff-6.1-to-6.2.md`
+**Summary**: Explained what happens when a BLE 6.2 central attempts to establish a 375 µs connection interval with a BLE 5.4 peripheral. The connection itself establishes normally (≥ 7.5 ms). The short interval negotiation fails because the 5.4 peripheral lacks the `Shorter Connection Intervals` and `Connection Rate (Host Support)` feature bits. The 6.2 central's local controller detects this during feature exchange and rejects `HCI_LE_Connection_Rate_Request` with error 0x11 before sending any LL PDU. If `LL_CONNECTION_RATE_REQ` were sent anyway, the 5.4 peripheral would respond with `LL_UNKNOWN_RSP`. Connection Subrating (5.3, available on 5.4) still works. Correct fallback: use `HCI_LE_Connection_Parameter_Request` with 7.5 ms minimum.
+**Citations**: `[Core 6.2, Vol 6, Part B, §4.6.50]`, `[Core 6.2, Vol 4, Part E, §7.8.154]`, `[Core 6.2, Vol 6, Part B, §5.1.32–5.1.33]`
+
+---
+
+## [2026-05-18] QUERY — HCI sequence for LE Secure Connections pairing
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/reference/hci-sequences.md`, `wiki/concepts/security.md`
+**Summary**: Answered step-by-step HCI sequence for LESC pairing between two BLE devices. Covered all four phases: (1) SMP negotiation (Pairing Request/Response, IO capability matrix, SC bit requirement); (2) ECDH key exchange via `HCI_LE_Read_Local_P-256_Public_Key` (0x2025) and `HCI_LE_Generate_DHKey [v2]` (0x205E); (3) host-side SMP authentication (f4/g2/f5/f6 functions, Numeric Comparison/Passkey/Just Works); (4) encryption startup via `HCI_LE_Enable_Encryption` (0x2019) + `LE_Long_Term_Key_Request` + `HCI_LE_Long_Term_Key_Request_Reply` (0x201A) → `HCI_Encryption_Change`. Key pitfalls: all-zero EDIV/Rand for LESC, DHKey=0xFF abort condition, one concurrent LESC per controller.
+**Citations**: `[Core 6.2, Vol 3, Part H, §2.3.5–§3.6]`, `[Core 6.2, Vol 4, Part E, §7.8.35–7.8.36, §7.7.65.8–7.7.65.9]`, `[Core 6.2, Vol 6, Part B, §5.1.3]`
+
+---
+
+## [2026-05-18] QUERY — Sub-1ms BLE connection interval for gaming controller
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/connection-management.md`, `wiki/versions/core-spec-6.2.md`, `wiki/version-diff/diff-6.1-to-6.2.md`, `wiki/reference/ble-parameters.md`
+**Summary**: Developer asked for minimum Bluetooth version and parameters for BLE connection intervals under 1 ms. Answer: Bluetooth 6.2 (minimum), using `HCI_LE_Connection_Rate_Request` with `Connection_Interval` = 3–7 (375–875 µs in 125 µs ticks), `Subrate_Factor` = 1, `Peripheral_Latency` = 0, `Supervision_Timeout` ≥ 100 ms. Hardware capability must be verified via `HCI_LE_Read_Minimum_Supported_Connection_Interval` first.
+
+---
+
+## [2026-05-18] QUERY — BLE privacy evolution (RPA and related) from 4.2 to 6.2
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/security.md`, `wiki/versions/core-spec-5.4.md`, `wiki/versions/core-spec-6.1.md`, `wiki/versions/core-spec-6.2.md`, `wiki/version-diff/diff-6.0-to-6.1.md`, `wiki/version-diff/diff-6.1-to-6.2.md`
+**Answer**: Traced RPA/privacy evolution across six milestones: 4.2 (controller-based resolution, Resolving List, Privacy Modes foundation), 5.0–5.3 (stable, no privacy changes), 5.4 (EAD — encrypted advertising payload, complementary to RPA), 6.1 (Randomized RPA rotation via v2 HCI command defeating timing-based re-identification), 6.2 (erratum 26048 zero-IRK fix + 11 other security errata hardening the pairing and key exchange stack).
+**Citations**: `[Core 4.2, Vol 6, Part B, §4.7.1]`, `[Core 5.4, Vol 3, Part C, §10.10]`, `[Core 6.1, Vol 4, Part E, §7.8.45]`, `[Core 6.2, Vol 3, Part H, §3.2]`
+
+## [2026-05-18] QUERY — BLE isochronous stream type and profile stack for 20-device hearing aid broadcast
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/le-audio.md`, `wiki/versions/core-spec-5.2.md`, `wiki/concepts/profiles-and-services.md`
+**Answer**: Minimum version is Bluetooth 5.2 (introduced BIS/BIG + LC3). For simultaneous streaming to 20 hearing aids, BIS (Broadcast Isochronous Stream) within a BIG is the correct transport — not CIS. Profile stack: BAP v1.0.2 (Broadcast Source/Sink) + CAP v1.0.1 (orchestration) + HAP v1.0.1 (hearing aid preset/volume management) + optionally PBP v1.0.2 (Auracast discovery). LC3 at 16 kHz mono, 32 kbps, 10 ms frames.
+**Citations**: `[Core 5.2, Vol 6, Part B, §4.4.6]`, `[Core 5.2, Vol 6, Part B, §4.5.13]`, `[BAP v1.0.2, §3]`, `[HAP v1.0.1, §3]`, `[PBP v1.0.2, §3.4]`
+
+## [2026-05-18] QUERY — Connection interval management evolution 5.3 → 6.2
+
+Answered user query on how LE connection interval management evolved from Core 5.3 through 6.2.
+Pages read: index.md, wiki/concepts/connection-management.md, wiki/versions/core-spec-5.3.md,
+wiki/versions/core-spec-6.2.md, wiki/version-diff/diff-5.2-to-5.3.md, wiki/version-diff/diff-6.1-to-6.2.md.
+No wiki gaps found; connection-management.md already covers this topic thoroughly.
+
+## [2026-05-18] QUERY — BLE advertising capacity evolution from 4.0 to 5.0
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/advertising.md`, `wiki/versions/core-spec-5.0.md`
+**Answer**: 4.0 limited advertising to 31 bytes per event, one set at a time, on primary channels only (LE 1M PHY). 5.0 Extended Advertising offloads payloads to secondary channels via AUX_ADV_IND + AUX_CHAIN_IND chains (up to 1650 bytes total), supports up to 255 simultaneous advertising sets with independent parameters and PHY selections (1M/2M/Coded), and introduced Periodic Advertising (AUX_SYNC_IND). Practical impact: richer connectionless beacons, multi-set concurrent advertising, foundation for Mesh and PAwR. Fully backward compatible — 4.x devices ignore extended PDUs.
+**Citations**: `[Core 5.0, Vol 6, Part B, §2.3.1]`, `[Core 5.0, Vol 6, Part B, §2.3.4]`, `[Core 5.0, Vol 4, Part E, §7.8.52–7.8.69]`
+
+---
+
+## [2026-05-18] QUERY — Security and privacy improvements from BLE 6.0 to 6.1
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/versions/core-spec-6.1.md`, `wiki/version-diff/diff-6.0-to-6.1.md`, `wiki/concepts/security.md`
+**Answer**: 6.1 introduced Randomized RPA Updates as its sole new feature: `HCI_LE_Set_Resolvable_Private_Address_Timeout [v2]` (OCF 0x009E) replaces the fixed 900 s RPA lifetime with a randomized range (default 480–900 s), defeating timing-based re-identification attacks. Errata with security impact: Security Manager (V3H) errata 25086, 26548, 26814 fix key derivation and IRK handling; GAP (V3C) errata fix address resolution and privacy mode; LL (V6B) errata fix privacy-mode advertising state. No features deprecated.
+**Citations**: `[Core 6.1, Vol 4, Part E, §7.8.45]`, `[Vol 6, Part B (LL privacy)]`, `[Vol 3, Part H (SM errata)]`, `[Vol 3, Part C (GAP errata)]`
+
+---
+
+## [2026-05-18] QUERY — LE Power Control in BLE 5.2: path loss zones and HCI commands
+Pages read: wiki/versions/core-spec-5.2.md, wiki/concepts/connection-management.md, wiki/reference/hci-commands.md.
+Answered question covering the three-zone path loss model, hysteresis/Min_Time_Spent parameters, per-PHY reporting, LL PDU procedures, and all five relevant HCI commands with opcodes and events.
+
+## [2026-05-18] QUERY — CIS vs. BIS in LE Audio
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/le-audio.md`, `wiki/versions/core-spec-5.2.md`
+**Answer**: Detailed comparison of CIS (Connected Isochronous Stream) and BIS (Broadcast Isochronous Stream). CIS is point-to-point, bidirectional, requires a prior ACL connection, and is used for TWS earbuds and voice calls. BIS is point-to-multipoint, unidirectional, requires no connection (Isochronous Broadcasting State), and supports unlimited receivers — the foundation of Auracast™. Grouping constructs: CIG (up to 31 CIS) vs. BIG. Encryption: CIS inherits ACL; BIS uses optional Broadcast Code. Full HCI setup sequences and profile mapping provided.
+**Citations**: `[Core 5.2, Vol 6, Part B, §4.5.13]` (CIS/CIG), `[Core 5.2, Vol 6, Part B, §4.4.6]` (BIS/BIG), `[Core 5.2, Vol 1, Part C, §11.1]`
+
+---
+
+## [2026-05-18] QUERY — Connection Subrating in BLE 5.3 and effective interval stacking formula
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/connection-management.md`, `wiki/versions/core-spec-5.3.md`
+**Answer**: Explained Connection Subrating mechanics (Subrate_Factor, Continuation_Number, Max_Latency), the stacking formula `Effective_Interval = CI × SF × (1+CN)`, supervision timeout constraint, two LL procedures (LL_SUBRATE_IND / LL_SUBRATE_REQ), and HCI commands. [Core 5.3, Vol 6, Part B, §4.6.35; §5.1.19–5.1.20]
+
+---
+
+## [2026-05-18] QUERY — Channel Sounding in Bluetooth 6.0 and ranging technique
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/channel-sounding.md`, `wiki/versions/core-spec-6.0.md`
+**Answer**: Channel Sounding (CS) is a physical-layer ranging feature introduced in Core Spec 6.0. It uses two complementary techniques: Phase-Based Ranging (PBR) via CS_TONE phase measurements across channels, and Round-Trip Time (RTT) via CS_SYNC packet exchange. Four step modes (0–3) support calibration, RTT-only, PBR-only, and combined RTT+PBR. The CS-DRBG randomizes parameters to resist relay attacks. Uses LE 2M 2BT PHY exclusively.
+
+---
+
 ## [2026-05-18] QUERY — HCI_LE_Add_Device_To_Filter_Accept_List error when scanning active with Scanning_Filter_Policy=0x01
 
 **Operation**: QUERY
