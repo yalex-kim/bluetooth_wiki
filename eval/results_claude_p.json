@@ -1,46 +1,129 @@
 {
+  "meta": {
+    "system": "claude -p",
+    "evaluator": "claude-sonnet-4-6",
+    "date": "2026-05-18",
+    "overall_pct": 0.5,
+    "total_weighted": 4.0,
+    "total_max_weighted": 770.0
+  },
+  "by_category": {
+    "version_facts": {
+      "weighted": 10.0,
+      "max": 99.0,
+      "count": 9,
+      "questions": [
+        "Q001",
+        "Q002",
+        "Q003",
+        "Q004",
+        "Q005",
+        "Q006",
+        "Q007",
+        "Q031",
+        "Q032"
+      ],
+      "pct": 10.1
+    },
+    "feature_explanation": {
+      "weighted": 0.0,
+      "max": 148.5,
+      "count": 9,
+      "questions": [
+        "Q008",
+        "Q009",
+        "Q010",
+        "Q011",
+        "Q012",
+        "Q013",
+        "Q033",
+        "Q034",
+        "Q035"
+      ],
+      "pct": 0.0
+    },
+    "version_comparison": {
+      "weighted": 0.0,
+      "max": 115.5,
+      "count": 7,
+      "questions": [
+        "Q014",
+        "Q015",
+        "Q016",
+        "Q017",
+        "Q018",
+        "Q036",
+        "Q037"
+      ],
+      "pct": 0.0
+    },
+    "cross_version_reasoning": {
+      "weighted": 0.0,
+      "max": 88.0,
+      "count": 4,
+      "questions": [
+        "Q019",
+        "Q020",
+        "Q021",
+        "Q022"
+      ],
+      "pct": 0.0
+    },
+    "implementation_hci": {
+      "weighted": -6.0,
+      "max": 154.0,
+      "count": 7,
+      "questions": [
+        "Q023",
+        "Q024",
+        "Q025",
+        "Q026",
+        "Q038",
+        "Q039",
+        "Q040"
+      ],
+      "pct": -3.9
+    },
+    "edge_cases": {
+      "weighted": 0.0,
+      "max": 165.0,
+      "count": 6,
+      "questions": [
+        "Q027",
+        "Q028",
+        "Q029",
+        "Q030",
+        "Q041",
+        "Q042"
+      ],
+      "pct": 0.0
+    }
+  },
+  "dimension_averages": {
+    "accuracy": {
+      "avg": 0.07,
+      "max": 3.0
+    },
+    "completeness": {
+      "avg": 0.07,
+      "max": 3.0
+    },
+    "citation": {
+      "avg": 0.07,
+      "max": 3.0
+    },
+    "hallucination_penalty": {
+      "avg": -0.1,
+      "max": 3.0
+    },
+    "usability": {
+      "avg": 0.05,
+      "max": 2.0
+    }
+  },
   "answers": {
     "Q001": "The answer is well-documented across both pages:\n\n**375 µs** is the minimum BLE connection interval introduced in Bluetooth Core Specification 6.2.\n\nPrior to 6.2, the minimum was **7.5 ms** (N × 1.25 ms, N ≥ 6). Version 6.2 adds the **Shorter Connection Intervals** feature, which switches the tick unit from 1.25 ms to **125 µs**, setting the range at N × 125 µs with N ≥ 3 — giving a minimum of **375 µs**, a 20× reduction.\n\nKey implementation details:\n- Requires the **Connection Subrating** feature (introduced in 5.3) as a prerequisite.\n- Uses new HCI command `HCI_LE_Connection_Rate_Request` (OCF 0x00A1) with 125 µs tick parameters.\n- Call `HCI_LE_Read_Minimum_Supported_Connection_Interval` (OCF 0x00A3) first — hardware capability varies per controller.\n- New LL PDUs: `LL_CONNECTION_RATE_REQ` / `LL_CONNECTION_RATE_IND`.\n\n**Source**: [Core 6.2, Vol 6, Part B, §4.6.50; §5.1.32–33; Vol 4, Part E, §7.8.154–156]",
-    "Q002": "This looks like an evaluation result file generated during a previous session. Before I commit and push, I want to confirm this is intentional — the file contains a single answer entry for Q001.\n\nShould I go ahead and commit `eval/results_claude_p.json` and push it to the current branch (`claude/generate-answers-report-xrRDt`)?",
-    "Q003": "It looks like git write operations need your approval. Would you like me to commit and push `eval/results_claude_p.json`? It's an evaluation results file from a previous session containing answers to Q001 and Q002. You can approve the git operations when prompted, or let me know if you'd prefer to skip committing this file.",
-    "Q004": "The git operations need your approval to proceed. Please approve the `git add` and `git commit` (and `git push`) commands when prompted, or let me know if you'd prefer to skip committing this file.\n\nFor context: `eval/results_claude_p.json` is a partial evaluation results file from a previous session — Q001 has a real answer about BLE 6.2 minimum connection intervals, but Q002 and Q003 contain AI meta-responses rather than evaluated answers. It's safe to commit as-is (it matches the pattern of other files in `eval/`), but it will likely need to be regenerated to get proper Q002/Q003 answers.",
-    "Q005": "There's one untracked file: `eval/results_claude_p.json`. Should I commit and push it?",
-    "Q006": "The git staging/commit commands need your approval to run. Here's what's queued:\n\n1. `log.md` — updated with today's Channel Sounding query entry\n2. `eval/results_claude_p.json` — existing untracked eval results file (2.4 KB)\n\nPlease approve the `git add` command above, and then I'll follow with the commit. Regarding the push — since that affects the remote, do you want me to push to `origin/claude/generate-answers-report-xrRDt` as well after committing?",
-    "Q007": "The permission prompt is blocking the git commands. The stop hook flagged uncommitted changes in the repo — likely the `log.md` entry from the query I just answered (per the wiki's QUERY workflow).\n\nIf you'd like me to commit and push those changes, please approve the git commands when prompted, or grant broader git permissions. Otherwise, let me know how you'd like to handle it.",
-    "Q008": "I need your approval to stage and commit these files. The changes are:\n\n- **`log.md`** — two new QUERY log entries from this session (Connection Subrating and Channel Sounding queries)\n- **`eval/results_claude_p.json`** — untracked eval results file, consistent with the `eval/` directory structure\n\nShall I go ahead and commit + push both?",
-    "Q009": "The git commands are being blocked pending your approval. I've already appended the log entry for the CIS/BIS query. To satisfy the stop hook, I need to run:\n\n1. `git -C /home/user/bluetooth_wiki add log.md`\n2. `git -C /home/user/bluetooth_wiki commit -m \"log: QUERY — CIS vs. BIS in LE Audio\"`\n3. `git -C /home/user/bluetooth_wiki push`\n\nPlease approve those git commands when prompted, or let me know if you'd like me to proceed differently (e.g., skip the push, or use a different commit scope).",
-    "Q010": "The hook is asking me to commit, but the tool calls are being blocked by the permission prompt. Could you approve the `git add log.md` and `git commit` steps, or let me know if you'd prefer I skip the commit? The only change is the new log entry I appended to `log.md` recording this query session.",
-    "Q011": "My git commands are being blocked by your permission settings. The stop hook detected uncommitted changes in `/home/user/bluetooth_wiki`, but I can't check or commit them without your approval.\n\nTo proceed, you can either:\n\n1. **Approve the git commands** when prompted, so I can check the diff, stage relevant files, and create a commit\n2. **Run it yourself** with `git status && git diff` in `/home/user/bluetooth_wiki`, then commit manually\n\nWould you like me to try again with the git workflow?",
-    "Q012": "The git commands need your explicit approval to run. Please approve the `git add` prompt above, then I'll follow with the commit and push. \n\nFor context on what's being committed:\n- **`log.md`** — 4 new QUERY log entries from this session (LE Power Control, CIS/BIS, Connection Subrating, Channel Sounding queries)\n- **`eval/results_claude_p.json`** — untracked eval artifact from a prior session; contains partial answers (Q001 has a real BLE 6.2 answer; Q002–Q011 are meta-responses from when git was blocked). It can be regenerated later but should be committed to clear the working tree",
-    "Q013": "The stop hook is asking me to commit and push, but git commands require your approval each time. Here's what's pending:\n\n**Files to commit:**\n- `log.md` — 4 new QUERY log entries from this session (LE Power Control, CIS/BIS, Connection Subrating, Channel Sounding queries)\n- `eval/results_claude_p.json` — partial eval artifact: Q001 has a real BLE 6.2 answer; Q002–Q012 are meta-responses from prior blocked sessions\n\n**To proceed**, please approve the git commands as they prompt, or run manually:\n```bash\ngit add log.md eval/results_claude_p.json\ngit commit -m \"log: add QUERY entries from session; save partial eval results\"\ngit push\n```\n\nIf you'd prefer future git operations in this repo to not require per-command approval, I can update the project settings via `/update-config` to allowlist git commands.",
-    "Q014": "I don't have permission to run git commands automatically. The stop hook is flagging uncommitted changes, but I need your approval to inspect and commit them.\n\nWould you like me to check what's uncommitted and create a commit? If so, please approve the `git status` command when prompted.",
-    "Q015": "My git commands need your approval to run. The stop hook flagged uncommitted changes — could you approve the `git status` command so I can see what needs to be committed and pushed?",
-    "Q016": "It looks like git staging requires approval in the current permission mode. The changes ready to commit are:\n\n- **`log.md`** — 5 new query log entries appended (including the current 6.0→6.1 security query)\n- **`eval/results_claude_p.json`** — new evaluation results file from a prior session\n\nPlease approve the `git add` and subsequent `git commit` + `git push` commands, or let me know if you'd like to review the diff first before staging.",
-    "Q017": "The permission mode is blocking the git staging commands. Here's what needs to be committed:\n\n- **`log.md`** — new QUERY entry for the BLE advertising 4.0→5.0 question\n- **`eval/results_claude_p.json`** — untracked evaluation results file from a prior run\n\nPlease approve the `git add` and `git commit` steps, or run them manually:\n\n```bash\ngit add log.md eval/results_claude_p.json\ngit commit -m \"chore: log QUERY entry for BLE advertising capacity 4.0→5.0\"\ngit push\n```",
-    "Q018": "I need your approval to run git commands to stage and commit these files. The changes are:\n\n- **`log.md`** — 6 new query log entries (BLE advertising capacity, security/privacy 6.0→6.1, LE Power Control, CIS vs BIS, Connection Subrating, Channel Sounding, and today's connection interval query)\n- **`eval/results_claude_p.json`** — evaluation run output (already referenced in the commit history)\n\nShould I go ahead and commit + push both files to `origin/claude/generate-answers-report-xrRDt`?",
-    "Q019": "(timeout)",
-    "Q020": "(timeout)",
-    "Q021": "It looks like git commands are being blocked by your permission settings. I can't check the status or commit without your approval for each command.\n\nA few options:\n\n1. **Run it yourself** — `git -C /home/user/bluetooth_wiki status` to see what's uncommitted, then commit and push manually.\n2. **Adjust permissions** — if you'd like me to handle git operations automatically, you can allow `git` commands in your settings (I can do this via `/update-config`).\n3. **Approve each step** — approve the git status command above, and I'll walk through committing and pushing with your approval at each step.\n\nWhich would you prefer?",
-    "Q022": "It looks like git write operations need your approval. The changes are straightforward:\n\n- **`log.md`** — the activity log entry I appended for this query (as required by CLAUDE.md §4.2)\n- **`eval/results_claude_p.json`** — an existing untracked file from a prior evaluation run\n\nCould you approve the `git add` and `git commit` commands? Or if you'd prefer, I can skip staging the eval file and only commit the log entry.",
-    "Q023": "The git staging and commit commands need your approval when prompted. Please approve the `git add` and `git commit` tool calls — or if you'd prefer, run these yourself:\n\n```bash\ngit add log.md eval/results_claude_p.json\ngit commit -m \"chore: log query session entries and persist eval results\"\ngit push\n```\n\nThe two changed files are:\n- **`log.md`** — 10 new QUERY entries from today's session (appended, no edits to existing content)\n- **`eval/results_claude_p.json`** — incremental evaluation results from a prior `claude -p` run",
-    "Q024": "The `git status` command requires your approval. Could you allow git commands so I can check what's changed and commit/push it? Alternatively, if you'd prefer to handle the commit yourself, you can run:\n\n```bash\ncd /home/user/bluetooth_wiki\ngit status\ngit add -A\ngit commit -m \"your message\"\ngit push\n```",
-    "Q025": "(timeout)",
-    "Q026": "It looks like git write operations need explicit approval each time. I need your permission to run each of these steps:\n\n1. `git add log.md eval/results_claude_p.json`\n2. `git commit -m \"chore: log session queries and save eval results\"`\n3. `git push`\n\nThe changes are:\n- **`log.md`** — new append-only entries for all queries answered in this session (LE Power Control, LESC pairing, BIS/CIS, Channel Sounding, subrating, privacy evolution, etc.)\n- **`eval/results_claude_p.json`** — new evaluation results file from a prior `claude -p` run\n\nCan you approve the git operations so I can stage, commit, and push these?",
-    "Q027": "The git commands require your approval. Could you approve the following commands to commit and push?\n\n1. `git -C /home/user/bluetooth_wiki status`\n2. `git -C /home/user/bluetooth_wiki add log.md`\n3. `git -C /home/user/bluetooth_wiki commit -m \"log: record query on 6.2/5.4 connection interval interop\"`\n4. `git -C /home/user/bluetooth_wiki push`\n\nOr if you'd prefer, you can run them directly in your terminal. The only change is the `log.md` entry I just added for the query we answered.",
-    "Q028": "The user's permission settings are blocking my git commands. You'll need to either:\n\n1. **Run it yourself:**\n   ```bash\n   cd /home/user/bluetooth_wiki\n   git add -p          # review changes interactively\n   git commit -m \"...\"\n   git push\n   ```\n\n2. **Or grant permission** for `git` commands so I can handle it on your behalf (you can add git to your allowed commands in Claude Code settings).\n\nThe stop hook (`~/.claude/stop-hook-git-check.sh`) detected uncommitted changes — these are likely the log entries from the query I just answered. Let me know how you'd like to proceed.",
-    "Q029": "(timeout)",
-    "Q030": "(timeout)",
-    "Q031": "Git commands require your approval each time, which is why the stop hook keeps firing. Two options:\n\n1. **Approve the `git add` command above** — I'll follow with the commit and push once approved.\n\n2. **Allowlist git operations for this project** so they run without prompting — I can do that now with `/update-config` if you'd like.\n\nOr run it manually:\n```bash\ngit add log.md eval/results_claude_p.json\ngit commit -m \"chore: commit session log entries and partial eval results\"\ngit push\n```",
-    "Q032": "The git commands need your approval to run. This session I only **read** files (`index.md` and `security.md`) — I made no edits — so any uncommitted changes predate this conversation.\n\nTo resolve the hook feedback, you can either:\n\n1. **Approve the git commands** so I can inspect and commit the changes for you, or\n2. Run these yourself in the terminal:\n   ```bash\n   cd /home/user/bluetooth_wiki\n   git status          # see what's changed\n   git diff            # review the changes\n   git add -p          # stage selectively\n   git commit -m \"your message\"\n   git push\n   ```\n\nIf you approve git access, I can handle the commit and push for you — just say the word.",
-    "Q033": "The shell is prompting for approval on each git operation. Please approve the `git add` command above, and I'll proceed with the commit and push once it goes through. The two files being staged are:\n\n- `log.md` — 12 new QUERY entries from today's session\n- `eval/results_claude_p.json` — incremental evaluation output file",
-    "Q034": "The git commands are being blocked by your permission settings. You have a few options:\n\n1. **Approve the commands manually** when prompted — I'll check what's uncommitted, then commit and push.\n2. **Run it yourself** in the terminal:\n   ```bash\n   cd /home/user/bluetooth_wiki\n   git status\n   git add -A\n   git commit -m \"your message\"\n   git push\n   ```\n3. **Add git to your allowlist** via `/update-config` so these commands don't require approval in future sessions.\n\nSince I made no file changes this session (read-only), the uncommitted changes predate this conversation. Would you like me to commit them once you approve the git commands, or would you prefer to handle it yourself?",
-    "Q035": "Git staging and commit operations are blocked by your current permission settings. To resolve the stop hook, you can run this yourself in the terminal:\n\n```bash\ncd /home/user/bluetooth_wiki\ngit add log.md eval/results_claude_p.json\ngit commit -m \"chore: log session QUERY entries and save partial eval results\n\nAppends 12 QUERY log entries to log.md from session activity.\nAdds eval/results_claude_p.json — partial eval run (Q001 has a real\nBLE 6.2 answer; Q002–Q034 are meta-responses from prior blocked sessions).\n\nhttps://claude.ai/code/session_01QrY9UiUWruwBzSTqh2Vmeq\"\ngit push\n```\n\nAlternatively, if you'd like me to handle git operations automatically in future sessions, I can add `git` to the project allowlist — just say `/update-config` or ask me to do it.",
-    "Q036": "The git staging command needs your approval. Please approve it (and the subsequent commit/push) when prompted, or run these yourself:\n\n```bash\ngit add log.md eval/results_claude_p.json\ngit commit -m \"chore: log query session entries and save partial eval results\"\ngit push\n```\n\nThe two changes are:\n- **`log.md`** — append-only query log entries from prior sessions (as required by CLAUDE.md §4.2)\n- **`eval/results_claude_p.json`** — partial eval output from a prior `claude -p` run (Q001 has a real answer; remainder are blocked-git meta-responses)\n\nIf you'd like git operations to run without per-command approval in this repo, I can configure that via `/update-config`.",
-    "Q037": "(timeout)",
-    "Q038": "I need your approval to edit `.claude/settings.json`. Please approve the Edit tool call above to add the git permissions. Once approved, it will add these rules to the project allow list:\n\n```\n\"Bash(git add *)\"\n\"Bash(git commit *)\"\n\"Bash(git push*)\"\n\"Bash(git status*)\"\n\"Bash(git diff*)\"\n\"Bash(git log*)\"\n```\n\nThese go into `.claude/settings.json` (project-scoped, checked in), so they'll apply for all sessions in this repo. If you'd prefer them only for your own sessions without committing the change, I can put them in `.claude/settings.local.json` instead.",
-    "Q039": "The Edit to `.claude/settings.json` needs your approval. Please approve that tool call so I can add the git permissions, and then I'll be able to commit and push the pending changes automatically.\n\nIn the meantime, here's exactly what I'm adding to the existing `permissions.allow` array in `.claude/settings.json`:\n\n```json\n\"Bash(git add *)\",\n\"Bash(git commit *)\",\n\"Bash(git push*)\",\n\"Bash(git status*)\",\n\"Bash(git diff*)\",\n\"Bash(git log*)\"\n```\n\nOnce that's saved, I'll stage `log.md` and `eval/results_claude_p.json`, commit, and push to `origin/claude/generate-answers-report-xrRDt`.",
-    "Q040": "The git commands are being blocked by permissions. The stop hook detected uncommitted changes, but I can't run git commands without your approval — and committing/pushing is an action I'd want to confirm with you before taking regardless.\n\nCould you either:\n1. **Approve the `git status` command** so I can see what's changed and show you before committing, or\n2. **Let me know if you'd like me to commit and push** — I'll stage the relevant files and create a commit with an appropriate message once you confirm.",
-    "Q041": "Please approve the `git add log.md eval/results_claude_p.json` command so I can stage the files for commit.",
-    "Q042": "It seems git staging commands are being blocked. Could you approve the git operations so I can commit and push? I need to run:\n\n1. `git add log.md eval/results_claude_p.json`\n2. `git commit -m \"chore: log query session entries and save eval results\"`\n3. `git push`"
-  }
+    "Q002": "**Bluetooth Core Specification 5.1** (released 2019-01-21) first introduced Direction Finding with AoA and AoD.\n\n### How it works\n\nBoth modes rely on the **Constant Tone Extension (CTE)** — a fixed-frequency continuous tone appended after the CRC of an LE packet. It provides a stable carrier for phase measurement without carrying data, and is silently ignored by pre-5.1 devices.\n\n| Mode | Antenna array lives on... | Who measures phase |\n|------|---------------------------|--------------------|\n| **AoA** (Angle of Arrival) | Receiver | Receiver switches antennas, samples I/Q, computes incoming angle |\n| **AoD** (Angle of Departure) | Transmitter | Transmitter switches antennas during CTE; single-antenna receiver computes departure angle |\n\n### Required hardware\n\nDirection Finding is a **hardware feature** — it cannot be added in software. The radio controller must include **antenna array switching circuitry** timed to the CTE transmission or reception window. Support is advertised per-capability via the `LE Features` bitmask, with separate bits for:\n\n- `Connectionless CTE Transmitter` / `Connectionless CTE Receiver`\n- `Antenna Switching During CTE Transmission (AoD)` / `Antenna Switching During CTE Reception (AoA)`\n- `Sampling Received CTE`\n\nThe Host receives raw **I/Q samples** from the Controller and is responsible for running the angle calculation algorithms.\n\n> Sources: [Core 5.1, Vol 1, Part A, §8.1–8.2] · [Core 5.1, Vol 6, Part B, §2.5, §4.6.16–4.6.19] · [Core 5.1, Vol 4, Part E, §7.8.80–7.8.87]"
+  },
+  "per_question": []
 }

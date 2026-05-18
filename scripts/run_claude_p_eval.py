@@ -93,12 +93,14 @@ def load_dataset() -> dict:
 
 
 def run_claude_p(question: str) -> str:
-    """Run `claude -p <question>` and return stdout."""
+    """Run `claude -p <question>` in isolated HOME (no hooks) and return stdout."""
+    env = {**os.environ, "HOME": JUDGE_HOME}
     result = subprocess.run(
         ["claude", "-p", question],
         capture_output=True,
         text=True,
         timeout=120,
+        env=env,
     )
     return result.stdout.strip()
 
