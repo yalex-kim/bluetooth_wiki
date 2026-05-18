@@ -3,6 +3,84 @@
 > This is an **append-only** log. Never delete entries. Add new entries at the top.
 > Format: `## [YYYY-MM-DD] [Operation] — [Summary]`
 
+## [2026-05-18] QUERY — L2CAP Connection Parameter Update vs. BLE 5.3 Connection Subrating for peripheral-initiated event frequency reduction
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/connection-management.md`, `wiki/concepts/l2cap.md`
+**Answer**: Detailed comparison of the two mechanisms across mechanism path, what physically changes, transition speed, granularity, feature requirements, and Continuation_Number semantics.
+
+---
+
+## [2026-05-18] QUERY — Resolving List vs. Filter Accept List interaction with RPAs in BLE 4.2+
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/security.md`
+**Answer**: Explained the distinct purposes of the Resolving List (address resolution, IRK-based) and Filter Accept List (access control, identity-address-based), and the two-stage pipeline the Controller uses when a bonded peer presents an RPA — resolve via Resolving List first, then apply FAL check against the resolved identity address.
+
+---
+
+## [2026-05-18] QUERY — GATT database caching and skip-discovery mechanism in BLE 5.1
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/att-gatt.md`, `wiki/versions/core-spec-5.1.md`
+**Summary**: Answered question on how GATT database caching works in 5.1 and how bonded clients skip service discovery on reconnection. Covered: Database Hash characteristic (0x2B2A, AES-CMAC, Vol 3 Part G §7.3.1), Robust Caching / ATT error 0x12 (Database Out Of Sync), change-aware vs change-unaware client state, and the relationship with the legacy Service Changed (0x2A05) mechanism. No wiki gaps found.
+
+---
+
+## [2026-05-18] QUERY — BLE 6.1 RPA rotation behavior on active connections
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/versions/core-spec-6.1.md`, `wiki/version-diff/diff-6.0-to-6.1.md`, `wiki/concepts/security.md`
+**Summary**: Answered question on whether a 6.1 randomized RPA rotation interval firing during an active connection causes an immediate RPA rotation and/or connection break. Answer: no — existing connections are unaffected; address used at connection setup is retained for the connection's lifetime. New RPA applies only to subsequent advertising/scanning. No wiki gaps found.
+
+---
+
+## [2026-05-18] QUERY — HCI commands for Connection Subrating on BLE 5.3
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/connection-management.md`, `wiki/reference/hci-commands.md`, `wiki/versions/core-spec-5.3.md`
+**Summary**: Answered question on HCI commands (`HCI_LE_Set_Default_Subrate` / `HCI_LE_Subrate_Request`) and parameter constraints for Connection Subrating on established BLE 5.3 connections. No wiki gaps found; pages were complete and consistent.
+
+---
+
+## [2026-05-18] QUERY — HCI command sequence for BIS setup (LE Audio broadcast source)
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/reference/hci-sequences.md`, `wiki/concepts/le-audio.md`
+
+**Summary**: Answered user question about the full 9-step HCI sequence required to stand up a BIS broadcaster (LE Audio source side). Covered Phase 1 (extended + periodic advertising infrastructure: steps 1–6) and Phase 2 (BIG creation and ISO data path: steps 7–9). Highlighted critical ordering constraint (extended adv must be enabled before periodic adv), stereo multi-BIS pattern, encrypted broadcast (Auracast with Broadcast_Code), and ISO flow control via HCI_Number_Of_Completed_Packets. Citations: [Core 5.2, Vol 6, Part B, §4.4.6] and [Core 6.2, Vol 4, Part E, §7.8.103–7.8.108].
+
+---
+
+## [2026-05-18] QUERY — LE packet data length evolution (27-byte limit, DLE, history)
+Read: index.md, wiki/concepts/connection-management.md. Answered query about earliest BT version supporting >27 bytes per LE PDU (4.2 via DLE) and its evolution through 5.0 PHY additions.
+
+---
+
+## [2026-05-18] QUERY — BLE privacy evolution: RPA and related mechanisms 4.2 → 6.2
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/security.md`, `wiki/versions/core-spec-5.4.md`, `wiki/versions/core-spec-6.1.md`, `wiki/versions/core-spec-6.2.md`, `wiki/version-diff/diff-5.3-to-5.4.md`, `wiki/version-diff/diff-5.4-to-6.0.md`, `wiki/version-diff/diff-6.0-to-6.1.md`, `wiki/version-diff/diff-6.1-to-6.2.md`
+
+**Summary**: Traced the full evolution of BLE privacy (RPA and related) from 4.2 to 6.2 across three attack surfaces: (1) device identity tracking — addressed in 4.2 with the Resolving List, controller-based RPA resolution, Privacy Modes, and LE Secure Connections; (2) advertising payload fingerprinting — addressed in 5.4 with Encrypted Advertising Data (EAD, AES-128-CCM); (3) timing-based re-identification — addressed in 6.1 with randomized RPA rotation windows (HCI v2 command). Version 6.2 hardened the IRK subsystem via security errata (erratum 26048: zero IRK prohibition; erratum 24557: RNG quality; erratum 26043: no persisted ECDH key pairs).
+
+---
+
+## [2026-05-18] QUERY — Connection interval management evolution: BLE 5.3 → 6.2
+
+**Operation**: QUERY
+**By**: Claude (claude-sonnet-4-6)
+**Pages read**: `index.md`, `wiki/concepts/connection-management.md`, `wiki/versions/core-spec-5.3.md`, `wiki/versions/core-spec-6.2.md`, `wiki/version-diff/diff-5.3-to-5.4.md`, `wiki/version-diff/diff-5.4-to-6.0.md`, `wiki/version-diff/diff-6.1-to-6.2.md`
+
+**Summary**: Answered user question about how LE connection interval management evolved from 5.3 to 6.2. Two distinct inflection points: (1) 5.3 introduced Connection Subrating to control the *effective* interval without changing the underlying one; (2) 6.2 broke through the 7.5 ms *minimum* floor to 375 µs via a new rate-request mechanism built on top of the 5.3 subrating infrastructure. Versions 5.4, 6.0, and 6.1 made no changes to connection interval management.
+
 ---
 
 ## [2026-05-08] FEAT — Phase 1 agent: embedded Claude Agent SDK loop + per-question eval harness
