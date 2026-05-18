@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -103,9 +104,13 @@ def run_claude_p(question: str) -> str:
 
 
 def extract_json(text: str) -> dict:
+    """Extract first complete JSON object from text (handles markdown code blocks)."""
+    # Strip markdown fences like ```json ... ```
+    import re
+    text = re.sub(r"```(?:json)?\s*", "", text)
     start = text.find("{")
     if start == -1:
-        raise ValueError("No JSON object in judge response")
+        raise ValueError(f"No JSON object in judge response: {text[:200]!r}")
     depth = 0
     in_str = False
     esc = False
@@ -130,8 +135,23 @@ def extract_json(text: str) -> dict:
     raise ValueError("Unbalanced JSON in judge response")
 
 
+JUDGE_HOME = "/tmp/judge_home"
+
+
+def _init_judge_home() -> None:
+    """Create an isolated HOME for judge calls — no hooks, no git interference."""
+    import shutil
+    os.makedirs(f"{JUDGE_HOME}/.claude", exist_ok=True)
+    src = Path("/root/.claude.json")
+    dst = Path(f"{JUDGE_HOME}/.claude.json")
+    if src.exists() and src.resolve() != dst.resolve():
+        shutil.copy(src, dst)
+    with open(f"{JUDGE_HOME}/.claude/settings.json", "w") as f:
+        json.dump({}, f)
+
+
 def judge_answer(question: dict, system_answer: str) -> dict:
-    """Judge via claude -p with system+user prompt concatenated."""
+    """Judge via claude -p in an isolated HOME (no hooks, no git state interference)."""
     user = JUDGE_TEMPLATE.format(
         question=question["question"],
         reference=question["reference_answer"],
@@ -139,13 +159,23 @@ def judge_answer(question: dict, system_answer: str) -> dict:
         expected_citations=", ".join(question["expected_citations"]),
         system_answer=system_answer,
     )
-    full_prompt = JUDGE_SYSTEM + "\n\n" + user
+    full_prompt = (
+        JUDGE_SYSTEM
+        + "\n\n"
+        + user
+        + "\n\nCRITICAL: Your entire response must be a single raw JSON object. "
+        "Do NOT wrap it in markdown code fences. Do NOT add any prose before or after the JSON."
+    )
+    env = {**os.environ, "HOME": JUDGE_HOME}
     result = subprocess.run(
         ["claude", "-p", full_prompt],
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=180,
+        env=env,
     )
+    if not result.stdout.strip():
+        raise ValueError(f"Empty judge response (stderr: {result.stderr[:200]!r})")
     return extract_json(result.stdout)
 
 
@@ -176,11 +206,15 @@ def generate_answers(dataset: dict, existing: dict) -> dict:
 
 
 def _save_answers(answers: dict) -> None:
-    if RESULTS_PATH.exists():
-        saved = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
-    else:
-        saved = {}
+    saved = json.loads(RESULTS_PATH.read_text(encoding="utf-8")) if RESULTS_PATH.exists() else {}
     saved["answers"] = answers
+    RESULTS_PATH.write_text(json.dumps(saved, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _save_scores(answers: dict, results: list[dict]) -> None:
+    saved = json.loads(RESULTS_PATH.read_text(encoding="utf-8")) if RESULTS_PATH.exists() else {}
+    saved["answers"] = answers
+    saved["per_question"] = results
     RESULTS_PATH.write_text(json.dumps(saved, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
@@ -200,7 +234,20 @@ def judge_all(dataset: dict, answers: dict, existing_scores: dict) -> list[dict]
         ans = answers.get(qid, "")
         print(f"  [{i:2}/{total}] {qid} — judging …", end="", flush=True)
         t0 = time.perf_counter()
-        verdict = judge_answer(q, ans)
+        try:
+            verdict = judge_answer(q, ans)
+        except Exception as e:
+            print(f" ERROR: {e}")
+            # Give zero scores on judge failure so run continues
+            verdict = {
+                "scores": {"accuracy": 0, "completeness": 0, "citation": 0,
+                           "hallucination_penalty": 0, "usability": 0},
+                "rationales": {"accuracy": f"judge error: {e}", "completeness": "",
+                               "citation": "", "hallucination_penalty": "", "usability": ""},
+                "raw_total": 0,
+                "key_facts_found": [],
+                "key_facts_missing": q.get("key_facts", []),
+            }
         elapsed = time.perf_counter() - t0
         s = verdict["scores"]
         hall = s.get("hallucination_penalty", s.get("hallucination", 0))
@@ -222,6 +269,9 @@ def judge_all(dataset: dict, answers: dict, existing_scores: dict) -> list[dict]
             "answer": ans,
         }
         results.append(result)
+        # Save incrementally
+        existing_scores[qid] = result
+        _save_scores(answers, results)
         print(f" {elapsed:.1f}s  raw={raw}/11")
     return results
 
@@ -699,6 +749,7 @@ def main() -> int:
     p.add_argument("--skip-judge", action="store_true", help="Skip judging, use cached scores")
     args = p.parse_args()
 
+    _init_judge_home()
     dataset = load_dataset()
 
     # Load or init results JSON
