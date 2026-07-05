@@ -271,6 +271,14 @@ Each version produces:
 - `sources/specs/X.Y/Core_vX.Y.md` — full spec text with headings, inline tables, and figure references
 - `sources/specs/X.Y/Core_vX.Y_images/Vol{N}_Part{P}_Figure{X_Y}.png` — extracted figure images
 
+An alternative engine `scripts/convert_pymupdf4llm.py` (PyMuPDF4LLM 2-pass hybrid) is available
+for supplemental PDFs (errata, profiles, test suites) and documents whose formatting breaks the
+caption-driven heuristics. It keeps real markdown tables while extracting vector diagrams as
+images (caption safety net), and prints a quality-gate report (mojibake count, captions without
+images) — escalate a document to a model-based converter (e.g. Marker) when the gate fails.
+Use `--suffix .p4l` to keep both engines' outputs side by side for comparison.
+Prefer `convert_to_md.py` for Core Specs — it produces semantic figure names.
+
 The LLM should process the source markdown section by section:
 
 1. Parse the document structure to identify volumes and parts (marked by headings like `## 1 ARCHITECTURE`).

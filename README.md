@@ -68,6 +68,7 @@ bluetooth_wiki/
 ├── scripts/
 │   ├── download_spec_documents.py  ← Download PDFs from bluetooth.com
 │   ├── convert_to_md.py            ← Convert PDF → Markdown + figure PNGs via PyMuPDF
+│   ├── convert_pymupdf4llm.py      ← Alternative engine (PyMuPDF4LLM) for supplemental PDFs / A-B comparison
 │   ├── ingest.py                   ← Workflow for reflecting new specs into the wiki
 │   ├── eval_one.py                 ← Run one eval question through agent + LLM judge
 │   └── smoke_test_agent.py         ← End-to-end agent smoke test
