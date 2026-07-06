@@ -230,22 +230,21 @@ _ALT_FIG_RE = re.compile(r"Figure\s+(\d+(?:\.\d+)*)", re.IGNORECASE)
 
 
 def _figure_number_for(alt, lines, line_idx):
-    """Figure number for an image: from its alt text, else the nearest caption
-    within the next few non-blank lines. Returns the dotted number or None."""
+    """Figure number for an image: from its alt text, else its caption.
+
+    In the 2-pass output an image's caption is the FIRST non-blank line after
+    it. If that line is not a Figure X.Y caption, the image is un-captioned (a
+    later figure's caption further down must not be borrowed). Returns the
+    dotted number or None."""
     m = _ALT_FIG_RE.search(alt or "")
     if m:
         return m.group(1)
-    seen = 0
-    for j in range(line_idx + 1, min(line_idx + 8, len(lines))):
+    for j in range(line_idx + 1, len(lines)):
         s = lines[j].strip()
         if not s:
             continue
-        seen += 1
         cm = FIG_CAP_RE.match(s)
-        if cm:
-            return cm.group(1)
-        if seen &gt;= 3:
-            break
+        return cm.group(1) if cm else None
     return None
 
 
