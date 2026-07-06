@@ -77,26 +77,15 @@ def _hit_from_chunk(chunk, score: float, tag: str) -> SearchHit:
 
 
 def _rg_source_arm(query: str, versions: list[str]) -> list[SearchHit]:
-    """Lexical arm: rg over the version's Core spec, hits resolved to chunks."""
+    """Lexical arm: rg over the version's Core spec, hits resolved to chunks.
+
+    Chunk resolution now happens inside ranked_rg_search, which buckets matches
+    per (file, chunk) and attaches Vol/Part/§ metadata — so hits come back
+    already chunk-resolved and deduped. Versions without a built index yield
+    raw line hits (chunk_id is None), still usable.
+    """
     roots = [SOURCES_DIR / "specs" / v for v in versions]
-    line_hits = ranked_rg_search(query, roots, limit=_SOURCE_TOPK, source_tag="ripgrep-source")
-    out: list[SearchHit] = []
-    seen: set[str] = set()
-    for h in line_hits:
-        m = re.search(r"sources/specs/([^/]+)/Core_v", h.file_path)
-        idx = load_index(m.group(1)) if m else None
-        if idx and h.line_start:
-            chunk = idx.find_chunk_for_line(h.line_start)
-            if chunk:
-                if chunk.id in seen:
-                    continue
-                seen.add(chunk.id)
-                ch = _hit_from_chunk(chunk, h.score, "ripgrep-source")
-                ch.snippet = h.snippet or ch.snippet  # keep the matched line as snippet
-                out.append(ch)
-                continue
-        out.append(h)  # no index for this version → raw line hit (still usable)
-    return out
+    return ranked_rg_search(query, roots, limit=_SOURCE_TOPK, source_tag="ripgrep-source")
 
 
 def _vector_source_arm(query: str, versions: list[str]) -> tuple[list[SearchHit], str | None]:
