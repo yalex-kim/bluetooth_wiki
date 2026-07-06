@@ -84,3 +84,23 @@ def test_non_indexed_file_stays_single_hit(tmp_path, monkeypatch):
 
     assert len(hits) == 1
     assert hits[0].chunk_id is None
+
+
+def test_core_spec_variant_not_chunk_resolved(tmp_path, monkeypatch):
+    # A same-directory conversion variant (Core_v9.9.p4l3.md) must NOT resolve
+    # against the real spec's chunk index — the anchored _CORE_SPEC_RE rejects it.
+    from search import v1_ripgrep
+    repo = _fake_repo(tmp_path)
+    _write(repo / "sources/specs/9.9/Core_v9.9.p4l3.md",
+           "# variant\nThe widget mechanism (variant copy).\n")
+    _point_modules_at(repo, monkeypatch)
+
+    hits = v1_ripgrep.ranked_rg_search(
+        "widget", [repo / "sources/specs/9.9"], source_tag="ripgrep-source"
+    )
+
+    by_file = {h.file_path: h for h in hits}
+    variant = next(h for f, h in by_file.items() if f.endswith("Core_v9.9.p4l3.md"))
+    assert variant.chunk_id is None
+    # The real spec's matches still resolve to chunks.
+    assert any(h.chunk_id is not None for h in hits)

@@ -13,12 +13,17 @@ import math
 import re
 from collections import defaultdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from agent.config import REPO_ROOT, SEARCH_RESULT_LIMIT, SEARCH_SNIPPET_CHARS, SOURCES_DIR, WIKI_DIR
 
 from .base import SearchHit, SearchResult
 from .rg_util import rg_search
 from .index_store import load_index
+
+if TYPE_CHECKING:
+    from .chunker import Chunk
+    from .index_store import VersionIndex
 
 _STOPWORDS = frozenset(
     "a an and are as at be by for from has have how in is it its of on or that the this to was what when where which with".split()
@@ -32,23 +37,20 @@ _TERM_RE = re.compile(r"[A-Za-z0-9_]+(?:\.[0-9]+)*")
 _CORE_SPEC_RE = re.compile(r"sources/specs/([^/]+)/Core_v\1\.md$")
 
 
-def _chunk_for(path, line, version_memo):
+def _chunk_for(path: Path, line: int, index_memo: dict[Path, "VersionIndex | None"]) -> "Chunk | None":
     """Chunk containing `line` if `path` is an indexed Core spec source, else None.
 
-    `version_memo` caches path -> spec-version (or None) so the resolve/regex
-    runs once per file rather than once per match line.
+    `index_memo` caches path -> (VersionIndex | None) so the resolve/regex and
+    load_index each run once per file rather than once per match line.
     """
-    if path not in version_memo:
+    if path not in index_memo:
         try:
             rel = path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
         except ValueError:
             rel = path.as_posix()
         m = _CORE_SPEC_RE.search(rel)
-        version_memo[path] = m.group(1) if m else None
-    version = version_memo[path]
-    if version is None:
-        return None
-    idx = load_index(version)
+        index_memo[path] = load_index(m.group(1)) if m else None
+    idx = index_memo[path]
     if idx is None:
         return None
     return idx.find_chunk_for_line(line)
@@ -87,15 +89,15 @@ def ranked_rg_search(
     if not terms:
         return []
 
-    version_memo: dict[Path, str | None] = {}
+    index_memo: dict[Path, "VersionIndex | None"] = {}
     # bucket key = (path, chunk_id or None); remember the resolved chunk per bucket.
     per_bucket: dict[tuple[Path, str | None], dict[str, list[tuple[int, str]]]] = defaultdict(
         lambda: defaultdict(list)
     )
-    bucket_chunk: dict[tuple[Path, str | None], object] = {}
+    bucket_chunk: dict[tuple[Path, str | None], "Chunk | None"] = {}
     for term in terms:
         for m in rg_search(term, roots):
-            chunk = _chunk_for(m.path, m.line_number, version_memo)
+            chunk = _chunk_for(m.path, m.line_number, index_memo)
             key = (m.path, chunk.id if chunk else None)
             per_bucket[key][term].append((m.line_number, m.line_text))
             bucket_chunk.setdefault(key, chunk)
@@ -104,7 +106,7 @@ def ranked_rg_search(
     phrase_buckets: dict[tuple[Path, str | None], tuple[int, str]] = {}
     if len(terms) > 1 and len(query.strip()) > 3:
         for m in rg_search(query.strip(), roots):
-            chunk = _chunk_for(m.path, m.line_number, version_memo)
+            chunk = _chunk_for(m.path, m.line_number, index_memo)
             key = (m.path, chunk.id if chunk else None)
             phrase_buckets.setdefault(key, (m.line_number, m.line_text))
 
