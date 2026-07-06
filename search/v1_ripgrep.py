@@ -18,12 +18,40 @@ from agent.config import REPO_ROOT, SEARCH_RESULT_LIMIT, SEARCH_SNIPPET_CHARS, S
 
 from .base import SearchHit, SearchResult
 from .rg_util import rg_search
+from .index_store import load_index
 
 _STOPWORDS = frozenset(
     "a an and are as at be by for from has have how in is it its of on or that the this to was what when where which with".split()
 )
 
 _TERM_RE = re.compile(r"[A-Za-z0-9_]+(?:\.[0-9]+)*")
+
+# Matches sources/specs/<version>/Core_v<version>.md exactly (the \1
+# backreference forces the dir version and filename version to be identical,
+# and the anchored .md$ excludes .p4l/.p4l2 test-conversion variants).
+_CORE_SPEC_RE = re.compile(r"sources/specs/([^/]+)/Core_v\1\.md$")
+
+
+def _chunk_for(path, line, version_memo):
+    """Chunk containing `line` if `path` is an indexed Core spec source, else None.
+
+    `version_memo` caches path -> spec-version (or None) so the resolve/regex
+    runs once per file rather than once per match line.
+    """
+    if path not in version_memo:
+        try:
+            rel = path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        m = _CORE_SPEC_RE.search(rel)
+        version_memo[path] = m.group(1) if m else None
+    version = version_memo[path]
+    if version is None:
+        return None
+    idx = load_index(version)
+    if idx is None:
+        return None
+    return idx.find_chunk_for_line(line)
 
 
 def tokenize(query: str) -> list[str]:
@@ -59,20 +87,30 @@ def ranked_rg_search(
     if not terms:
         return []
 
-    # file -> term -> [(line_number, line_text)]
-    per_file: dict[Path, dict[str, list[tuple[int, str]]]] = defaultdict(lambda: defaultdict(list))
+    version_memo: dict[Path, str | None] = {}
+    # bucket key = (path, chunk_id or None); remember the resolved chunk per bucket.
+    per_bucket: dict[tuple[Path, str | None], dict[str, list[tuple[int, str]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    bucket_chunk: dict[tuple[Path, str | None], object] = {}
     for term in terms:
         for m in rg_search(term, roots):
-            per_file[m.path][term].append((m.line_number, m.line_text))
+            chunk = _chunk_for(m.path, m.line_number, version_memo)
+            key = (m.path, chunk.id if chunk else None)
+            per_bucket[key][term].append((m.line_number, m.line_text))
+            bucket_chunk.setdefault(key, chunk)
 
     # Exact-phrase pass (multi-word queries only) for a strong precision boost.
-    phrase_files: dict[Path, tuple[int, str]] = {}
+    phrase_buckets: dict[tuple[Path, str | None], tuple[int, str]] = {}
     if len(terms) > 1 and len(query.strip()) > 3:
         for m in rg_search(query.strip(), roots):
-            phrase_files.setdefault(m.path, (m.line_number, m.line_text))
+            chunk = _chunk_for(m.path, m.line_number, version_memo)
+            key = (m.path, chunk.id if chunk else None)
+            phrase_buckets.setdefault(key, (m.line_number, m.line_text))
 
     hits: list[SearchHit] = []
-    for path, term_map in per_file.items():
+    for key, term_map in per_bucket.items():
+        path, _chunk_id = key
         coverage = len(term_map) / len(terms)
         total_matches = sum(len(v) for v in term_map.values())
         score = 3.0 * coverage + 0.3 * math.log1p(total_matches)
@@ -89,11 +127,11 @@ def ranked_rg_search(
                     best_density, best_line = density, ln
             if best_density >= 2:
                 score += 0.8 * (best_density / len(terms))
-        if path in phrase_files:
+        if key in phrase_buckets:
             score += 2.0
-            best_line = phrase_files[path][0]
+            best_line = phrase_buckets[key][0]
 
-        # Snippet: the densest matched line (falls back to first match).
+        # Snippet: the densest matched line (falls back to first match / phrase).
         line_text = ""
         for pairs in term_map.values():
             for ln, text in pairs:
@@ -102,22 +140,35 @@ def ranked_rg_search(
                     break
             if line_text:
                 break
-        if not line_text and path in phrase_files:
-            line_text = phrase_files[path][1]
+        if not line_text and key in phrase_buckets:
+            line_text = phrase_buckets[key][1]
         snippet = line_text.strip()[:SEARCH_SNIPPET_CHARS]
 
-        hits.append(
-            SearchHit(
-                file_path=path.resolve().relative_to(REPO_ROOT.resolve()).as_posix(),
-                snippet=snippet,
-                score=round(score, 4),
-                line_start=best_line,
-                line_end=best_line,
-                source_tag=source_tag,
-            )
+        hit = SearchHit(
+            file_path=path.resolve().relative_to(REPO_ROOT.resolve()).as_posix(),
+            snippet=snippet,
+            score=round(score, 4),
+            line_start=best_line,
+            line_end=best_line,
+            source_tag=source_tag,
         )
+        chunk = bucket_chunk.get(key)
+        if chunk is not None:
+            # Chunk-resolved source hit: attach Vol/Part/§ citation metadata and
+            # widen the line span to the chunk (matched line stays as snippet).
+            hit.version = chunk.version
+            hit.vol = chunk.vol
+            hit.part = chunk.part
+            hit.section = chunk.section
+            hit.heading_title = chunk.heading_title
+            hit.chunk_id = chunk.id
+            hit.line_start = chunk.line_start
+            hit.line_end = chunk.line_end
+            if not snippet:
+                hit.snippet = " ".join(chunk.text.split())[:SEARCH_SNIPPET_CHARS]
+        hits.append(hit)
 
-    hits.sort(key=lambda h: (-h.score, h.file_path))
+    hits.sort(key=lambda h: (-h.score, h.file_path, h.line_start or 0))
     return hits[:limit]
 
 
