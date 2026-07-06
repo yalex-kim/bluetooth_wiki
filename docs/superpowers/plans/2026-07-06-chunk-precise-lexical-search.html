@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chunk-precise lexical search — Implementation Plan</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1b1f24; --muted: #57606a; --border: #d0d7de;
+    --code-bg: #f6f8fa; --accent: #0969da; --accent-bg: #ddf4ff;
+    --add: #1a7f37; --del: #cf222e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --code-bg: #161b22; --accent: #4493f8; --accent-bg: #0c2d4a;
+      --add: #3fb950; --del: #f85149;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 1rem; }
+  h2 {
+    font-size: 1.35rem; margin: 2.5rem 0 1rem; padding-bottom: .35rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.1rem; margin: 2rem 0 .75rem; }
+  h4 { font-size: .98rem; margin: 1.25rem 0 .4rem; color: var(--fg); }
+  p, li { color: var(--fg); }
+  .muted { color: var(--muted); }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .88em; background: var(--code-bg); padding: .12em .4em;
+    border-radius: 6px; border: 1px solid var(--border);
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; font-size: .84rem; line-height: 1.5;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+  .callout {
+    background: var(--accent-bg); border: 1px solid var(--border);
+    border-left: 4px solid var(--accent); border-radius: 6px;
+    padding: .85rem 1rem; margin: 1.25rem 0;
+  }
+  .task {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.25rem 1.4rem; margin: 1.5rem 0; background: var(--bg);
+  }
+  .task > h3:first-child { margin-top: 0; }
+  .files dt { font-weight: 600; margin-top: .5rem; }
+  .files dd { margin: 0 0 0 1rem; }
+  .step { list-style: none; padding-left: 0; }
+  .step > li { margin: 1rem 0; padding-left: 1.9rem; position: relative; }
+  .step > li::before {
+    content: "[ ]"; position: absolute; left: 0; top: 0;
+    font-family: ui-monospace, monospace; color: var(--muted); font-weight: 700;
+  }
+  .add { color: var(--add); }
+  .del { color: var(--del); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+  .meta { color: var(--muted); font-size: .92rem; }
+  ul.tight { margin: .3rem 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Chunk-precise lexical search for Core spec sources — Implementation Plan</h1>
+
+<div class="callout">
+  <strong>For agentic workers:</strong> REQUIRED SUB-SKILL — use
+  <code>superpowers:subagent-driven-development</code> (recommended) or
+  <code>superpowers:executing-plans</code> to implement this plan task-by-task.
+  Steps use <code>[ ]</code> / <code>[x]</code> markers for tracking; flip the
+  marker in this file as each step completes.
+</div>
+
+<p class="meta">
+  Spec: <code>docs/superpowers/specs/2026-07-06-chunk-precise-lexical-search-design.md</code>
+  &nbsp;·&nbsp; Date: 2026-07-06
+</p>
+
+<p><strong>Goal:</strong> Make <code>ranked_rg_search</code> group ripgrep
+matches per <em>(file, Vol/Part chunk)</em> instead of per file, so multiple
+relevant sections of a single multi-thousand-page Core spec source file each
+surface as their own ranked, citation-ready hit.</p>
+
+<p><strong>Architecture:</strong> Resolve each ripgrep match line to its
+<code>chunker.Chunk</code> (via the already-built
+<code>search/index/&lt;version&gt;/chunks.jsonl</code> index and
+<code>VersionIndex.find_chunk_for_line</code>) at aggregation time inside
+<code>ranked_rg_search</code>. Bucket by <code>(path, chunk_id)</code>; paths
+with no chunk index (wiki pages, un-indexed versions) keep today's single
+whole-file bucket. Then delete the now-duplicate re-resolution loop in v2's
+<code>_rg_source_arm</code>.</p>
+
+<p><strong>Tech Stack:</strong> Python ≥3.10, ripgrep (<code>rg</code>) on PATH,
+existing <code>search/</code> package (<code>v1_ripgrep</code>,
+<code>index_store</code>, <code>chunker</code>, <code>base</code>), pytest
+(dev extra).</p>
+
+<h2>Global Constraints</h2>
+<ul class="tight">
+  <li>Python ≥ 3.10 (<code>pyproject.toml</code> <code>requires-python</code>).</li>
+  <li>No new runtime dependencies. Only <code>search.index_store.load_index</code>
+      (already used by <code>v2_hybrid</code>) and stdlib are added to
+      <code>v1_ripgrep</code>.</li>
+  <li>Do <strong>not</strong> modify <code>search/chunker.py</code>,
+      <code>search/index_store.py</code>, <code>search/embeddings.py</code>, or
+      <code>search/fusion.py</code>. They already expose everything needed.</li>
+  <li>Wiki / non-indexed behavior must be byte-for-byte unchanged (purely
+      additive change).</li>
+  <li>The Core-spec path matcher must match
+      <code>sources/specs/&lt;version&gt;/Core_v&lt;version&gt;.md</code>
+      <em>exactly</em> so test-conversion variants in the same directory
+      (<code>Core_v6.3.p4l3.md</code>, etc.) never resolve against the real
+      index.</li>
+  <li>Tests require <code>rg</code> on PATH; skip cleanly when it is absent
+      (ripgrep is not currently installed on the dev machine — install it, e.g.
+      <code>choco install ripgrep</code>, to actually exercise the tests).</li>
+</ul>
+
+<hr>
+
+<!-- ─────────────────────────── TASK 1 ─────────────────────────── -->
+<div class="task">
+<h3>Task 1: Bucket <code>ranked_rg_search</code> by (file, chunk)</h3>
+
+<dl class="files">
+  <dt>Modify</dt>
+  <dd><code>search/v1_ripgrep.py</code> — add imports + <code>_chunk_for</code>
+      helper; rewrite <code>ranked_rg_search</code> body.</dd>
+  <dt>Create</dt>
+  <dd><code>tests/search/test_ranked_rg_search_chunking.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li><strong>Consumes:</strong>
+      <code>search.index_store.load_index(version: str) -&gt; VersionIndex | None</code>
+      and <code>VersionIndex.find_chunk_for_line(line: int) -&gt; Chunk | None</code>
+      (existing). <code>Chunk</code> fields:
+      <code>id, version, vol, part, part_title, section, heading_title,
+      line_start, line_end, text</code>.</li>
+  <li><strong>Produces:</strong> <code>ranked_rg_search(query, roots, *,
+      limit=SEARCH_RESULT_LIMIT, source_tag="ripgrep-wiki") -&gt;
+      list[SearchHit]</code> — unchanged signature. For matches inside an
+      indexed Core spec file, returned hits now carry
+      <code>version/vol/part/section/heading_title/chunk_id</code> and
+      <code>line_start/line_end</code> set to the chunk span; each distinct
+      chunk is a separate hit. Non-indexed paths yield one hit per file with
+      <code>chunk_id is None</code> (unchanged).</li>
+</ul>
+
+<ol class="step">
+
+<li><h4>Step 1: Write the failing tests</h4>
+Create <code>tests/search/test_ranked_rg_search_chunking.py</code>:
+<pre><code>import json
+import shutil
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    shutil.which("rg") is None, reason="ripgrep (rg) not on PATH"
+)
+
+
+def _write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _fake_repo(tmp_path):
+    """A minimal repo tree: one Core spec source file + a 2-chunk index.
+
+    'widget' appears at line 2 (Vol 1 Part A) and line 8 (Vol 6 Part B),
+    which fall into two different chunks.
+    """
+    repo = tmp_path
+    lines = [
+        "# Core v9.9",                        # 1
+        "The widget mechanism is described.",  # 2
+        "filler", "filler", "filler",          # 3-5
+        "filler", "filler",                    # 6-7
+        "Another widget appears far below.",   # 8
+        "end",                                 # 9
+    ]
+    _write(repo / "sources/specs/9.9/Core_v9.9.md", "\n".join(lines) + "\n")
+
+    chunks = [
+        {"id": "9.9:1:A:1:1", "version": "9.9", "vol": "1", "part": "A",
+         "part_title": "Architecture", "section": "1", "heading_title": "Overview",
+         "line_start": 1, "line_end": 5, "text": "The widget mechanism is described."},
+        {"id": "9.9:6:B:4:6", "version": "9.9", "vol": "6", "part": "B",
+         "part_title": "Link Layer", "section": "4", "heading_title": "Widgets",
+         "line_start": 6, "line_end": 9, "text": "Another widget appears far below."},
+    ]
+    idx = repo / "search/index/9.9"
+    idx.mkdir(parents=True, exist_ok=True)
+    (idx / "chunks.jsonl").write_text(
+        "\n".join(json.dumps(c) for c in chunks), encoding="utf-8"
+    )
+    return repo
+
+
+def _point_modules_at(repo, monkeypatch):
+    from search import v1_ripgrep, index_store
+    monkeypatch.setattr(v1_ripgrep, "REPO_ROOT", repo)
+    monkeypatch.setattr(v1_ripgrep, "SOURCES_DIR", repo / "sources")
+    monkeypatch.setattr(index_store, "SEARCH_INDEX_DIR", repo / "search" / "index")
+    index_store._index_cache.clear()
+
+
+def test_two_chunks_same_file_yield_two_hits(tmp_path, monkeypatch):
+    from search import v1_ripgrep
+    repo = _fake_repo(tmp_path)
+    _point_modules_at(repo, monkeypatch)
+
+    hits = v1_ripgrep.ranked_rg_search(
+        "widget", [repo / "sources/specs/9.9"], source_tag="ripgrep-source"
+    )
+
+    assert len(hits) == 2
+    by_id = {h.chunk_id: h for h in hits}
+    assert sorted(by_id) == ["9.9:1:A:1:1", "9.9:6:B:4:6"]
+    assert (by_id["9.9:1:A:1:1"].vol, by_id["9.9:1:A:1:1"].part) == ("1", "A")
+    assert (by_id["9.9:6:B:4:6"].vol, by_id["9.9:6:B:4:6"].part) == ("6", "B")
+    assert by_id["9.9:1:A:1:1"].version == "9.9"
+
+
+def test_non_indexed_file_stays_single_hit(tmp_path, monkeypatch):
+    from search import v1_ripgrep
+    repo = tmp_path
+    _write(repo / "wiki/concepts/foo.md",
+           "widget here\n\n\n\n\n\n\n\nwidget again\n")
+    _point_modules_at(repo, monkeypatch)
+
+    hits = v1_ripgrep.ranked_rg_search(
+        "widget", [repo / "wiki"], source_tag="ripgrep-wiki"
+    )
+
+    assert len(hits) == 1
+    assert hits[0].chunk_id is None
+</code></pre>
+</li>
+
+<li><h4>Step 2: Run the tests to verify they fail</h4>
+Run (from repo root): <code>python -m pytest tests/search/test_ranked_rg_search_chunking.py -v</code><br>
+Expected: <code>test_two_chunks_same_file_yield_two_hits</code> FAILS with
+<code>assert 1 == 2</code> (today's per-file aggregation returns a single hit
+for the whole file with <code>chunk_id is None</code>).
+<code>test_non_indexed_file_stays_single_hit</code> PASSES (regression guard).
+<span class="muted">If <code>rg</code> is not installed both tests SKIP — install
+ripgrep first, otherwise the task cannot be verified.</span>
+</li>
+
+<li><h4>Step 3: Add imports and the chunk-resolution helper</h4>
+In <code>search/v1_ripgrep.py</code>, add to the imports (after the existing
+<code>from .base import SearchHit, SearchResult</code> /
+<code>from .rg_util import rg_search</code> lines):
+<pre><code>from .index_store import load_index</code></pre>
+Then add, just below the <code>_TERM_RE</code> definition near the top of the
+module:
+<pre><code># Matches sources/specs/&lt;version&gt;/Core_v&lt;version&gt;.md exactly (the \1
+# backreference forces the dir version and filename version to be identical,
+# and the anchored .md$ excludes .p4l/.p4l2 test-conversion variants).
+_CORE_SPEC_RE = re.compile(r"sources/specs/([^/]+)/Core_v\1\.md$")
+
+
+def _chunk_for(path, line, version_memo):
+    """Chunk containing `line` if `path` is an indexed Core spec source, else None.
+
+    `version_memo` caches path -&gt; spec-version (or None) so the resolve/regex
+    runs once per file rather than once per match line.
+    """
+    if path not in version_memo:
+        try:
+            rel = path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        m = _CORE_SPEC_RE.search(rel)
+        version_memo[path] = m.group(1) if m else None
+    version = version_memo[path]
+    if version is None:
+        return None
+    idx = load_index(version)
+    if idx is None:
+        return None
+    return idx.find_chunk_for_line(line)</code></pre>
+</li>
+
+<li><h4>Step 4: Rewrite <code>ranked_rg_search</code> to bucket by (path, chunk)</h4>
+Replace the entire body of <code>ranked_rg_search</code> (keep the signature
+and docstring) with:
+<pre><code>    terms = tokenize(query)
+    if not terms:
+        return []
+
+    version_memo: dict[Path, str | None] = {}
+    # bucket key = (path, chunk_id or None); remember the resolved chunk per bucket.
+    per_bucket: dict[tuple[Path, str | None], dict[str, list[tuple[int, str]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    bucket_chunk: dict[tuple[Path, str | None], object] = {}
+    for term in terms:
+        for m in rg_search(term, roots):
+            chunk = _chunk_for(m.path, m.line_number, version_memo)
+            key = (m.path, chunk.id if chunk else None)
+            per_bucket[key][term].append((m.line_number, m.line_text))
+            bucket_chunk.setdefault(key, chunk)
+
+    # Exact-phrase pass (multi-word queries only) for a strong precision boost.
+    phrase_buckets: dict[tuple[Path, str | None], tuple[int, str]] = {}
+    if len(terms) > 1 and len(query.strip()) > 3:
+        for m in rg_search(query.strip(), roots):
+            chunk = _chunk_for(m.path, m.line_number, version_memo)
+            key = (m.path, chunk.id if chunk else None)
+            phrase_buckets.setdefault(key, (m.line_number, m.line_text))
+
+    hits: list[SearchHit] = []
+    for key, term_map in per_bucket.items():
+        path, _chunk_id = key
+        coverage = len(term_map) / len(terms)
+        total_matches = sum(len(v) for v in term_map.values())
+        score = 3.0 * coverage + 0.3 * math.log1p(total_matches)
+
+        # Proximity: reward distinct terms co-occurring within a few lines.
+        all_lines = sorted({ln for pairs in term_map.values() for ln, _ in pairs})
+        best_line, best_density = all_lines[0], 1
+        if len(term_map) > 1:
+            for ln in all_lines:
+                density = sum(
+                    1 for pairs in term_map.values() if any(abs(line - ln) <= 3 for line, _ in pairs)
+                )
+                if density > best_density:
+                    best_density, best_line = density, ln
+            if best_density >= 2:
+                score += 0.8 * (best_density / len(terms))
+        if key in phrase_buckets:
+            score += 2.0
+            best_line = phrase_buckets[key][0]
+
+        # Snippet: the densest matched line (falls back to first match / phrase).
+        line_text = ""
+        for pairs in term_map.values():
+            for ln, text in pairs:
+                if ln == best_line:
+                    line_text = text
+                    break
+            if line_text:
+                break
+        if not line_text and key in phrase_buckets:
+            line_text = phrase_buckets[key][1]
+        snippet = line_text.strip()[:SEARCH_SNIPPET_CHARS]
+
+        hit = SearchHit(
+            file_path=path.resolve().relative_to(REPO_ROOT.resolve()).as_posix(),
+            snippet=snippet,
+            score=round(score, 4),
+            line_start=best_line,
+            line_end=best_line,
+            source_tag=source_tag,
+        )
+        chunk = bucket_chunk.get(key)
+        if chunk is not None:
+            # Chunk-resolved source hit: attach Vol/Part/§ citation metadata and
+            # widen the line span to the chunk (matched line stays as snippet).
+            hit.version = chunk.version
+            hit.vol = chunk.vol
+            hit.part = chunk.part
+            hit.section = chunk.section
+            hit.heading_title = chunk.heading_title
+            hit.chunk_id = chunk.id
+            hit.line_start = chunk.line_start
+            hit.line_end = chunk.line_end
+            if not snippet:
+                hit.snippet = " ".join(chunk.text.split())[:SEARCH_SNIPPET_CHARS]
+        hits.append(hit)
+
+    hits.sort(key=lambda h: (-h.score, h.file_path, h.line_start or 0))
+    return hits[:limit]</code></pre>
+<p class="muted">Note the <code>Path</code> type hints reference the
+<code>from pathlib import Path</code> already imported at the top of the module.</p>
+</li>
+
+<li><h4>Step 5: Run the tests to verify they pass</h4>
+Run: <code>python -m pytest tests/search/test_ranked_rg_search_chunking.py -v</code><br>
+Expected: both tests PASS (or SKIP if <code>rg</code> is unavailable).
+</li>
+
+<li><h4>Step 6: Sanity-check the wider search package imports cleanly</h4>
+Run: <code>python -c "import search.v1_ripgrep, search.v2_hybrid; print('ok')"</code><br>
+Expected: prints <code>ok</code> (no circular-import or NameError).
+</li>
+
+<li><h4>Step 7: Commit</h4>
+<pre><code>git add search/v1_ripgrep.py tests/search/test_ranked_rg_search_chunking.py
+git commit -m "feat(search): bucket ranked_rg_search by (file, chunk)
+
+Resolve each ripgrep match to its Vol/Part chunk so multiple sections of
+a single large Core spec source file surface as separate citation-ready
+hits. Non-indexed paths keep per-file behavior.
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<!-- ─────────────────────────── TASK 2 ─────────────────────────── -->
+<div class="task">
+<h3>Task 2: Drop the duplicate re-resolution in v2's <code>_rg_source_arm</code></h3>
+
+<dl class="files">
+  <dt>Modify</dt>
+  <dd><code>search/v2_hybrid.py</code> — simplify <code>_rg_source_arm</code>;
+      remove now-unused imports/helper if nothing else uses them.</dd>
+  <dt>Create</dt>
+  <dd><code>tests/search/test_rg_source_arm.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li><strong>Consumes:</strong> <code>ranked_rg_search</code> from Task 1
+      (now returns chunk-resolved hits directly).</li>
+  <li><strong>Produces:</strong> <code>_rg_source_arm(query: str,
+      versions: list[str]) -&gt; list[SearchHit]</code> — unchanged signature;
+      returns chunk-resolved source hits (deduped per chunk by construction),
+      falling back to raw line hits for versions with no index.</li>
+</ul>
+
+<ol class="step">
+
+<li><h4>Step 1: Write the failing test</h4>
+Create <code>tests/search/test_rg_source_arm.py</code>:
+<pre><code>import json
+import shutil
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    shutil.which("rg") is None, reason="ripgrep (rg) not on PATH"
+)
+
+
+def _write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def test_rg_source_arm_returns_chunk_resolved_hits(tmp_path, monkeypatch):
+    from search import v1_ripgrep, v2_hybrid, index_store
+
+    repo = tmp_path
+    lines = [
+        "# Core v9.9",                        # 1
+        "The widget mechanism is described.",  # 2
+        "filler", "filler", "filler",          # 3-5
+        "filler", "filler",                    # 6-7
+        "Another widget appears far below.",   # 8
+        "end",                                 # 9
+    ]
+    _write(repo / "sources/specs/9.9/Core_v9.9.md", "\n".join(lines) + "\n")
+    chunks = [
+        {"id": "9.9:1:A:1:1", "version": "9.9", "vol": "1", "part": "A",
+         "part_title": "Architecture", "section": "1", "heading_title": "Overview",
+         "line_start": 1, "line_end": 5, "text": "The widget mechanism is described."},
+        {"id": "9.9:6:B:4:6", "version": "9.9", "vol": "6", "part": "B",
+         "part_title": "Link Layer", "section": "4", "heading_title": "Widgets",
+         "line_start": 6, "line_end": 9, "text": "Another widget appears far below."},
+    ]
+    idx = repo / "search/index/9.9"
+    idx.mkdir(parents=True, exist_ok=True)
+    (idx / "chunks.jsonl").write_text(
+        "\n".join(json.dumps(c) for c in chunks), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(v1_ripgrep, "REPO_ROOT", repo)
+    monkeypatch.setattr(v1_ripgrep, "SOURCES_DIR", repo / "sources")
+    monkeypatch.setattr(v2_hybrid, "SOURCES_DIR", repo / "sources")
+    monkeypatch.setattr(index_store, "SEARCH_INDEX_DIR", repo / "search" / "index")
+    index_store._index_cache.clear()
+
+    hits = v2_hybrid._rg_source_arm("widget", ["9.9"])
+
+    ids = sorted(h.chunk_id for h in hits)
+    assert ids == ["9.9:1:A:1:1", "9.9:6:B:4:6"]
+    assert all(h.source_tag == "ripgrep-source" for h in hits)
+    # No duplicate chunks.
+    assert len(ids) == len(set(ids))
+</code></pre>
+</li>
+
+<li><h4>Step 2: Run the test — it should already PASS via the old code path</h4>
+Run: <code>python -m pytest tests/search/test_rg_source_arm.py -v</code><br>
+Expected: PASS. <span class="muted">The old <code>_rg_source_arm</code> also
+produces two chunk hits (it re-resolves internally), so this test passes before
+the refactor too — it exists to <em>lock in</em> the behavior so the
+simplification in Step 3 provably preserves it. If it SKIPs, install
+<code>rg</code>.</span>
+</li>
+
+<li><h4>Step 3: Simplify <code>_rg_source_arm</code></h4>
+In <code>search/v2_hybrid.py</code>, replace the whole <code>_rg_source_arm</code>
+function with:
+<pre><code>def _rg_source_arm(query: str, versions: list[str]) -&gt; list[SearchHit]:
+    """Lexical arm: rg over the version's Core spec, hits resolved to chunks.
+
+    Chunk resolution now happens inside ranked_rg_search, which buckets matches
+    per (file, chunk) and attaches Vol/Part/§ metadata — so hits come back
+    already chunk-resolved and deduped. Versions without a built index yield
+    raw line hits (chunk_id is None), still usable.
+    """
+    roots = [SOURCES_DIR / "specs" / v for v in versions]
+    return ranked_rg_search(query, roots, limit=_SOURCE_TOPK, source_tag="ripgrep-source")</code></pre>
+</li>
+
+<li><h4>Step 4: Remove imports/helpers left unused by the simplification</h4>
+Check what <code>v2_hybrid.py</code> still uses:
+<pre><code>python -c "import re,sys; src=open('search/v2_hybrid.py').read(); \
+print('load_index used:', src.count('load_index')); \
+print('find_chunk_for_line used:', src.count('find_chunk_for_line')); \
+print('_hit_from_chunk used:', src.count('_hit_from_chunk'))"</code></pre>
+<ul class="tight">
+  <li><code>_hit_from_chunk</code> is still used by
+      <code>_vector_source_arm</code> — <strong>keep it</strong>.</li>
+  <li><code>load_index</code> is still used by <code>_vector_source_arm</code>
+      (<code>load_index(v)</code>) — <strong>keep the import</strong>
+      (<code>available_versions, load_index</code> from <code>.index_store</code>).</li>
+  <li><code>find_chunk_for_line</code> should now appear <strong>0</strong>
+      times — it was only called in the old <code>_rg_source_arm</code>. No
+      import to remove (it was always accessed as a method).</li>
+</ul>
+Only remove an import if the count above shows it is genuinely unused. Given
+the vector arm keeps both <code>load_index</code> and <code>_hit_from_chunk</code>,
+expect <strong>no import removals</strong> — just the function-body swap.
+</li>
+
+<li><h4>Step 5: Run both search test files</h4>
+Run: <code>python -m pytest tests/search/ -v</code><br>
+Expected: all tests PASS (or SKIP without <code>rg</code>).
+</li>
+
+<li><h4>Step 6: Confirm v2 still imports and constructs cleanly</h4>
+Run: <code>python -c "from search.v2_hybrid import V2Hybrid; print(V2Hybrid().name)"</code><br>
+Expected: prints <code>v2</code>.
+</li>
+
+<li><h4>Step 7: Commit</h4>
+<pre><code>git add search/v2_hybrid.py tests/search/test_rg_source_arm.py
+git commit -m "refactor(search): drop duplicate chunk re-resolution in v2 _rg_source_arm
+
+ranked_rg_search now returns chunk-resolved, deduped source hits, so the
+manual load_index/find_chunk_for_line/_hit_from_chunk loop is redundant.
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Verification (whole feature)</h2>
+<ul class="tight">
+  <li><code>python -m pytest tests/search/ -v</code> — all pass (needs <code>rg</code>).</li>
+  <li><code>python -c "import search.v1_ripgrep, search.v2_hybrid; print('ok')"</code>.</li>
+  <li>Spec coverage: Task 1 implements the design's §"Changes 1"
+      (bucket-by-chunk + citation metadata) and §"Testing"; Task 2 implements
+      §"Changes 2" (remove duplicate re-resolution). Non-goals respected —
+      <code>chunker.py</code>, <code>index_store.py</code>,
+      <code>embeddings.py</code>, <code>fusion.py</code> untouched; no source
+      files physically split; no index rebuild required.</li>
+</ul>
+
+</main>
+</body>
+</html>
