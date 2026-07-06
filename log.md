@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-07-06] FEAT — Pluggable search strategies (v0/v1/v2) + strategy eval pipeline + FastAPI comparison UI
+
+**Operation**: FEAT
+**Scope**: New `search/` and `server/` packages; new `eval/judge.py`, `eval/runner.py`, `eval/report_render.py`; new `scripts/build_search_index.py`, `scripts/run_search_eval.py`, `scripts/generate_search_report.py`; refactored `agent/tools.py`, `agent/agent.py`, `agent/config.py`, `scripts/eval_one.py`; `pyproject.toml`, `.gitignore`, `.env.example`, `README.md`, `CLAUDE.md`.
+
+### What was added
+- `search/` — three interchangeable `search_wiki` backends behind one `SearchStrategy` protocol:
+  - **v0** — the original naive substring scan, relocated verbatim (baseline; rendered output byte-identical).
+  - **v1** — ripgrep-backed ranked lexical search (multi-term, coverage/proximity/exact-phrase scoring, line-accurate hits).
+  - **v2** — agentic tiered pipeline inside a single tool call: v1 over wiki → Haiku-class sufficiency judge → hybrid fallback over `sources/specs/` (ripgrep arm + local-embedding vector arm fused via Reciprocal Rank Fusion, k=60) → bounded query-reformulation loop (`BT_AGENT_SUFFICIENCY_MAX_ITER`). Degrades gracefully when the embedding index or judge model is unavailable.
+- `search/chunker.py` — structural chunker for `Core_vX.Y.md`, validated against all 8 versions (5.0–6.2). Detects real Part boundaries from body markers (`{Volume} Part {L}` lines in 6.x, `PART {L}: {TITLE}` in 5.x, figure-reference fallback for parts whose banner page was lost — e.g. 6.0 Vol 4 Part E), and filters PyMuPDF equation-noise headings via symbol blocklist + numbering-consistency checks.
+- `scripts/build_search_index.py` — idempotent per-version chunk+embedding index (`search/index/`, gitignored; `BAAI/bge-small-en-v1.5`, brute-force cosine, no vector DB). `--chunks-only` works without ML deps.
+- Eval: `eval/judge.py` (judge prompts/scoring extracted from `eval_one.py` — single source of truth), `eval/runner.py` (shared suite runner), `scripts/run_search_eval.py` (per-strategy `eval/results_search_v*.json` incl. latency/cost telemetry), `eval/report_render.py` + `scripts/generate_search_report.py` (`eval/report_search_compare.html` — score rings, latency/cost panel, per-category Δ, per-question pills).
+- `server/` — implements the previously declared-but-missing `bluetooth-wiki-agent-http` entry point: `POST /api/compare` (concurrent multi-strategy answers), `POST /api/eval/run` + status polling + report serving, single-page vanilla-JS UI.
+
+### Fixes
+- **`read_source` Vol/Part addressing was broken** — `[Vol N]`/`Part X` tagged headings exist only in front-matter, so e.g. `read_source(6.2, vol=2, part=A)` returned an acknowledgments contributor table instead of the Radio spec. Now backed by `search/chunker.py::parse_part_spans` (affects all strategies).
+- Chunker counts lines by `\n` only (not `str.splitlines()`), keeping line numbers aligned with editors/grep despite `\x0b`/`\x0c` artifacts in converted PDFs.
+- `agent/__init__.py` imports the SDK lazily so `search`/`eval` tooling works without `claude-agent-sdk` installed.
+- Duplicated brace-balancing JSON extraction consolidated into `agent/json_extract.py`.
+
+### Notes
+- `BluetoothWikiAgent(search_strategy=...)` / `BT_AGENT_SEARCH_STRATEGY` selects the backend; tool name/args/output envelope are identical across strategies, so `system_prompt.md` and `citations.py` are unchanged.
+- New deps: `numpy` (core), `sentence-transformers` (optional `embeddings` extra; ~130 MB model download on first index build).
+
+---
+
 ## [2026-05-08] FEAT — Phase 1 agent: embedded Claude Agent SDK loop + per-question eval harness
 
 **Operation**: FEAT

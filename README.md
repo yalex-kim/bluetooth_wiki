@@ -52,18 +52,38 @@ bluetooth_wiki/
 │       └── test-suites/         ← TS (Test Suite) docs
 │
 ├── eval/
-│   ├── dataset.json                ← 30-question evaluation dataset (RAG vs LLM-Wiki)
+│   ├── dataset.json                ← 42-question evaluation dataset (6 categories)
 │   ├── rubric.md                   ← Scoring rubric (5 dimensions + difficulty weights)
 │   ├── judge_prompt.md             ← LLM-as-Judge prompt + Python run_evaluation() helper
+│   ├── judge.py                    ← Shared judge/scoring module (imported by all runners)
+│   ├── runner.py                   ← Shared eval-suite runner (CLI + server jobs)
+│   ├── report_render.py            ← Strategy-comparison HTML renderer
 │   ├── results_wiki.json           ← LLM-Wiki baseline results (95.8%, 2026-05-04)
-│   └── report.html                 ← Visual evaluation dashboard
+│   ├── results_search_v{0,1,2}.json ← Per-search-strategy results (generated)
+│   ├── report.html                 ← Visual evaluation dashboard (baseline)
+│   └── report_search_compare.html  ← Search-strategy comparison report (generated)
 │
 ├── agent/                          ← Embedded agent loop (Phase 1, Python)
 │   ├── agent.py                    ← BluetoothWikiAgent.ask() — single entry point
 │   ├── system_prompt.md            ← Citation rules + anti-hallucination prompt
-│   ├── tools.py                    ← list_index, search_wiki, read_page, read_source
+│   ├── tools.py                    ← list_index, search_wiki (pluggable), read_page, read_source
 │   ├── citations.py                ← Citation ↔ hosted-site URL mapping
-│   └── config.py                   ← Env-driven config (model, paths, limits)
+│   ├── json_extract.py             ← Shared JSON extraction for LLM responses
+│   └── config.py                   ← Env-driven config (model, paths, limits, search strategy)
+│
+├── search/                         ← Pluggable search strategies (v0/v1/v2)
+│   ├── v0_naive.py                 ← v0: original substring scan (baseline)
+│   ├── v1_ripgrep.py               ← v1: ripgrep ranked lexical search
+│   ├── v2_hybrid.py                ← v2: agentic loop + hybrid (ripgrep+vector, RRF) fallback
+│   ├── chunker.py                  ← Core spec Vol/Part-aware structural chunker
+│   ├── embeddings.py / index_store.py / fusion.py / sufficiency.py / rg_util.py / render.py
+│   └── index/                      ← Generated chunk/embedding indexes (gitignored)
+│
+├── server/                         ← FastAPI test server + web UI
+│   ├── http.py                     ← Routes (/api/compare, /api/eval/run, …)
+│   ├── jobs.py                     ← In-memory background eval jobs
+│   ├── schemas.py                  ← Pydantic models
+│   └── static/index.html           ← Single-page strategy comparison UI
 │
 ├── scripts/
 │   ├── download_spec_documents.py  ← Download PDFs from bluetooth.com
@@ -71,6 +91,9 @@ bluetooth_wiki/
 │   ├── convert_pymupdf4llm.py      ← Alternative engine (PyMuPDF4LLM) for supplemental PDFs / A-B comparison
 │   ├── ingest.py                   ← Workflow for reflecting new specs into the wiki
 │   ├── eval_one.py                 ← Run one eval question through agent + LLM judge
+│   ├── build_search_index.py       ← Build chunk/embedding index per spec version
+│   ├── run_search_eval.py          ← Run eval dataset across search strategies
+│   ├── generate_search_report.py   ← Render strategy-comparison HTML report
 │   └── smoke_test_agent.py         ← End-to-end agent smoke test
 │
 └── guide/
@@ -108,7 +131,21 @@ The `eval/` directory contains a quality-measurement suite for comparing LLM-Wik
 | `results_wiki.json` | LLM-Wiki baseline: **95.8%** overall (521.5 / 544.5 weighted, 2026-05-04) |
 | `report.html` | Visual dashboard — open in browser to see category breakdown and improvement areas |
 
-To run a RAG comparison: collect answers from your RAG system for all 30 questions, call `run_evaluation()` from `judge_prompt.md`, and save results as `eval/results_rag.json`.
+To run a RAG comparison: collect answers from your RAG system for all questions, call `run_evaluation()` from `judge_prompt.md`, and save results as `eval/results_rag.json`.
+
+### Search-strategy comparison
+
+The agent's `search_wiki` tool has three interchangeable backends (see [Search Strategies](#search-strategies)). To score them against each other on the same dataset:
+
+```bash
+# smoke run first — a full run is strategies × 42 agent calls + judge calls
+.venv/bin/python scripts/run_search_eval.py --strategies v0 v1 v2 --limit 5
+# → eval/results_search_v0.json, _v1.json, _v2.json (scores + latency/cost telemetry)
+
+.venv/bin/python scripts/generate_search_report.py \
+    --inputs eval/results_search_v0.json eval/results_search_v1.json eval/results_search_v2.json
+# → eval/report_search_compare.html (side-by-side quality + latency/cost)
+```
 
 ---
 
@@ -160,9 +197,54 @@ Per-question evaluation:
 # → score breakdown + saves to eval/results_agent.json
 ```
 
-Tunable env vars: `BT_AGENT_MODEL` (default `claude-opus-4-7`), `BT_AGENT_MAX_TURNS`, `SITE_BASE_URL`.
+Tunable env vars: `BT_AGENT_MODEL` (default `claude-opus-4-7`), `BT_AGENT_MAX_TURNS`, `SITE_BASE_URL`, plus the search-strategy knobs below.
 
 The agent emits citations as `{label, file_path}` and `agent/citations.py` resolves them to deep-link URLs into a hosted MkDocs site (planned Phase 3).
+
+---
+
+## Search Strategies
+
+The agent's `search_wiki` tool is pluggable — three backends live in `search/`, selected via `BT_AGENT_SEARCH_STRATEGY` or `BluetoothWikiAgent(search_strategy=...)`. Tool name/args/output format are identical across strategies, so they A/B/C-test cleanly:
+
+| Strategy | Mechanism | Trade-off |
+|----------|-----------|-----------|
+| `v0` | Naive substring scan over all markdown (the original) | Baseline for evals |
+| `v1` | ripgrep multi-term search, ranked by term coverage / proximity / exact-phrase | Fast, much better lexical relevance |
+| `v2` | v1 first → a Haiku-class judge decides if hits suffice → if not, hybrid retrieval over `sources/specs/` (ripgrep + local-embedding vector search fused with Reciprocal Rank Fusion), with a bounded query-reformulation loop | Highest quality on deep spec questions (opcodes, PDU details); slower per call |
+
+v2's sufficiency loop runs *inside* one tool call, so it never consumes the main agent's turn budget. Source hits are resolved to structural chunks (`search/chunker.py`) carrying correct `Vol/Part/§` metadata — this chunker also fixed `read_source`, which previously matched only front-matter `[Vol N]` tags and returned the wrong sections.
+
+### Building the search index
+
+v2's vector arm (and chunk-precise citations) needs a per-version index:
+
+```bash
+.venv/bin/pip install -e ".[embeddings]"     # sentence-transformers (+ torch)
+.venv/bin/python scripts/build_search_index.py --version 6.0   # or --all
+# → search/index/6.0/{chunks.jsonl, embeddings.npy, meta.json}   (gitignored)
+```
+
+First run downloads `BAAI/bge-small-en-v1.5` (~130 MB) from Hugging Face. Builds are idempotent (source sha256 + chunker version + model fingerprint). Without ML deps, `--chunks-only` still enables chunk-accurate lexical search; v2 then notes that its vector arm is off.
+
+Search env vars: `BT_AGENT_SEARCH_STRATEGY` (v0|v1|v2), `BT_AGENT_EMBED_MODEL`, `BT_AGENT_RRF_K`, `BT_AGENT_SUFFICIENCY_MODEL`, `BT_AGENT_SUFFICIENCY_MAX_ITER`.
+
+---
+
+## Web UI (strategy test server)
+
+`server/` implements the `bluetooth-wiki-agent-http` entry point: a FastAPI server with a single-page UI for comparing strategies live.
+
+```bash
+.venv/bin/pip install -e .
+bluetooth-wiki-agent-http                 # or: .venv/bin/uvicorn server.http:app --port 8080
+# → http://localhost:8080
+```
+
+- **Compare** — type a question, tick v0/v1/v2, get answers + citations + wall-time + cost side by side (strategies run concurrently).
+- **Run eval** — trigger an eval-suite run (with a question limit) in the background, watch progress, then open the generated comparison report.
+
+API: `POST /api/compare`, `POST /api/eval/run` → `{job_id}`, `GET /api/eval/status/{job_id}`, `GET /api/eval/report/{job_id}`, `GET /api/health`. Jobs are in-memory (single process; lost on restart). Env: `BT_AGENT_HTTP_HOST`, `BT_AGENT_HTTP_PORT` (default 8080).
 
 ---
 
