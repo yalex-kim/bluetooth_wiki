@@ -46,6 +46,11 @@ import re
 import sys
 from pathlib import Path
 
+# Sibling script in scripts/ (on sys.path[0] when run as a script). Import-safe:
+# convert_to_md.py has only imports/constants/regex at module scope and guards
+# its CLI under __main__. Reused for its PDF-TOC Vol/Part page mapping.
+from convert_to_md import build_vol_part_map
+
 REPO_ROOT = Path(__file__).parent.parent
 SPECS_DIR = REPO_ROOT / "sources" / "specs"
 
@@ -58,7 +63,23 @@ _PICTURE_TEXT_RE = re.compile(
 )
 _BLANKS_RE = re.compile(r"\n{3,}")
 
+# Original PyMuPDF4LLM image filename tail: ...-<page>-<idx>.<ext>
+_IMG_TAIL_RE = re.compile(r"-(\d+)-(\d+)\.(?:png|jpg|jpeg)$", re.IGNORECASE)
+# Image markdown link capturing BOTH alt text and path.
+_IMG_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+# Figure number inside an image's alt text, e.g. "Figure 1.6".
+_ALT_FIG_RE = re.compile(r"Figure\s+(\d+(?:\.\d+)*)", re.IGNORECASE)
+
 STRATEGY_CHAIN = ("lines_strict", "lines", None)
+
+# Running header/footer band to exclude from extraction, in PDF points.
+# Measured directly off the Core Spec's US Letter (612x792) page template:
+# header block ends ~59pt from top, footer starts ~747pt, body text stays
+# within ~79-726pt. Verified identical from page 230 through 3900 of the
+# v6.3 document, so a fixed point margin (not a page-height fraction) is
+# used to leave a safety buffer without clipping into body text.
+PAGE_MARGIN_TOP = 65.0
+PAGE_MARGIN_BOTTOM = 56.0
 
 
 def check_deps():
@@ -77,6 +98,7 @@ def convert_page(core_md, doc, page_no: int, img_dir: Path, table_strategy):
     return core_md(
         doc, pages=[page_no], write_images=True, image_path=str(img_dir),
         image_format="png", dpi=150, table_strategy=table_strategy,
+        margins=(0, PAGE_MARGIN_TOP, 0, PAGE_MARGIN_BOTTOM),
     )
 
 
@@ -182,6 +204,84 @@ def postprocess(md: str, img_dir_name: str) -> str:
     return md.strip() + "\n"
 
 
+# ─── Semantic image naming (match convert_to_md.py) ──────────────────────────
+
+def _figure_number_for(alt, lines, line_idx):
+    """Figure number for an image: from its alt text, else its caption.
+
+    In the 2-pass output an image's caption is the FIRST non-blank line after
+    it. If that line is not a ``Figure X.Y`` caption, the image is un-captioned
+    (a later figure's caption further down must not be borrowed). Returns the
+    dotted number or None."""
+    m = _ALT_FIG_RE.search(alt or "")
+    if m:
+        return m.group(1)
+    for j in range(line_idx + 1, len(lines)):
+        s = lines[j].strip()
+        if not s:
+            continue
+        cm = FIG_CAP_RE.match(s)
+        return cm.group(1) if cm else None
+    return None
+
+
+def _semantic_name(page, idx, fig_num, vol, part):
+    """Build the target basename (without collision suffix) per the naming rules."""
+    # Match convert_to_md.py: use `is not None` (Vol 0 is a valid volume).
+    known = vol is not None and part is not None
+    if fig_num is not None:
+        safe = fig_num.replace(".", "_")
+        stem = f"Vol{vol}_Part{part}_Figure{safe}" if known else f"Figure{safe}"
+    else:
+        stem = f"Vol{vol}_Part{part}_Image_p{page}_{idx}" if known else f"Image_p{page}_{idx}"
+    return stem
+
+
+def rename_images_semantically(md_text, img_dir: Path, vol_part_map: dict) -> str:
+    """Rename PyMuPDF4LLM's page-indexed image files to the semantic
+    Vol/Part/Figure convention and rewrite their markdown links.
+
+    Only touches links whose on-disk filename matches PyMuPDF4LLM's
+    ...-<page>-<idx>.png pattern and whose file exists; every other link is
+    left exactly as-is.
+    """
+    lines = md_text.split("\n")
+    assigned: set[str] = set()  # target basenames already used this pass
+
+    def _unique(stem: str) -> str:
+        name = f"{stem}.png"
+        n = 2
+        while name in assigned or (img_dir / name).exists():
+            name = f"{stem}_{n}.png"
+            n += 1
+        assigned.add(name)
+        return name
+
+    for i, line in enumerate(lines):
+        if "![" not in line:
+            continue
+
+        def _replace(mo, _i=i):
+            alt, path = mo.group(1), mo.group(2)
+            basename = re.split(r"[/\\]", path)[-1]
+            tail = _IMG_TAIL_RE.search(basename)
+            if not tail:
+                return mo.group(0)  # not a PyMuPDF4LLM image name — leave alone
+            src = img_dir / basename
+            if not src.is_file():
+                return mo.group(0)  # missing file — leave link unchanged
+            page, idx = int(tail.group(1)), int(tail.group(2))
+            fig_num = _figure_number_for(alt, lines, _i)
+            vol, part = vol_part_map.get(page, (None, None))
+            new_name = _unique(_semantic_name(page, idx, fig_num, vol, part))
+            src.rename(img_dir / new_name)
+            return f"![{alt}]({img_dir.name}/{new_name})"
+
+        lines[i] = _IMG_LINK_RE.sub(_replace, line)
+
+    return "\n".join(lines)
+
+
 # ─── Document conversion ─────────────────────────────────────────────────────
 
 def convert_one(pdf_path: Path, pymupdf, core_md,
@@ -226,6 +326,7 @@ def convert_one(pdf_path: Path, pymupdf, core_md,
         lines = merge_page(core_md, doc, p, md1.splitlines(), img_dir, stats)
         out_pages.append("\n".join(lines))
 
+    vol_part_map = build_vol_part_map(doc)
     doc.close()
 
     merged = "\n\n".join(out_pages)
@@ -235,6 +336,7 @@ def convert_one(pdf_path: Path, pymupdf, core_md,
         "---\n\n"
     )
     body = postprocess(merged, img_dir.name)
+    body = rename_images_semantically(body, img_dir, vol_part_map)
     md_path.write_text(header + body, encoding="utf-8")
 
     # ── Quality-gate report ──────────────────────────────────────────────
