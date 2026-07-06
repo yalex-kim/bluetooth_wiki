@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bluetooth Wiki — Search Strategy Tester</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3250;
+    --text: #e2e8f0; --muted: #8892b0; --accent: #64ffda; --blue: #7b8cde;
+    --green: #4ade80; --yellow: #facc15; --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 14px; }
+  textarea { width: 100%; min-height: 70px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font: inherit; resize: vertical; }
+  .row { display: flex; gap: 16px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  label.chk { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; }
+  label.chk input:checked + span { color: var(--text); font-weight: 600; }
+  button { background: var(--accent); color: #0b3b33; border: 0; border-radius: 8px; padding: 9px 18px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  input[type=number] { width: 70px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font: inherit; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 18px; }
+  .result { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .result h3 { font-size: 13px; margin-bottom: 8px; }
+  .result .v0 { color: var(--muted); } .result .v1 { color: var(--blue); } .result .v2 { color: var(--accent); }
+  .stats { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .stats b { color: var(--text); }
+  .answer { font-size: 12.5px; white-space: pre-wrap; max-height: 380px; overflow: auto; border-top: 1px solid var(--border); padding-top: 8px; }
+  .cites { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; font-size: 11px; }
+  .cites a, .cites span.cl { color: var(--accent); display: block; margin-bottom: 2px; }
+  .err { color: var(--red); font-size: 12px; white-space: pre-wrap; }
+  .spin { color: var(--muted); font-size: 12px; }
+  #evalstatus { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  #evalstatus a { color: var(--accent); }
+  .bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .bar > div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Search Strategy Tester</h1>
+  <div class="sub">Ask one question through v0 (naive) / v1 (ripgrep) / v2 (hybrid + agentic) side by side, or run the eval suite and get a comparison report.</div>
+
+  <div class="panel">
+    <h2>Compare a single question</h2>
+    <textarea id="q" placeholder="e.g. What is the minimum connection interval in Core 6.2, and which HCI commands changed for it?"></textarea>
+    <div class="row">
+      <label class="chk"><input type="checkbox" value="v0" checked><span>v0 naive</span></label>
+      <label class="chk"><input type="checkbox" value="v1" checked><span>v1 ripgrep</span></label>
+      <label class="chk"><input type="checkbox" value="v2" checked><span>v2 hybrid</span></label>
+      <button id="ask">Compare</button>
+      <span id="askspin" class="spin" hidden>running… (an Opus agent per strategy; can take a minute)</span>
+    </div>
+    <div id="results" class="cols"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Run eval suite &amp; report</h2>
+    <div class="row">
+      <label class="chk"><input type="checkbox" value="v0" checked><span>v0</span></label>
+      <label class="chk"><input type="checkbox" value="v1" checked><span>v1</span></label>
+      <label class="chk"><input type="checkbox" value="v2" checked><span>v2</span></label>
+      <label class="chk">limit <input id="limit" type="number" min="1" max="42" value="5"></label>
+      <button id="run" class="secondary">Run eval</button>
+    </div>
+    <div id="evalstatus"></div>
+    <div class="bar" hidden id="barwrap"><div id="bar"></div></div>
+  </div>
+</div>
+
+<script>
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+
+function picked(panel) {
+  return $$('input[type=checkbox]', panel).filter(c => c.checked).map(c => c.value);
+}
+
+$('#ask').onclick = async () => {
+  const question = $('#q').value.trim();
+  const strategies = picked($('#ask').closest('.panel'));
+  if (!question || !strategies.length) return;
+  $('#ask').disabled = true; $('#askspin').hidden = false;
+  $('#results').innerHTML = '';
+  try {
+    const r = await fetch('/api/compare', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question, strategies}),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    for (const s of strategies) {
+      const a = data.results[s];
+      const div = document.createElement('div');
+      div.className = 'result';
+      const cites = (a.citations || []).map(c =>
+        c.url ? `<a href="${c.url}" target="_blank">${c.label}</a>` : `<span class="cl">${c.label}</span>`).join('');
+      div.innerHTML = `
+        <h3 class="${s}">${s}</h3>
+        <div class="stats">⏱ <b>${a.wall_time_sec}s</b> · turns <b>${a.num_turns}</b> · tools <b>${a.tool_calls}</b>${a.total_cost_usd != null ? ` · $<b>${a.total_cost_usd.toFixed(3)}</b>` : ''}</div>
+        ${a.error ? `<div class="err">${a.error}</div>` : `<div class="answer">${a.answer.replace(/</g,'&lt;')}</div><div class="cites">${cites}</div>`}
+      `;
+      $('#results').appendChild(div);
+    }
+  } catch (e) {
+    $('#results').innerHTML = `<div class="err">${e.message.replace(/</g,'&lt;')}</div>`;
+  } finally {
+    $('#ask').disabled = false; $('#askspin').hidden = true;
+  }
+};
+
+let pollTimer = null;
+$('#run').onclick = async () => {
+  const panel = $('#run').closest('.panel');
+  const strategies = picked(panel);
+  const limit = parseInt($('#limit').value) || null;
+  if (!strategies.length) return;
+  $('#run').disabled = true;
+  $('#evalstatus').textContent = 'starting…';
+  $('#barwrap').hidden = false; $('#bar').style.width = '0';
+  try {
+    const r = await fetch('/api/eval/run', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({strategies, limit}),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const {job_id} = await r.json();
+    pollTimer = setInterval(async () => {
+      const s = await (await fetch(`/api/eval/status/${job_id}`)).json();
+      const p = s.progress || {completed: 0, total: 0};
+      $('#bar').style.width = p.total ? `${100*p.completed/p.total}%` : '0';
+      if (s.state === 'done') {
+        clearInterval(pollTimer);
+        $('#run').disabled = false;
+        $('#evalstatus').innerHTML = `done — <a href="${s.report_url}" target="_blank">open comparison report</a>`;
+      } else if (s.state === 'error') {
+        clearInterval(pollTimer);
+        $('#run').disabled = false;
+        $('#evalstatus').innerHTML = `<span class="err">error: ${(s.error||'').replace(/</g,'&lt;')}</span>`;
+      } else {
+        $('#evalstatus').textContent = `${s.state} — ${p.completed}/${p.total} question-runs`;
+      }
+    }, 2000);
+  } catch (e) {
+    $('#run').disabled = false;
+    $('#evalstatus').innerHTML = `<span class="err">${e.message.replace(/</g,'&lt;')}</span>`;
+  }
+};
+</script>
+</body>
+</html>

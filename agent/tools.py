@@ -1,14 +1,20 @@
 """Tools the agent loop can call.
 
 The pure-logic helpers (``_list_index``, ``_search_wiki``, ``_read_page``,
-``_read_source``) have no external dependencies so they can be unit-tested
-against real repo content without booting the SDK. The SDK ``@tool``-decorated
-wrappers below adapt them into the MCP-style content envelope Claude expects.
+``_read_source``) have no SDK dependency so they can be unit-tested against
+real repo content. The SDK ``@tool``-decorated wrappers adapt them into the
+MCP-style content envelope Claude expects.
+
+Search is pluggable: ``build_tools(strategy_name)`` wires the ``search_wiki``
+tool to one of the strategies in the ``search`` package (v0 naive baseline /
+v1 ripgrep / v2 hybrid+agentic). The tool's name, argument schema, and output
+envelope are identical across strategies — only retrieval quality and latency
+differ — so system_prompt.md and citations.py need no per-strategy changes.
 """
 
 from __future__ import annotations
 
-import re
+import asyncio
 from pathlib import Path
 
 from claude_agent_sdk import tool
@@ -19,6 +25,7 @@ from .config import (
     REPO_ROOT,
     SEARCH_RESULT_LIMIT,
     SEARCH_SNIPPET_CHARS,
+    SEARCH_STRATEGY,
     SOURCES_DIR,
     WIKI_DIR,
 )
@@ -41,30 +48,6 @@ def _safe_path(rel: str) -> Path | None:
     return p
 
 
-def _iter_markdown(scope: str):
-    if scope in ("wiki", "both"):
-        yield from WIKI_DIR.rglob("*.md")
-    if scope in ("sources", "both"):
-        yield from SOURCES_DIR.rglob("*.md")
-
-
-def _make_snippet(text: str, query: str, span: int = SEARCH_SNIPPET_CHARS) -> str:
-    lower = text.lower()
-    q = query.lower()
-    i = lower.find(q)
-    if i < 0:
-        return text[:span].strip()
-    half = span // 2
-    start = max(0, i - half)
-    end = min(len(text), i + len(q) + half)
-    snippet = text[start:end].replace("\n", " ").strip()
-    if start > 0:
-        snippet = "…" + snippet
-    if end < len(text):
-        snippet = snippet + "…"
-    return snippet
-
-
 # ─── Pure-logic implementations (testable, no SDK required) ─────────────
 
 
@@ -72,37 +55,17 @@ def _list_index() -> str:
     return INDEX_PATH.read_text(encoding="utf-8")
 
 
-def _search_wiki(query: str, scope: str = "both") -> str:
-    query = (query or "").strip()
-    scope = (scope or "both").lower()
-    if scope not in ("wiki", "sources", "both"):
-        scope = "both"
-    if not query:
-        return "Error: 'query' is required."
+def _search_wiki(query: str, scope: str = "both", strategy_name: str = SEARCH_STRATEGY) -> str:
+    """Synchronous convenience wrapper (used by tests/scripts)."""
+    return asyncio.run(_search_wiki_async(query, scope, strategy_name))
 
-    needle = query.lower()
-    hits: list[tuple[str, str]] = []
-    for path in _iter_markdown(scope):
-        try:
-            text = path.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
-        if needle not in text.lower():
-            continue
-        rel = path.relative_to(REPO_ROOT).as_posix()
-        hits.append((rel, _make_snippet(text, query)))
-        if len(hits) >= SEARCH_RESULT_LIMIT:
-            break
 
-    if not hits:
-        return f"No matches for {query!r} in scope={scope!r}."
+async def _search_wiki_async(query: str, scope: str = "both", strategy_name: str = SEARCH_STRATEGY) -> str:
+    from search import get_strategy
+    from search.render import render_result
 
-    lines = [f"Found {len(hits)} match(es) for {query!r} in scope={scope!r}:", ""]
-    for rel, snippet in hits:
-        lines.append(f"### {rel}")
-        lines.append(snippet)
-        lines.append("")
-    return "\n".join(lines)
+    result = await get_strategy(strategy_name).search(query or "", scope or "both")
+    return render_result(result)
 
 
 def _read_page(path: str) -> str:
@@ -118,90 +81,58 @@ def _read_page(path: str) -> str:
 
 
 def _read_source(version: str, vol: str = "", part: str = "") -> str:
+    """Read a Vol/Part slice of an original spec markdown.
+
+    Part boundaries come from search.chunker's body-marker detection — the
+    former '[Vol N]'/'Part X' tagged-heading walk only ever matched the
+    front-matter acknowledgments and silently returned the wrong section.
+    """
+    from search.chunker import parse_part_spans, spec_path
+
     version = (version or "").strip()
     vol = (vol or "").strip()
     part = (part or "").strip().upper()
     if not version:
         return "Error: 'version' is required (e.g. '6.0')."
 
-    spec_path = SOURCES_DIR / "specs" / version / f"Core_v{version}.md"
-    if not spec_path.is_file():
-        return f"No spec markdown found at {spec_path.relative_to(REPO_ROOT).as_posix()}."
-    text = spec_path.read_text(encoding="utf-8", errors="ignore")
+    path = spec_path(version)
+    if not path.is_file():
+        return f"No spec markdown found at {path.relative_to(REPO_ROOT).as_posix()}."
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    spans = parse_part_spans(text)
+    if not spans:
+        return f"Could not detect Volume/Part structure in Core_v{version}.md."
+
+    def _toc(rows) -> str:
+        lines = [f"# Table of contents for Core_v{version}.md", ""]
+        for s in rows:
+            lines.append(f"- Vol {s.vol}, Part {s.part}: {s.part_title}  (lines {s.line_start + 1}-{s.line_end})")
+        lines.append("")
+        lines.append("Call read_source again with both 'vol' and 'part' to read a section.")
+        return "\n".join(lines)
 
     if not vol and not part:
-        toc_lines = [f"# Table of contents for Core_v{version}.md", ""]
-        toc_re = re.compile(r"^#{1,4}\s+.*(?:\[Vols?\b|\bPart\s+[A-Z]\b)", flags=re.IGNORECASE)
-        for line in text.splitlines():
-            if toc_re.match(line):
-                toc_lines.append(line)
-        if len(toc_lines) <= 2:
-            toc_lines.append("(no Volume/Part headings detected)")
-        return "\n".join(toc_lines)
+        return _toc(spans)
+    if vol and not part:
+        rows = [s for s in spans if s.vol == vol]
+        return _toc(rows) if rows else f"No Vol {vol} found in v{version}."
+    if part and not vol:
+        rows = [s for s in spans if s.part == part]
+        if not rows:
+            return f"No Part {part} found in v{version}."
+        if len(rows) > 1:
+            return _toc(rows)
+        vol = rows[0].vol
 
-    # Spec markdown nests Vol/Part hierarchically:
-    #   ### 2.7 [Vol 6] Low Energy Controller
-    #     #### 2.7.2 Part B: Link Layer Specification
-    # so vol+part lookups must scope the part search to the vol's heading scope.
-    lines = text.splitlines()
-    # Use the bracketed singular form '[Vol N]' for content headings; this
-    # avoids accidentally matching aggregate/version-history entries like
-    # '[Vols 2, 3, 5, 6 & 7]' that contain the right number but no real content.
-    vol_rx = re.compile(rf"\[Vol\s+{re.escape(vol)}\]", re.IGNORECASE) if vol else None
-    part_rx = re.compile(rf"\bPart\s+{re.escape(part)}\b", re.IGNORECASE) if part else None
+    span = next((s for s in spans if s.vol == vol and s.part == part), None)
+    if span is None:
+        return f"No 'Part {part}' found within Vol {vol} of v{version}."
 
-    def _heading_level(ln: str) -> int:
-        return len(ln) - len(ln.lstrip("#"))
-
-    start_idx = None
-    if vol and part:
-        vol_idx = next(
-            (i for i, ln in enumerate(lines) if ln.startswith("#") and vol_rx.search(ln)),
-            None,
-        )
-        if vol_idx is None:
-            return f"No heading matching Vol {vol} in v{version}."
-        vol_level = _heading_level(lines[vol_idx])
-        for j in range(vol_idx + 1, len(lines)):
-            ln = lines[j]
-            if not ln.startswith("#"):
-                continue
-            if _heading_level(ln) <= vol_level:
-                break
-            if part_rx.search(ln):
-                start_idx = j
-                break
-        if start_idx is None:
-            return f"No 'Part {part}' heading found within Vol {vol} of v{version}."
-    elif vol:
-        start_idx = next(
-            (i for i, ln in enumerate(lines) if ln.startswith("#") and vol_rx.search(ln)),
-            None,
-        )
-        if start_idx is None:
-            return f"No heading matching Vol {vol} in v{version}."
-    else:
-        start_idx = next(
-            (i for i, ln in enumerate(lines) if ln.startswith("#") and part_rx.search(ln)),
-            None,
-        )
-        if start_idx is None:
-            return f"No heading matching Part {part} in v{version}."
-
-    start_level = len(lines[start_idx]) - len(lines[start_idx].lstrip("#"))
-    end_idx = len(lines)
-    for j in range(start_idx + 1, len(lines)):
-        ln = lines[j]
-        if ln.startswith("#"):
-            lvl = len(ln) - len(ln.lstrip("#"))
-            if lvl <= start_level:
-                end_idx = j
-                break
-
-    section = "\n".join(lines[start_idx:end_idx])
+    lines = text.split("\n")
+    section = "\n".join(lines[span.line_start : span.line_end])
     if len(section) > READ_PAGE_MAX_CHARS:
         section = section[:READ_PAGE_MAX_CHARS] + f"\n\n…[truncated; full section is {len(section)} chars]"
-    header = f"# sources/specs/{version}/Core_v{version}.md  (Vol {vol or '?'} Part {part or '?'})\n\n"
+    header = f"# sources/specs/{version}/Core_v{version}.md  (Vol {vol} Part {part}: {span.part_title})\n\n"
     return header + section
 
 
@@ -222,17 +153,6 @@ async def list_index(args: dict) -> dict:
 
 
 @tool(
-    "search_wiki",
-    "Search wiki and/or original spec markdown for a query. "
-    f"Returns up to {SEARCH_RESULT_LIMIT} hits with file paths and ~{SEARCH_SNIPPET_CHARS}-char snippets. "
-    "scope: 'wiki' for curated content, 'sources' for original spec text, 'both' to search everything.",
-    {"query": str, "scope": str},
-)
-async def search_wiki(args: dict) -> dict:
-    return _wrap(_search_wiki(args.get("query") or "", args.get("scope") or "both"))
-
-
-@tool(
     "read_page",
     "Read a wiki or source markdown file by repo-relative path "
     "(e.g. 'wiki/concepts/channel-sounding.md' or 'sources/specs/6.0/Core_v6.0.md'). "
@@ -246,12 +166,31 @@ async def read_page(args: dict) -> dict:
 @tool(
     "read_source",
     "Read a slice of an original Bluetooth spec markdown. Provide 'version' (e.g. '6.0') "
-    "and optionally 'vol' (e.g. '6') and 'part' (e.g. 'B') to scope the read. "
-    "Without vol/part, returns a table of contents derived from headings.",
+    "plus 'vol' (e.g. '6') and 'part' (e.g. 'B') to read that Part's full text. "
+    "Without vol/part, returns a table of contents of all Volumes/Parts.",
     {"version": str, "vol": str, "part": str},
 )
 async def read_source(args: dict) -> dict:
     return _wrap(_read_source(args.get("version") or "", args.get("vol") or "", args.get("part") or ""))
 
 
-ALL_TOOLS = [list_index, search_wiki, read_page, read_source]
+def build_tools(strategy_name: str = SEARCH_STRATEGY) -> list:
+    """Assemble the tool list with search_wiki bound to the given strategy."""
+    extra = " May take a few extra seconds when it expands into the original spec text." if strategy_name == "v2" else ""
+
+    @tool(
+        "search_wiki",
+        "Search wiki and/or original spec markdown for a query. "
+        f"Returns up to {SEARCH_RESULT_LIMIT} hits with file paths and ~{SEARCH_SNIPPET_CHARS}-char snippets. "
+        "scope: 'wiki' for curated content, 'sources' for original spec text, 'both' to search everything."
+        + extra,
+        {"query": str, "scope": str},
+    )
+    async def search_wiki(args: dict) -> dict:
+        return _wrap(await _search_wiki_async(args.get("query") or "", args.get("scope") or "both", strategy_name))
+
+    return [list_index, search_wiki, read_page, read_source]
+
+
+# Backward-compatible default tool list (strategy from BT_AGENT_SEARCH_STRATEGY, default v0).
+ALL_TOOLS = build_tools()

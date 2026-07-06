@@ -20,3 +20,15 @@ SEARCH_SNIPPET_CHARS = int(os.getenv("BT_AGENT_SNIPPET_CHARS", "240"))
 READ_PAGE_MAX_CHARS = int(os.getenv("BT_AGENT_READ_MAX", "60000"))
 
 SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "system_prompt.md"
+
+# ─── Search strategy (see search/ package) ──────────────────────────────
+SEARCH_STRATEGY = os.getenv("BT_AGENT_SEARCH_STRATEGY", "v0")  # v0 | v1 | v2
+SEARCH_INDEX_DIR = REPO_ROOT / "search" / "index"
+EMBED_MODEL = os.getenv("BT_AGENT_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
+RRF_K = int(os.getenv("BT_AGENT_RRF_K", "60"))
+SUFFICIENCY_MODEL = os.getenv("BT_AGENT_SUFFICIENCY_MODEL", "claude-haiku-4-5")
+SUFFICIENCY_MAX_ITER = int(os.getenv("BT_AGENT_SUFFICIENCY_MAX_ITER", "2"))
+
+# ─── HTTP test server (server/ package) ─────────────────────────────────
+HTTP_HOST = os.getenv("BT_AGENT_HTTP_HOST", "0.0.0.0")
+HTTP_PORT = int(os.getenv("BT_AGENT_HTTP_PORT", "8080"))

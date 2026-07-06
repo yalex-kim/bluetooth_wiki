@@ -75,25 +75,52 @@ bluetooth_wiki/
 │           ├── Core_vX.Y.md           ← Full spec text converted via PyMuPDF
 │           └── Core_vX.Y_images/      ← Extracted figure PNGs (Vol{N}_Part{P}_Figure{X_Y}.png)
 ├── eval/
-│   ├── dataset.json                   ← 30-question test set for RAG vs LLM-Wiki comparison
+│   ├── dataset.json                   ← 42-question test set for strategy/system comparison
 │   ├── rubric.md                      ← 5-dimension scoring rubric with difficulty weights
 │   ├── judge_prompt.md                ← LLM-as-Judge prompt + Python run_evaluation() helper
+│   ├── judge.py                       ← Shared judge/scoring module (used by all eval runners)
+│   ├── runner.py                      ← Shared eval-suite runner (CLI + server jobs)
+│   ├── report_render.py               ← Strategy-comparison HTML renderer (f-strings, no Jinja)
 │   ├── results_wiki.json              ← LLM-Wiki baseline scores (95.8% overall, 2026-05-04)
-│   └── report.html                    ← Visual evaluation dashboard
+│   ├── results_search_v{0,1,2}.json   ← Per-strategy eval results (run_search_eval.py output)
+│   ├── report.html                    ← Visual evaluation dashboard (LLM-Wiki baseline)
+│   └── report_search_compare.html     ← Search-strategy comparison report (generated)
 ├── agent/
 │   ├── agent.py                       ← BluetoothWikiAgent — embedded Claude Agent SDK loop
 │   ├── system_prompt.md               ← Citation rules + anti-hallucination prompt
-│   ├── tools.py                       ← list_index, search_wiki, read_page, read_source
+│   ├── tools.py                       ← list_index, search_wiki (pluggable strategy), read_page, read_source
 │   ├── citations.py                   ← Citation ↔ hosted-site URL mapping (single source of truth)
-│   └── config.py                      ← Env-driven config (model, paths, limits)
+│   ├── json_extract.py                ← Shared JSON-payload extraction for LLM responses
+│   └── config.py                      ← Env-driven config (model, paths, limits, search strategy)
+├── search/                            ← Pluggable search strategies (see §4.4)
+│   ├── base.py                        ← SearchHit / SearchResult / SearchStrategy protocol
+│   ├── v0_naive.py                    ← v0: original substring scan (baseline)
+│   ├── v1_ripgrep.py                  ← v1: ripgrep-backed ranked lexical search
+│   ├── v2_hybrid.py                   ← v2: v1 + sufficiency loop + hybrid source fallback (RRF)
+│   ├── chunker.py                     ← Core spec Vol/Part-aware structural chunker
+│   ├── embeddings.py                  ← Local embedding model (bge-small) + cosine top-k
+│   ├── index_store.py                 ← On-disk chunk/embedding index build & load
+│   ├── fusion.py                      ← Reciprocal Rank Fusion
+│   ├── sufficiency.py                 ← Haiku-class "are these hits enough?" judge
+│   ├── rg_util.py                     ← ripgrep subprocess wrapper
+│   ├── render.py                      ← SearchResult → tool-output text envelope
+│   └── index/                         ← Generated chunk/embedding indexes (gitignored)
+├── server/
+│   ├── http.py                        ← FastAPI test server (bluetooth-wiki-agent-http)
+│   ├── jobs.py                        ← In-memory background eval jobs
+│   ├── schemas.py                     ← Pydantic request/response models
+│   └── static/index.html              ← Single-page strategy comparison UI
 ├── scripts/
 │   ├── download_spec_documents.py     ← Downloads PDFs from bluetooth.com
 │   ├── convert_to_md.py               ← Converts PDFs → markdown + figure PNGs via PyMuPDF
 │   ├── ingest.py                      ← Ingests new source docs into the wiki
 │   ├── eval_one.py                    ← Run one eval question through agent + LLM judge
+│   ├── build_search_index.py          ← Build chunk/embedding index per spec version
+│   ├── run_search_eval.py             ← Run eval dataset across search strategies
+│   ├── generate_search_report.py      ← Render strategy-comparison HTML report
 │   └── smoke_test_agent.py            ← End-to-end agent smoke test
-├── pyproject.toml                     ← Python deps: claude-agent-sdk, anthropic, mcp, fastapi
-├── .env.example                       ← Env template (ANTHROPIC_API_KEY, BT_AGENT_MODEL, …)
+├── pyproject.toml                     ← Python deps: claude-agent-sdk, anthropic, mcp, fastapi, numpy (+ embeddings extra: sentence-transformers)
+├── .env.example                       ← Env template (ANTHROPIC_API_KEY, BT_AGENT_MODEL, BT_AGENT_SEARCH_STRATEGY, …)
 └── guide/
     └── claude-code-integration.md     ← How to use this wiki with Claude Code
 ```
@@ -141,6 +168,34 @@ Periodically run a lint pass to:
 - Flag stale claims (e.g., "new in 5.3" on a 5.3 page when 6.0 is now latest)
 - Check that all versions in `sources/specs/` have corresponding wiki pages
 - Verify all cross-references point to existing files
+
+### 4.4 SEARCH — Pluggable retrieval strategies
+
+The agent's `search_wiki` tool is backed by one of three strategies in `search/`,
+selected via `BT_AGENT_SEARCH_STRATEGY` (or `BluetoothWikiAgent(search_strategy=...)`).
+The tool's name, arguments, and output envelope are identical across strategies —
+only retrieval quality and latency differ:
+
+| Strategy | Mechanism | When to use |
+|----------|-----------|-------------|
+| `v0` | Naive case-insensitive substring scan (original) | Baseline / control in evals |
+| `v1` | ripgrep multi-term ranked search (coverage/proximity/phrase scoring) | Fast, better lexical relevance |
+| `v2` | v1 → Haiku sufficiency judge → hybrid source fallback: ripgrep + local-embedding vector search fused with RRF, bounded reformulation loop (max `BT_AGENT_SUFFICIENCY_MAX_ITER`) | Deep questions needing raw spec text (opcodes, PDU details) |
+
+Supporting workflows:
+- **Index build** (required for v2's vector arm and chunk-precise citations):
+  `python scripts/build_search_index.py --version 6.0 [--all] [--chunks-only]`.
+  First full build downloads the `BAAI/bge-small-en-v1.5` model (~130 MB).
+  `--chunks-only` works without ML deps; v2 then runs lexical-only with a note.
+- **Strategy eval**: `python scripts/run_search_eval.py --strategies v0 v1 v2 --limit 5`
+  → `eval/results_search_v*.json`; then `python scripts/generate_search_report.py --inputs ...`
+  → `eval/report_search_compare.html` (quality + latency/cost side by side).
+- **Live comparison UI**: `bluetooth-wiki-agent-http` (or `uvicorn server.http:app`) —
+  ask one question through multiple strategies concurrently, or trigger an eval run
+  and open the generated report from the browser.
+- `search/chunker.py` is also the authority for `read_source`'s Vol/Part slicing
+  (the old `[Vol N]` tagged-heading walk only matched front-matter and returned
+  wrong sections; do not reintroduce it).
 
 ---
 

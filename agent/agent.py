@@ -8,8 +8,6 @@ every client (HTTP, MCP, web sidebar) gets the same answer quality.
 
 from __future__ import annotations
 
-import json
-import re
 from dataclasses import asdict, dataclass
 
 from claude_agent_sdk import (
@@ -23,8 +21,9 @@ from claude_agent_sdk import (
 )
 
 from .citations import hydrate_citations
-from .config import MAX_TURNS, MODEL, SYSTEM_PROMPT_PATH
-from .tools import ALL_TOOLS
+from .config import MAX_TURNS, MODEL, SEARCH_STRATEGY, SYSTEM_PROMPT_PATH
+from .json_extract import extract_json_payload
+from .tools import build_tools
 
 
 @dataclass
@@ -46,58 +45,9 @@ class AgentResponse:
         return asdict(self)
 
 
-_FENCED_JSON_RE = re.compile(r"```json\s*\n(?P<body>.*?)\n```", re.DOTALL)
-
-
-def _extract_json_payload(text: str) -> dict | None:
-    """Extract the agent's structured answer.
-
-    Tries (in order):
-      1. ``` ```json ... ``` ``` fenced block
-      2. The first top-level JSON object in the text via brace-balancing
-    Returns the parsed dict on success, else None.
-    """
-    m = _FENCED_JSON_RE.search(text)
-    if m:
-        try:
-            return json.loads(m.group("body"))
-        except json.JSONDecodeError:
-            pass
-    # Brace-balanced fallback: find the first '{' and walk until matched.
-    start = text.find("{")
-    while start != -1:
-        depth = 0
-        in_str = False
-        esc = False
-        for i in range(start, len(text)):
-            ch = text[i]
-            if in_str:
-                if esc:
-                    esc = False
-                elif ch == "\\":
-                    esc = True
-                elif ch == '"':
-                    in_str = False
-                continue
-            if ch == '"':
-                in_str = True
-            elif ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    candidate = text[start : i + 1]
-                    try:
-                        return json.loads(candidate)
-                    except json.JSONDecodeError:
-                        break
-        start = text.find("{", start + 1)
-    return None
-
-
 def _parse_final_text(text: str) -> AgentResponse:
     """Extract the JSON-formatted answer block the agent is instructed to emit."""
-    data = _extract_json_payload(text)
+    data = extract_json_payload(text)
     if data is not None:
         citations = data.get("citations") or []
         hydrated = [asdict(c) for c in hydrate_citations(citations)]
@@ -111,12 +61,13 @@ def _parse_final_text(text: str) -> AgentResponse:
 
 
 class BluetoothWikiAgent:
-    def __init__(self, model: str = MODEL):
+    def __init__(self, model: str = MODEL, search_strategy: str = SEARCH_STRATEGY):
         self._system_prompt = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+        self.search_strategy = search_strategy
         self._mcp_server = create_sdk_mcp_server(
             name="bluetooth-wiki",
             version="0.1.0",
-            tools=ALL_TOOLS,
+            tools=build_tools(search_strategy),
         )
         tool_names = [
             "mcp__bluetooth-wiki__list_index",
