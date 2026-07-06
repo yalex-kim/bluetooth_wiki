@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semantic image naming for PyMuPDF4LLM converter — Implementation Plan</title>
+<style>
+  :root {
+    --bg:#fff; --fg:#1b1f24; --muted:#57606a; --border:#d0d7de;
+    --code-bg:#f6f8fa; --accent:#0969da; --accent-bg:#ddf4ff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;
+    --code-bg:#161b22;--accent:#4493f8;--accent-bg:#0c2d4a;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  main{max-width:900px;margin:0 auto;padding:2.5rem 1.25rem 6rem}
+  h1{font-size:1.9rem;line-height:1.25;margin:0 0 1rem}
+  h2{font-size:1.35rem;margin:2.5rem 0 1rem;padding-bottom:.35rem;border-bottom:1px solid var(--border)}
+  h3{font-size:1.1rem;margin:0 0 .75rem}
+  h4{font-size:.98rem;margin:1.25rem 0 .4rem}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;
+    background:var(--code-bg);padding:.12em .4em;border-radius:6px;border:1px solid var(--border)}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;
+    padding:1rem;overflow-x:auto;font-size:.84rem;line-height:1.5}
+  pre code{background:none;border:none;padding:0;font-size:inherit}
+  .callout{background:var(--accent-bg);border:1px solid var(--border);border-left:4px solid var(--accent);
+    border-radius:6px;padding:.85rem 1rem;margin:1.25rem 0}
+  .task{border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.4rem;margin:1.5rem 0}
+  .files dt{font-weight:600;margin-top:.5rem}
+  .files dd{margin:0 0 0 1rem}
+  .step{list-style:none;padding-left:0}
+  .step>li{margin:1rem 0;padding-left:1.9rem;position:relative}
+  .step>li::before{content:"[ ]";position:absolute;left:0;top:0;
+    font-family:ui-monospace,monospace;color:var(--muted);font-weight:700}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+  th,td{border:1px solid var(--border);padding:.4rem .6rem;text-align:left}
+  .meta{color:var(--muted);font-size:.92rem}
+  ul.tight{margin:.3rem 0}
+  hr{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Semantic image naming for the PyMuPDF4LLM converter — Implementation Plan</h1>
+
+<div class="callout">
+  <strong>For agentic workers:</strong> REQUIRED SUB-SKILL — use
+  <code>superpowers:subagent-driven-development</code> (recommended) or
+  <code>superpowers:executing-plans</code>. Steps use <code>[ ]</code> /
+  <code>[x]</code> markers for tracking.
+</div>
+
+<p class="meta">Spec: <code>docs/superpowers/specs/2026-07-07-p4l-semantic-image-naming-design.md</code> · Date: 2026-07-07</p>
+
+<p><strong>Goal:</strong> Make <code>scripts/convert_pymupdf4llm.py</code> emit
+figure images under the same <code>Vol{N}_Part{P}_Figure{X_Y}.png</code>
+convention as <code>scripts/convert_to_md.py</code>, preserving un-captioned
+images under a <code>Vol{N}_Part{P}_Image_p{page}_{idx}.png</code> scheme.</p>
+
+<p><strong>Architecture:</strong> A single post-conversion rename pass. After
+the whole document is converted and <code>postprocess</code> has produced the
+final markdown body, one new pure-ish function renames each extracted image
+file on disk and rewrites its markdown link. The delicate pass-1 / pass-2 /
+caption-merge logic is untouched. Vol/Part per page comes from reusing
+<code>build_vol_part_map</code> from <code>convert_to_md.py</code>.</p>
+
+<p><strong>Tech Stack:</strong> Python ≥3.10, PyMuPDF (<code>pymupdf</code>),
+PyMuPDF4LLM, pytest (dev extra). No new dependencies.</p>
+
+<h2>Global Constraints</h2>
+<ul class="tight">
+  <li>Python ≥ 3.10. No new runtime dependencies.</li>
+  <li>Naming rules (exact):</li>
+</ul>
+<table>
+  <tr><th>Case</th><th>Vol/Part known</th><th>Vol/Part unknown</th></tr>
+  <tr><td>Has <code>Figure X.Y</code> caption</td><td><code>Vol{N}_Part{P}_Figure{X_Y}.png</code></td><td><code>Figure{X_Y}.png</code></td></tr>
+  <tr><td>No figure caption</td><td><code>Vol{N}_Part{P}_Image_p{page}_{idx}.png</code></td><td><code>Image_p{page}_{idx}.png</code></td></tr>
+</table>
+<ul class="tight">
+  <li><code>X_Y</code> = figure number with dots → underscores (matches <code>convert_to_md.py</code>).</li>
+  <li><code>page</code> = 0-based PDF page index, <code>idx</code> = per-page image index, both parsed from the original <code>...-{page}-{idx}.png</code> filename.</li>
+  <li>Do NOT modify <code>convert_to_md.py</code>, or the p4l engine's text extraction / caption merging / quality-gate report — only image file naming.</li>
+  <li>Missing source file or unparseable filename → leave the link unchanged (defensive).</li>
+  <li>Name collisions → append <code>_2</code>, <code>_3</code>, … so no file is silently overwritten.</li>
+</ul>
+
+<hr>
+
+<div class="task">
+<h3>Task 1: Post-conversion semantic image rename</h3>
+
+<dl class="files">
+  <dt>Modify</dt>
+  <dd><code>scripts/convert_pymupdf4llm.py</code> — add <code>build_vol_part_map</code> import, add <code>rename_images_semantically</code> + a small helper, and wire the call into <code>convert_one</code>.</dd>
+  <dt>Create</dt>
+  <dd><code>tests/scripts/test_p4l_image_naming.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li><strong>Consumes:</strong> <code>convert_to_md.build_vol_part_map(doc) -&gt; dict[int, tuple[int|None, str|None]]</code> (0-based page → (vol, part)); the module-level <code>IMG_RE</code> and <code>FIG_CAP_RE</code> already in <code>convert_pymupdf4llm.py</code>.</li>
+  <li><strong>Produces:</strong> <code>rename_images_semantically(md_text: str, img_dir: Path, vol_part_map: dict) -&gt; str</code> — renames files under <code>img_dir</code> and returns the markdown with links rewritten.</li>
+</ul>
+
+<ol class="step">
+
+<li><h4>Step 1: Write the failing test</h4>
+Create <code>tests/scripts/test_p4l_image_naming.py</code>:
+<pre><code>import sys
+from pathlib import Path
+
+import pytest
+
+# scripts/ is not a package; put it on sys.path so we can import the module.
+SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+
+# pymupdf4llm is an import-time dependency of the module under test.
+pytest.importorskip("pymupdf4llm")
+
+import convert_pymupdf4llm as p4l  # noqa: E402
+
+
+def _touch(path):
+    path.write_bytes(b"\x89PNG\r\n\x1a\n")  # minimal PNG signature; content irrelevant
+
+
+def test_rename_covers_all_cases(tmp_path):
+    img_dir = tmp_path / "Core_v9.9.p4l_images"
+    img_dir.mkdir()
+    # Four extracted images (names as PyMuPDF4LLM writes them):
+    _touch(img_dir / "Core_v9.9.pdf-230-0.png")   # captioned, vol/part known
+    _touch(img_dir / "Core_v9.9.pdf-238-0.png")   # un-captioned, vol/part known
+    _touch(img_dir / "Core_v9.9.pdf-500-1.png")   # captioned, vol/part UNKNOWN
+    # note: page 999 file intentionally absent -> link must stay unchanged
+
+    md = "\n".join([
+        "![Figure 1.1](Core_v9.9.p4l_images/Core_v9.9.pdf-230-0.png)",
+        "",
+        "_Figure 1.1: Host and Controller_",
+        "",
+        "![](Core_v9.9.p4l_images/Core_v9.9.pdf-238-0.png)",
+        "",
+        "Some body text with no figure caption here.",
+        "",
+        "![](Core_v9.9.p4l_images/Core_v9.9.pdf-500-1.png)",
+        "",
+        "_Figure 9.9: Orphaned volume figure_",
+        "",
+        "![](Core_v9.9.p4l_images/Core_v9.9.pdf-999-0.png)",
+        "",
+    ])
+    vol_part_map = {230: (1, "A"), 238: (1, "A"), 500: (None, None), 999: (None, None)}
+
+    out = p4l.rename_images_semantically(md, img_dir, vol_part_map)
+
+    # Captioned + known vol/part.
+    assert "Core_v9.9.p4l_images/Vol1_PartA_Figure1_1.png" in out
+    assert (img_dir / "Vol1_PartA_Figure1_1.png").is_file()
+    # Un-captioned + known vol/part.
+    assert "Core_v9.9.p4l_images/Vol1_PartA_Image_p238_0.png" in out
+    assert (img_dir / "Vol1_PartA_Image_p238_0.png").is_file()
+    # Captioned + unknown vol/part -> figure-only fallback.
+    assert "Core_v9.9.p4l_images/Figure9_9.png" in out
+    assert (img_dir / "Figure9_9.png").is_file()
+    # Missing source file -> link left untouched, no new file invented.
+    assert "Core_v9.9.p4l_images/Core_v9.9.pdf-999-0.png" in out
+    # Old names for the renamed files are gone.
+    assert not (img_dir / "Core_v9.9.pdf-230-0.png").exists()
+    assert not (img_dir / "Core_v9.9.pdf-238-0.png").exists()
+    assert not (img_dir / "Core_v9.9.pdf-500-1.png").exists()
+
+
+def test_collision_gets_disambiguated(tmp_path):
+    img_dir = tmp_path / "imgs"
+    img_dir.mkdir()
+    _touch(img_dir / "Core_v9.9.pdf-10-0.png")
+    _touch(img_dir / "Core_v9.9.pdf-11-0.png")
+    md = "\n".join([
+        "![Figure 2.1](imgs/Core_v9.9.pdf-10-0.png)",
+        "![Figure 2.1](imgs/Core_v9.9.pdf-11-0.png)",
+        "",
+    ])
+    vol_part_map = {10: (2, "B"), 11: (2, "B")}
+
+    out = p4l.rename_images_semantically(md, img_dir, vol_part_map)
+
+    assert (img_dir / "Vol2_PartB_Figure2_1.png").is_file()
+    assert (img_dir / "Vol2_PartB_Figure2_1_2.png").is_file()
+    assert "imgs/Vol2_PartB_Figure2_1.png" in out
+    assert "imgs/Vol2_PartB_Figure2_1_2.png" in out
+</code></pre>
+</li>
+
+<li><h4>Step 2: Run the test, verify it fails</h4>
+Run from repo root:
+<pre><code>python -m pytest tests/scripts/test_p4l_image_naming.py -v</code></pre>
+Expected: FAIL with <code>AttributeError: module 'convert_pymupdf4llm' has no attribute 'rename_images_semantically'</code>.
+<span class="meta">If it errors at <code>pytest.importorskip("pymupdf4llm")</code> the dep is missing — <code>pip install pymupdf4llm</code> first (it is already installed in this environment).</span>
+</li>
+
+<li><h4>Step 3: Add the <code>build_vol_part_map</code> import</h4>
+In <code>scripts/convert_pymupdf4llm.py</code>, the module already sets
+<code>REPO_ROOT</code> and imports stdlib at the top. Add this import near the
+top of the file, after the existing <code>from pathlib import Path</code> line:
+<pre><code>from convert_to_md import build_vol_part_map</code></pre>
+This works because both scripts live in <code>scripts/</code>, which is on
+<code>sys.path[0]</code> when the module is run as a script, and the test
+prepends <code>scripts/</code> to <code>sys.path</code> before importing.
+<code>convert_to_md.py</code> is import-safe (only imports, constants, and
+regex at module scope; its CLI is under a <code>__main__</code> guard).
+</li>
+
+<li><h4>Step 4: Add the rename function + helper</h4>
+In <code>scripts/convert_pymupdf4llm.py</code>, add these near the other
+module-level regexes (after the existing <code>IMG_RE</code> /
+<code>FIG_CAP_RE</code> definitions). <code>re</code> and <code>Path</code>
+are already imported at the top of the module.
+<pre><code># Original PyMuPDF4LLM image filename tail: ...-&lt;page&gt;-&lt;idx&gt;.&lt;ext&gt;
+_IMG_TAIL_RE = re.compile(r"-(\d+)-(\d+)\.(?:png|jpg|jpeg)$", re.IGNORECASE)
+# Image markdown link capturing BOTH alt text and path.
+_IMG_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+# Figure number inside an image's alt text, e.g. "Figure 1.6".
+_ALT_FIG_RE = re.compile(r"Figure\s+(\d+(?:\.\d+)*)", re.IGNORECASE)
+
+
+def _figure_number_for(alt, lines, line_idx):
+    """Figure number for an image: from its alt text, else the nearest caption
+    within the next few non-blank lines. Returns the dotted number or None."""
+    m = _ALT_FIG_RE.search(alt or "")
+    if m:
+        return m.group(1)
+    seen = 0
+    for j in range(line_idx + 1, min(line_idx + 8, len(lines))):
+        s = lines[j].strip()
+        if not s:
+            continue
+        seen += 1
+        cm = FIG_CAP_RE.match(s)
+        if cm:
+            return cm.group(1)
+        if seen &gt;= 3:
+            break
+    return None
+
+
+def _semantic_name(page, idx, fig_num, vol, part):
+    """Build the target basename (without collision suffix) per the naming rules."""
+    # Match convert_to_md.py: use `is not None` (Vol 0 is a valid volume).
+    known = vol is not None and part is not None
+    if fig_num is not None:
+        safe = fig_num.replace(".", "_")
+        stem = f"Vol{vol}_Part{part}_Figure{safe}" if known else f"Figure{safe}"
+    else:
+        stem = f"Vol{vol}_Part{part}_Image_p{page}_{idx}" if known else f"Image_p{page}_{idx}"
+    return stem
+
+
+def rename_images_semantically(md_text, img_dir: Path, vol_part_map: dict) -&gt; str:
+    """Rename PyMuPDF4LLM's page-indexed image files to the semantic
+    Vol/Part/Figure convention and rewrite their markdown links.
+
+    Only touches links whose on-disk filename matches PyMuPDF4LLM's
+    ...-&lt;page&gt;-&lt;idx&gt;.png pattern and whose file exists; every other link is
+    left exactly as-is.
+    """
+    lines = md_text.split("\n")
+    assigned: set[str] = set()  # target basenames already used this pass
+
+    def _unique(stem: str) -> str:
+        name = f"{stem}.png"
+        n = 2
+        while name in assigned or (img_dir / name).exists():
+            name = f"{stem}_{n}.png"
+            n += 1
+        assigned.add(name)
+        return name
+
+    for i, line in enumerate(lines):
+        if "![" not in line:
+            continue
+
+        def _replace(mo, _i=i):
+            alt, path = mo.group(1), mo.group(2)
+            basename = re.split(r"[/\\]", path)[-1]
+            tail = _IMG_TAIL_RE.search(basename)
+            if not tail:
+                return mo.group(0)  # not a PyMuPDF4LLM image name — leave alone
+            src = img_dir / basename
+            if not src.is_file():
+                return mo.group(0)  # missing file — leave link unchanged
+            page, idx = int(tail.group(1)), int(tail.group(2))
+            fig_num = _figure_number_for(alt, lines, _i)
+            vol, part = vol_part_map.get(page, (None, None))
+            new_name = _unique(_semantic_name(page, idx, fig_num, vol, part))
+            src.rename(img_dir / new_name)
+            return f"![{alt}]({img_dir.name}/{new_name})"
+
+        lines[i] = _IMG_LINK_RE.sub(_replace, line)
+
+    return "\n".join(lines)</code></pre>
+<p class="meta">Note: <code>FIG_CAP_RE</code> is the module's existing caption
+regex (<code>^[_*]{0,2}\s*Figure\s+(\S+?)\s*[:：\-–]</code>); it captures the
+same figure-id shape (<code>1.1</code>, <code>9.9</code>) the tests use.</p>
+</li>
+
+<li><h4>Step 5: Wire the call into <code>convert_one</code></h4>
+In <code>scripts/convert_pymupdf4llm.py</code>, inside <code>convert_one</code>,
+the current sequence is:
+<pre><code>    doc.close()
+
+    merged = "\n\n".join(out_pages)
+    header = (
+        f"# {pdf_path.stem.replace('_', ' ')}\n\n"
+        "&gt; Source: PDF converted via PyMuPDF4LLM (2-pass hybrid engine).\n\n"
+        "---\n\n"
+    )
+    body = postprocess(merged, img_dir.name)
+    md_path.write_text(header + body, encoding="utf-8")</code></pre>
+Change it to compute the Vol/Part map <em>before</em> closing the document,
+and run the rename pass on <code>body</code> before writing:
+<pre><code>    vol_part_map = build_vol_part_map(doc)
+    doc.close()
+
+    merged = "\n\n".join(out_pages)
+    header = (
+        f"# {pdf_path.stem.replace('_', ' ')}\n\n"
+        "&gt; Source: PDF converted via PyMuPDF4LLM (2-pass hybrid engine).\n\n"
+        "---\n\n"
+    )
+    body = postprocess(merged, img_dir.name)
+    body = rename_images_semantically(body, img_dir, vol_part_map)
+    md_path.write_text(header + body, encoding="utf-8")</code></pre>
+<p class="meta">Only these two lines change: add <code>vol_part_map = build_vol_part_map(doc)</code> immediately above <code>doc.close()</code>, and add the <code>body = rename_images_semantically(...)</code> line immediately below <code>body = postprocess(...)</code>. Nothing else in <code>convert_one</code> moves.</p>
+</li>
+
+<li><h4>Step 6: Run the tests, verify they pass</h4>
+<pre><code>python -m pytest tests/scripts/test_p4l_image_naming.py -v</code></pre>
+Expected: 2 passed, pristine (no warnings). Then confirm the module still imports:
+<pre><code>python -c "import sys; sys.path.insert(0,'scripts'); import convert_pymupdf4llm; print('ok')"</code></pre>
+Expected: prints <code>ok</code>.
+</li>
+
+<li><h4>Step 7: Commit</h4>
+<pre><code>git add scripts/convert_pymupdf4llm.py tests/scripts/test_p4l_image_naming.py
+git commit -m "feat(convert): semantic Vol/Part/Figure image names in p4l engine
+
+Post-conversion rename pass gives convert_pymupdf4llm.py the same
+Vol{N}_Part{P}_Figure{X_Y}.png naming as convert_to_md.py; un-captioned
+images keep a Vol/Part/Image_p{page}_{idx} scheme. Reuses build_vol_part_map.
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Verification (whole feature)</h2>
+<ul class="tight">
+  <li><code>python -m pytest tests/scripts/test_p4l_image_naming.py -v</code> — 2 passed.</li>
+  <li>Spec coverage: Task 1 implements every row of the naming-rules table (captioned/un-captioned × known/unknown Vol/Part), the missing-file and collision edge cases, the <code>build_vol_part_map</code> reuse, and the post-<code>postprocess</code> call site. Non-goals respected — <code>convert_to_md.py</code> untouched; p4l text/caption/quality-gate logic untouched.</li>
+  <li>Optional real-document smoke check (not required for the task): re-run a small page range, e.g. <code>python scripts/convert_pymupdf4llm.py sources/specs/6.3/Core_v6.3.pdf --suffix .p4lN --pages 230-238</code>, and confirm the emitted <code>*_images/</code> contains <code>Vol1_PartA_Figure1_1.png</code>-style names.</li>
+</ul>
+
+</main>
+</body>
+</html>
