@@ -71,3 +71,24 @@ def test_unknown_tool_call_is_fed_back_not_fatal(monkeypatch):
     assert resp.answer == "ok"
     tool_msgs = [m for m in fake.seen_messages if m.get("role") == "tool"]
     assert tool_msgs and "unknown tool" in tool_msgs[0]["content"].lower()
+
+
+class MalformedArgsClient(FakeClient):
+    async def _create(self, *, model, messages, tools, tool_choice):
+        self.calls += 1
+        self.seen_messages = messages
+        if self.calls == 1:
+            bad = SimpleNamespace(id="cbad", function=SimpleNamespace(name="search_wiki", arguments="{not valid json"))
+            return _resp(_msg(tool_calls=[bad]))
+        return _resp(_msg(content='{"answer": "recovered", "citations": [], "reasoning": ""}'))
+
+
+def test_malformed_tool_args_fed_back_as_error(monkeypatch):
+    from agent import agent as agent_mod
+    fake = MalformedArgsClient()
+    monkeypatch.setattr(agent_mod, "get_client", lambda: fake)
+    a = agent_mod.BluetoothWikiAgent(model="gpt-oss-120b", search_strategy="v1")
+    resp = asyncio.run(a.ask("q"))
+    assert resp.answer == "recovered"
+    tool_msgs = [m for m in fake.seen_messages if m.get("role") == "tool"]
+    assert tool_msgs and "malformed arguments" in tool_msgs[0]["content"].lower()

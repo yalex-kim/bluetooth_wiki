@@ -105,14 +105,21 @@ class BluetoothWikiAgent:
                 tool_calls += 1
                 name = c.function.name
                 tools_used[name] = tools_used.get(name, 0) + 1
+                raw_args = c.function.arguments or "{}"
+                args: dict = {}
+                bad_args = False
                 try:
-                    args = json.loads(c.function.arguments or "{}")
-                    if not isinstance(args, dict):
-                        args = {}
+                    parsed = json.loads(raw_args)
+                    if isinstance(parsed, dict):
+                        args = parsed
+                    else:
+                        bad_args = True
                 except json.JSONDecodeError:
-                    args = {}
+                    bad_args = True
                 handler = self._handlers.get(name)
-                if handler is None:
+                if bad_args:
+                    result = f"Error: malformed arguments for {name!r}: {raw_args!r}"
+                elif handler is None:
                     result = f"Error: unknown tool {name!r}. Available: {list(self._handlers)}."
                 else:
                     try:
