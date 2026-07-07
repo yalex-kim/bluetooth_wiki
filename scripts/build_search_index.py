@@ -50,6 +50,14 @@ def build_chunks_only(version: str) -> dict:
 
 
 def main() -> int:
+    # Progress lines use an em dash; force UTF-8 so a cp949/Windows console
+    # (which would otherwise raise UnicodeEncodeError) doesn't abort the build.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", nargs="+", default=None, help="spec versions, e.g. 6.0 6.2")
     ap.add_argument("--all", action="store_true", help="build every version under sources/specs/")

@@ -60,7 +60,12 @@ def rg_search(
     cmd.append(pattern)
     cmd.extend(str(r) for r in roots)
 
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=_RG_TIMEOUT_SEC)
+    # ripgrep emits UTF-8; decode as such explicitly. Without encoding=, text=True
+    # uses the locale codec (e.g. cp949 on Windows) and crashes on non-ASCII spec
+    # text (em dashes, µ, etc.). errors="replace" keeps a bad byte from aborting search.
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=_RG_TIMEOUT_SEC
+    )
     if proc.returncode not in (0, 1):  # 1 = no matches
         raise RuntimeError(f"ripgrep failed (exit {proc.returncode}): {proc.stderr.strip()[:500]}")
 
