@@ -2,8 +2,8 @@
 
 The pure-logic helpers (``_list_index``, ``_search_wiki``, ``_read_page``,
 ``_read_source``) have no SDK dependency so they can be unit-tested against
-real repo content. The SDK ``@tool``-decorated wrappers adapt them into the
-MCP-style content envelope Claude expects.
+real repo content. They produce plain strings; the caller wraps them in the
+LLM client's expected format (OpenAI function schemas → handler map).
 
 Search is pluggable: ``build_tools(strategy_name)`` wires the ``search_wiki``
 tool to one of the strategies in the ``search`` package (v0 naive baseline /
@@ -16,8 +16,6 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-
-from claude_agent_sdk import tool
 
 from .config import (
     INDEX_PATH,
@@ -136,61 +134,68 @@ def _read_source(version: str, vol: str = "", part: str = "") -> str:
     return header + section
 
 
-# ─── SDK-decorated wrappers ─────────────────────────────────────────────
+# ─── OpenAI function schema builders ────────────────────────────────────
 
 
-def _wrap(text: str) -> dict:
-    return {"content": [{"type": "text", "text": text}]}
+def _fn(name: str, description: str, properties: dict, required: list[str]) -> dict:
+    """Build an OpenAI function tool schema."""
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": description,
+            "parameters": {"type": "object", "properties": properties, "required": required},
+        },
+    }
 
 
-@tool(
+_LIST_INDEX = _fn(
     "list_index",
     "Read the wiki's index.md catalog. ALWAYS call this first to identify which pages are relevant.",
-    {},
+    {}, [],
 )
-async def list_index(args: dict) -> dict:
-    return _wrap(_list_index())
-
-
-@tool(
+_READ_PAGE = _fn(
     "read_page",
     "Read a wiki or source markdown file by repo-relative path "
     "(e.g. 'wiki/concepts/channel-sounding.md' or 'sources/specs/6.0/Core_v6.0.md'). "
     f"Truncated to {READ_PAGE_MAX_CHARS} characters; long source files should use read_source instead.",
-    {"path": str},
+    {"path": {"type": "string"}}, ["path"],
 )
-async def read_page(args: dict) -> dict:
-    return _wrap(_read_page(args.get("path") or ""))
-
-
-@tool(
+_READ_SOURCE = _fn(
     "read_source",
     "Read a slice of an original Bluetooth spec markdown. Provide 'version' (e.g. '6.0') "
     "plus 'vol' (e.g. '6') and 'part' (e.g. 'B') to read that Part's full text. "
     "Without vol/part, returns a table of contents of all Volumes/Parts.",
-    {"version": str, "vol": str, "part": str},
+    {"version": {"type": "string"}, "vol": {"type": "string"}, "part": {"type": "string"}}, ["version"],
 )
-async def read_source(args: dict) -> dict:
-    return _wrap(_read_source(args.get("version") or "", args.get("vol") or "", args.get("part") or ""))
 
 
-def build_tools(strategy_name: str = SEARCH_STRATEGY) -> list:
-    """Assemble the tool list with search_wiki bound to the given strategy."""
+def build_tools(strategy_name: str = SEARCH_STRATEGY):
+    """Return (openai_tool_schemas, name->async-handler) for the given strategy."""
     extra = " May take a few extra seconds when it expands into the original spec text." if strategy_name == "v2" else ""
-
-    @tool(
+    search_schema = _fn(
         "search_wiki",
         "Search wiki and/or original spec markdown for a query. "
         f"Returns up to {SEARCH_RESULT_LIMIT} hits with file paths and ~{SEARCH_SNIPPET_CHARS}-char snippets. "
         "scope: 'wiki' for curated content, 'sources' for original spec text, 'both' to search everything."
         + extra,
-        {"query": str, "scope": str},
+        {"query": {"type": "string"},
+         "scope": {"type": "string", "enum": ["wiki", "sources", "both"]}},
+        ["query"],
     )
-    async def search_wiki(args: dict) -> dict:
-        return _wrap(await _search_wiki_async(args.get("query") or "", args.get("scope") or "both", strategy_name))
 
-    return [list_index, search_wiki, read_page, read_source]
+    async def _h_list(args: dict) -> str:
+        return _list_index()
 
+    async def _h_search(args: dict) -> str:
+        return await _search_wiki_async(args.get("query") or "", args.get("scope") or "both", strategy_name)
 
-# Backward-compatible default tool list (strategy from BT_AGENT_SEARCH_STRATEGY, default v0).
-ALL_TOOLS = build_tools()
+    async def _h_page(args: dict) -> str:
+        return _read_page(args.get("path") or "")
+
+    async def _h_source(args: dict) -> str:
+        return _read_source(args.get("version") or "", args.get("vol") or "", args.get("part") or "")
+
+    schemas = [_LIST_INDEX, search_schema, _READ_PAGE, _READ_SOURCE]
+    handlers = {"list_index": _h_list, "search_wiki": _h_search, "read_page": _h_page, "read_source": _h_source}
+    return schemas, handlers
