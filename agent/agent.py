@@ -128,6 +128,20 @@ class BluetoothWikiAgent:
                         result = f"Error running {name}: {exc}"
                 messages.append({"role": "tool", "tool_call_id": c.id, "content": result})
 
+        if not final_text:
+            # Turn budget exhausted while still tool-calling: force one final
+            # synthesis turn with tools disabled so we return a real answer.
+            resp = await client.chat.completions.create(
+                model=self._model, messages=messages, tools=self._schemas, tool_choice="none",
+            )
+            usage = getattr(resp, "usage", None)
+            if usage:
+                prompt_tokens += getattr(usage, "prompt_tokens", 0) or 0
+                completion_tokens += getattr(usage, "completion_tokens", 0) or 0
+            choice = resp.choices[0]
+            finish_reason = choice.finish_reason
+            final_text = choice.message.content or ""
+
         response = _parse_final_text(final_text or "")
         response.tool_calls = tool_calls
         response.tools_used = tools_used or None

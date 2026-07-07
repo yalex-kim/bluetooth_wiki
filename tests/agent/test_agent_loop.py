@@ -92,3 +92,30 @@ def test_malformed_tool_args_fed_back_as_error(monkeypatch):
     assert resp.answer == "recovered"
     tool_msgs = [m for m in fake.seen_messages if m.get("role") == "tool"]
     assert tool_msgs and "malformed arguments" in tool_msgs[0]["content"].lower()
+
+
+def test_turn_budget_exhausted_forces_final_synthesis(monkeypatch):
+    from agent import agent as agent_mod
+
+    class NeverStopsClient(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.forced = False
+
+        async def _create(self, *, model, messages, tools, tool_choice):
+            self.calls += 1
+            self.seen_messages = messages
+            if tool_choice == "none":
+                self.forced = True
+                return _resp(_msg(content='{"answer": "forced synthesis", "citations": [], "reasoning": ""}'))
+            # Always keep tool-calling (uses list_index so no ripgrep needed).
+            return _resp(_msg(tool_calls=[_tool_call(f"c{self.calls}", "list_index", {})]))
+
+    monkeypatch.setattr(agent_mod, "MAX_TURNS", 2)
+    fake = NeverStopsClient()
+    monkeypatch.setattr(agent_mod, "get_client", lambda: fake)
+    a = agent_mod.BluetoothWikiAgent(model="gpt-oss-120b", search_strategy="v1")
+    resp = asyncio.run(a.ask("q"))
+    assert fake.forced is True
+    assert resp.answer == "forced synthesis"
+    assert resp.num_turns == 2

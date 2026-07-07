@@ -74,10 +74,10 @@ Return this exact JSON structure:
 ## Example Invocation (Python)
 
 ```python
-import anthropic
+from openai import OpenAI
 import json
 
-client = anthropic.Anthropic()
+client = OpenAI(base_url="https://your-gpt-oss-endpoint/v1", api_key="...")
 
 SYSTEM_PROMPT = """You are an expert evaluator for Bluetooth specification knowledge systems.
 Your job is to score a system's answer against a reference answer using a strict rubric.
@@ -136,14 +136,16 @@ Return this exact JSON structure:
   "key_facts_missing": ["<fact>"]
 }}"""
 
-    response = client.messages.create(
-        model="claude-opus-4-7",
+    response = client.chat.completions.create(
+        model="gpt-oss-120b",
         max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
     )
 
-    return json.loads(response.content[0].text)
+    return json.loads(response.choices[0].message.content)
 
 
 DIFFICULTY_WEIGHTS = {

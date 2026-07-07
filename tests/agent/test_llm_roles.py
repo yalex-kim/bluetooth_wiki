@@ -30,4 +30,4 @@ def test_judge_parses_openai_json(monkeypatch):
     )
     q = {"question": "q", "reference_answer": "r", "key_facts": ["a"], "expected_citations": ["[Core 6.0]"]}
     verdict = asyncio.run(jm.judge(q, "some answer"))
-    assert verdict["accuracy"] == 5 and verdict["usability"] == 5
+    assert verdict["scores"]["accuracy"] == 5 and verdict["scores"]["usability"] == 5

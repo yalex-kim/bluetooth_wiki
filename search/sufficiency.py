@@ -1,6 +1,6 @@
 """Agentic sufficiency judge for the v2 search pipeline.
 
-A cheap/fast model (Haiku-class, distinct from the main answering model) looks
+A fast model (the configured gpt-oss endpoint) looks
 at the question plus previews of the current hits and decides whether they are
 enough to answer — optionally proposing a reformulated query for the next
 retrieval pass. Zero hits short-circuit to "insufficient" without an LLM call.

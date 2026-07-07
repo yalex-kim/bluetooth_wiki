@@ -8,7 +8,7 @@ Usage:
     python scripts/run_search_eval.py --strategies v0 v1 v2            # full 42-question run
 
 Cost warning: a full run is len(strategies) × 42 agent.ask() calls plus the
-same number of judge calls (and extra Haiku sufficiency calls under v2).
+same number of judge calls (and extra sufficiency calls under v2).
 Smoke-test with --limit 5 first.
 
 Outputs: eval/results_search_<strategy>.json

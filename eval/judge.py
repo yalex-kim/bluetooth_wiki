@@ -93,10 +93,26 @@ def extract_json(text: str) -> dict:
     return data
 
 
+_DIMENSIONS = ("accuracy", "completeness", "citation", "hallucination_penalty", "usability")
+
+
 def normalize_verdict(verdict: dict) -> dict:
-    """Canonicalize judge output in place (some judges emit 'hallucination'
-    instead of 'hallucination_penalty'); returns the same dict."""
-    s = verdict.setdefault("scores", {})
+    """Canonicalize judge output in place; returns the same dict.
+
+    Handles two judge quirks: (1) 'hallucination' emitted instead of
+    'hallucination_penalty', and (2) a flat verdict with dimension keys at the
+    top level instead of nested under 'scores' (gpt-oss is less adherent to the
+    nested schema than Claude) — those top-level dimension scores are lifted
+    into 'scores'."""
+    s = verdict.get("scores")
+    if not isinstance(s, dict) or not s:
+        s = {}
+        for dim in _DIMENSIONS:
+            if dim in verdict and not isinstance(verdict[dim], dict):
+                s[dim] = verdict[dim]
+        if "hallucination" in verdict and "hallucination_penalty" not in s:
+            s["hallucination_penalty"] = verdict["hallucination"]
+        verdict["scores"] = s
     s["hallucination_penalty"] = s.get("hallucination_penalty", s.get("hallucination", 0))
     r = verdict.setdefault("rationales", {})
     r["hallucination_penalty"] = r.get("hallucination_penalty", r.get("hallucination", ""))

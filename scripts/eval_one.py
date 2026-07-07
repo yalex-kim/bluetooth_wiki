@@ -83,13 +83,9 @@ async def main() -> int:
         print(f"  cost_usd:     ${response.total_cost_usd:.4f}")
     if response.usage:
         u = response.usage
-        in_tok = u.get("input_tokens", 0)
-        out_tok = u.get("output_tokens", 0)
-        cache_r = u.get("cache_read_input_tokens", 0)
-        cache_c = u.get("cache_creation_input_tokens", 0)
-        print(f"  tokens:       in={in_tok} out={out_tok} cache_read={cache_r} cache_create={cache_c}")
+        print(f"  tokens:       in={u.get('prompt_tokens', 0)} out={u.get('completion_tokens', 0)}")
     print("\n──── TIMING ────")
-    print(f"  agent.ask:        {ask_time:6.2f}s  (api {response.duration_api_ms/1000:.2f}s, total {response.duration_ms/1000:.2f}s)")
+    print(f"  agent.ask:        {ask_time:6.2f}s  (total {response.duration_ms/1000:.2f}s)")
     print(f"  judge:            {judge_time:6.2f}s")
     print(f"  total:            {ask_time + judge_time:6.2f}s")
 
