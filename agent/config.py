@@ -22,7 +22,7 @@ READ_PAGE_MAX_CHARS = int(os.getenv("BT_AGENT_READ_MAX", "60000"))
 SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "system_prompt.md"
 
 # ─── Search strategy (see search/ package) ──────────────────────────────
-SEARCH_STRATEGY = os.getenv("BT_AGENT_SEARCH_STRATEGY", "v0")  # v0 | v1 | v2
+SEARCH_STRATEGY = os.getenv("BT_AGENT_SEARCH_STRATEGY", "v1")  # v0 | v1 | v2 (default v1: ranked lexical + chunk citations)
 SEARCH_INDEX_DIR = REPO_ROOT / "search" / "index"
 EMBED_MODEL = os.getenv("BT_AGENT_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 RRF_K = int(os.getenv("BT_AGENT_RRF_K", "60"))

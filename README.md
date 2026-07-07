@@ -210,7 +210,7 @@ The agent's `search_wiki` tool is pluggable — three backends live in `search/`
 | Strategy | Mechanism | Trade-off |
 |----------|-----------|-----------|
 | `v0` | Naive substring scan over all markdown (the original) | Baseline for evals |
-| `v1` | ripgrep multi-term search, ranked by term coverage / proximity / exact-phrase | Fast, much better lexical relevance |
+| `v1` **(default)** | ripgrep multi-term search, ranked by term coverage / proximity / exact-phrase; source hits bucketed to Vol/Part chunks | Fast, much better lexical relevance; no ML deps |
 | `v2` | v1 first → a Haiku-class judge decides if hits suffice → if not, hybrid retrieval over `sources/specs/` (ripgrep + local-embedding vector search fused with Reciprocal Rank Fusion), with a bounded query-reformulation loop | Highest quality on deep spec questions (opcodes, PDU details); slower per call |
 
 v2's sufficiency loop runs *inside* one tool call, so it never consumes the main agent's turn budget. Source hits are resolved to structural chunks (`search/chunker.py`) carrying correct `Vol/Part/§` metadata — this chunker also fixed `read_source`, which previously matched only front-matter `[Vol N]` tags and returned the wrong sections.
