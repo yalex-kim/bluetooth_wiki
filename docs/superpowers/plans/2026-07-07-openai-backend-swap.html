@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenAI backend swap (gpt-oss-120B) — Implementation Plan</title>
+<style>
+  :root{--bg:#fff;--fg:#1b1f24;--muted:#57606a;--border:#d0d7de;--code-bg:#f6f8fa;--accent:#0969da;--accent-bg:#ddf4ff}
+  @media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;--code-bg:#161b22;--accent:#4493f8;--accent-bg:#0c2d4a}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  main{max-width:920px;margin:0 auto;padding:2.5rem 1.25rem 6rem}
+  h1{font-size:1.85rem;line-height:1.25;margin:0 0 1rem}
+  h2{font-size:1.3rem;margin:2.5rem 0 1rem;padding-bottom:.35rem;border-bottom:1px solid var(--border)}
+  h3{font-size:1.08rem;margin:0 0 .75rem}
+  h4{font-size:.96rem;margin:1.25rem 0 .4rem}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.87em;background:var(--code-bg);padding:.12em .4em;border-radius:6px;border:1px solid var(--border)}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:1rem;overflow-x:auto;font-size:.82rem;line-height:1.5}
+  pre code{background:none;border:none;padding:0;font-size:inherit}
+  .callout{background:var(--accent-bg);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:6px;padding:.85rem 1rem;margin:1.25rem 0}
+  .task{border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.4rem;margin:1.5rem 0}
+  .files dt{font-weight:600;margin-top:.5rem}
+  .files dd{margin:0 0 0 1rem}
+  .step{list-style:none;padding-left:0}
+  .step>li{margin:1rem 0;padding-left:1.9rem;position:relative}
+  .step>li::before{content:"[ ]";position:absolute;left:0;top:0;font-family:ui-monospace,monospace;color:var(--muted);font-weight:700}
+  .meta{color:var(--muted);font-size:.92rem}
+  ul.tight{margin:.3rem 0}
+  hr{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>OpenAI backend swap (gpt-oss-120B) — Implementation Plan</h1>
+
+<div class="callout">
+  <strong>For agentic workers:</strong> REQUIRED SUB-SKILL — use
+  <code>superpowers:subagent-driven-development</code> (recommended) or
+  <code>superpowers:executing-plans</code>. Steps use <code>[ ]</code> /
+  <code>[x]</code> markers for tracking.
+</div>
+
+<p class="meta">Spec: <code>docs/superpowers/specs/2026-07-07-openai-backend-swap-design.md</code> · Date: 2026-07-07</p>
+
+<p><strong>Goal:</strong> Replace the Claude Agent SDK + Anthropic backend with a
+hand-rolled OpenAI-compatible tool-calling loop so the agent, eval judge, and v2
+sufficiency judge all run on a company-hosted gpt-oss-120B endpoint.</p>
+
+<p><strong>Architecture:</strong> A shared <code>AsyncOpenAI</code> client
+(<code>agent/llm.py</code>) points at <code>OPENAI_BASE_URL</code>. The agent
+loop calls <code>chat.completions.create</code> with OpenAI function schemas,
+executes tool calls via the existing provider-neutral tool logic, and loops
+until a final answer. The public <code>BluetoothWikiAgent.ask</code> →
+<code>AgentResponse</code> contract is preserved, so <code>server/</code> is
+untouched.</p>
+
+<p><strong>Tech Stack:</strong> Python ≥3.10, <code>openai</code> async SDK,
+pytest + pytest-asyncio. Removes <code>claude-agent-sdk</code> and
+<code>anthropic</code>.</p>
+
+<h2>Global Constraints</h2>
+<ul class="tight">
+  <li>Python ≥ 3.10. Add <code>openai&gt;=1.0</code>; remove
+      <code>claude-agent-sdk</code> and <code>anthropic</code>; keep
+      <code>mcp&gt;=1.0.0</code> (used by <code>server/mcp.py</code>).</li>
+  <li>OpenAI-only — no multi-provider abstraction.</li>
+  <li>All three roles (agent / judge / sufficiency) use the same shared
+      <code>get_client()</code> and the gpt-oss model id from config.</li>
+  <li>Preserve the <code>BluetoothWikiAgent(model=…, search_strategy=…)</code>
+      constructor and the <code>AgentResponse</code> dataclass fields exactly
+      (<code>answer, citations, reasoning, raw, num_turns, tool_calls,
+      tools_used, duration_ms, duration_api_ms, total_cost_usd, usage,
+      stop_reason</code>) — <code>server/http.py</code> depends on them.</li>
+  <li>Do not change the tool <em>logic</em> (<code>_list_index</code>,
+      <code>_search_wiki_async</code>, <code>_read_page</code>,
+      <code>_read_source</code>) or any search / chunker / index code.</li>
+  <li>Config default model id placeholder is <code>gpt-oss-120b</code>; the real
+      served name is supplied via <code>BT_AGENT_MODEL</code>.</li>
+</ul>
+
+<hr>
+
+<!-- TASK 1 -->
+<div class="task">
+<h3>Task 1: Config + shared OpenAI client</h3>
+<dl class="files">
+  <dt>Create</dt><dd><code>agent/llm.py</code></dd>
+  <dt>Modify</dt><dd><code>agent/config.py</code> (add OPENAI_* + JUDGE_MODEL; change model defaults), <code>pyproject.toml</code> (deps)</dd>
+  <dt>Test</dt><dd><code>tests/agent/test_llm_client.py</code></dd>
+</dl>
+<h4>Interfaces — Produces</h4>
+<ul class="tight">
+  <li><code>agent.config.OPENAI_BASE_URL: str</code>, <code>OPENAI_API_KEY: str</code>, <code>MODEL: str</code>, <code>JUDGE_MODEL: str</code>, <code>SUFFICIENCY_MODEL: str</code></li>
+  <li><code>agent.llm.get_client() -&gt; openai.AsyncOpenAI</code> (process-cached)</li>
+</ul>
+
+<ol class="step">
+<li><h4>Step 1: Install the SDK + update deps</h4>
+Run: <code>pip install "openai&gt;=1.0"</code><br>
+In <code>pyproject.toml</code>, edit the <code>dependencies</code> list: remove the lines <code>"claude-agent-sdk&gt;=0.1.0",</code> and <code>"anthropic&gt;=0.39.0",</code>; add <code>"openai&gt;=1.0",</code>. Leave <code>"mcp&gt;=1.0.0",</code> in place.
+</li>
+
+<li><h4>Step 2: Write the failing test</h4>
+Create <code>tests/agent/test_llm_client.py</code>:
+<pre><code>import importlib
+
+
+def test_get_client_uses_configured_base_url(monkeypatch):
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://gpt-oss.internal/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy-key")
+    # Re-import config + llm so they pick up the patched env.
+    import agent.config as cfg
+    importlib.reload(cfg)
+    import agent.llm as llm
+    importlib.reload(llm)
+
+    c1 = llm.get_client()
+    c2 = llm.get_client()
+    assert c1 is c2  # process-cached
+    assert str(c1.base_url).rstrip("/") == "http://gpt-oss.internal/v1"
+
+
+def test_config_model_defaults_are_gpt_oss(monkeypatch):
+    for var in ("BT_AGENT_MODEL", "BT_AGENT_JUDGE_MODEL", "BT_AGENT_SUFFICIENCY_MODEL"):
+        monkeypatch.delenv(var, raising=False)
+    import agent.config as cfg
+    importlib.reload(cfg)
+    assert cfg.MODEL == "gpt-oss-120b"
+    assert cfg.JUDGE_MODEL == "gpt-oss-120b"
+    assert cfg.SUFFICIENCY_MODEL == "gpt-oss-120b"
+</code></pre>
+</li>
+
+<li><h4>Step 3: Run the test, verify it fails</h4>
+Run: <code>python -m pytest tests/agent/test_llm_client.py -v</code><br>
+Expected: FAIL — <code>agent.llm</code> does not exist / <code>cfg.MODEL</code> is still <code>claude-opus-4-7</code>.
+</li>
+
+<li><h4>Step 4: Update <code>agent/config.py</code></h4>
+Change the model line and add the OpenAI endpoint + judge/sufficiency model config. Replace:
+<pre><code>MODEL = os.getenv("BT_AGENT_MODEL", "claude-opus-4-7")</code></pre>
+with:
+<pre><code>MODEL = os.getenv("BT_AGENT_MODEL", "gpt-oss-120b")
+
+# OpenAI-compatible LLM endpoint (company-hosted gpt-oss-120B). Used by the
+# agent loop, the eval judge, and the v2 sufficiency judge via agent/llm.py.
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+JUDGE_MODEL = os.getenv("BT_AGENT_JUDGE_MODEL", MODEL)</code></pre>
+Then change the existing sufficiency default (in the search-strategy block) from:
+<pre><code>SUFFICIENCY_MODEL = os.getenv("BT_AGENT_SUFFICIENCY_MODEL", "claude-haiku-4-5")</code></pre>
+to:
+<pre><code>SUFFICIENCY_MODEL = os.getenv("BT_AGENT_SUFFICIENCY_MODEL", MODEL)</code></pre>
+</li>
+
+<li><h4>Step 5: Create <code>agent/llm.py</code></h4>
+<pre><code>"""Shared OpenAI-compatible async client.
+
+The agent loop, the eval judge, and the v2 sufficiency judge all talk to the
+same endpoint (a company-hosted gpt-oss-120B behind an OpenAI-compatible
+/v1/chat/completions API), configured via OPENAI_BASE_URL / OPENAI_API_KEY.
+"""
+from __future__ import annotations
+
+from agent.config import OPENAI_API_KEY, OPENAI_BASE_URL
+
+_client = None
+
+
+def get_client():
+    """Return a process-cached AsyncOpenAI client for the configured endpoint."""
+    global _client
+    if _client is None:
+        from openai import AsyncOpenAI
+
+        _client = AsyncOpenAI(
+            base_url=OPENAI_BASE_URL or None,
+            api_key=OPENAI_API_KEY or "not-needed",
+        )
+    return _client
+</code></pre>
+<p class="meta">Note: an empty <code>base_url</code> falls back to OpenAI's public API; the endpoint is expected to be supplied via env. <code>api_key</code> defaults to a non-empty dummy because the SDK requires one even for keyless internal endpoints.</p>
+</li>
+
+<li><h4>Step 6: Run the tests, verify they pass</h4>
+Run: <code>python -m pytest tests/agent/test_llm_client.py -v</code><br>
+Expected: 2 passed.
+</li>
+
+<li><h4>Step 7: Commit</h4>
+<pre><code>git add agent/llm.py agent/config.py pyproject.toml tests/agent/test_llm_client.py
+git commit -m "feat(agent): shared OpenAI client + gpt-oss config; drop anthropic/claude-agent-sdk deps
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<!-- TASK 2 -->
+<div class="task">
+<h3>Task 2: Provider-neutral tool registry</h3>
+<dl class="files">
+  <dt>Modify</dt><dd><code>agent/tools.py</code> — replace the claude-agent-sdk <code>@tool</code> wiring with OpenAI function schemas + a handler map; keep the pure-logic helpers.</dd>
+  <dt>Test</dt><dd><code>tests/agent/test_tool_registry.py</code></dd>
+</dl>
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li><strong>Consumes:</strong> existing <code>_list_index() -&gt; str</code>, <code>async _search_wiki_async(query, scope, strategy) -&gt; str</code>, <code>_read_page(path) -&gt; str</code>, <code>_read_source(version, vol, part) -&gt; str</code> (unchanged).</li>
+  <li><strong>Produces:</strong> <code>build_tools(strategy_name=SEARCH_STRATEGY) -&gt; tuple[list[dict], dict[str, Callable[[dict], Awaitable[str]]]]</code> — OpenAI tool schemas + a name→async-handler map. Handlers return plain strings.</li>
+</ul>
+
+<ol class="step">
+<li><h4>Step 1: Write the failing test</h4>
+Create <code>tests/agent/test_tool_registry.py</code>:
+<pre><code>import asyncio
+
+
+def test_build_tools_schemas_and_handlers():
+    from agent.tools import build_tools
+    schemas, handlers = build_tools("v1")
+
+    names = [s["function"]["name"] for s in schemas]
+    assert set(names) == {"list_index", "search_wiki", "read_page", "read_source"}
+    assert set(handlers) == set(names)
+
+    # every schema is a valid OpenAI function tool
+    for s in schemas:
+        assert s["type"] == "function"
+        assert "parameters" in s["function"]
+        assert s["function"]["parameters"]["type"] == "object"
+
+    # required params match the tool contract
+    reqs = {s["function"]["name"]: s["function"]["parameters"].get("required", []) for s in schemas}
+    assert reqs["search_wiki"] == ["query"]
+    assert reqs["read_page"] == ["path"]
+    assert reqs["read_source"] == ["version"]
+    assert reqs["list_index"] == []
+
+
+def test_list_index_handler_runs_real_logic():
+    from agent.tools import build_tools
+    _, handlers = build_tools("v1")
+    out = asyncio.run(handlers["list_index"]({}))
+    assert isinstance(out, str) and out.strip()  # returns the index.md catalog text
+</code></pre>
+</li>
+
+<li><h4>Step 2: Run it, verify it fails</h4>
+Run: <code>python -m pytest tests/agent/test_tool_registry.py -v</code><br>
+Expected: FAIL — <code>build_tools</code> currently returns a list of SDK tool objects, not <code>(schemas, handlers)</code>; and importing <code>agent.tools</code> fails once <code>claude_agent_sdk</code> is uninstalled.
+</li>
+
+<li><h4>Step 3: Rewrite the tool wiring in <code>agent/tools.py</code></h4>
+Remove the <code>from claude_agent_sdk import tool</code> import and the <code>create_sdk_mcp_server</code> usage/import. Remove the four <code>@tool(...)</code>-decorated wrappers and the <code>_wrap</code> helper. Keep the pure-logic functions (<code>_list_index</code>, <code>_search_wiki_async</code>, <code>_read_page</code>, <code>_read_source</code>) and their imports. Replace the removed block with:
+<pre><code>def _fn(name: str, description: str, properties: dict, required: list[str]) -&gt; dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": description,
+            "parameters": {"type": "object", "properties": properties, "required": required},
+        },
+    }
+
+
+_LIST_INDEX = _fn(
+    "list_index",
+    "Read the wiki's index.md catalog. ALWAYS call this first to identify which pages are relevant.",
+    {}, [],
+)
+_READ_PAGE = _fn(
+    "read_page",
+    "Read a wiki or source markdown file by repo-relative path "
+    "(e.g. 'wiki/concepts/channel-sounding.md' or 'sources/specs/6.0/Core_v6.0.md'). "
+    f"Truncated to {READ_PAGE_MAX_CHARS} characters; long source files should use read_source instead.",
+    {"path": {"type": "string"}}, ["path"],
+)
+_READ_SOURCE = _fn(
+    "read_source",
+    "Read a slice of an original Bluetooth spec markdown. Provide 'version' (e.g. '6.0') "
+    "plus 'vol' (e.g. '6') and 'part' (e.g. 'B') to read that Part's full text. "
+    "Without vol/part, returns a table of contents of all Volumes/Parts.",
+    {"version": {"type": "string"}, "vol": {"type": "string"}, "part": {"type": "string"}}, ["version"],
+)
+
+
+def build_tools(strategy_name: str = SEARCH_STRATEGY):
+    """Return (openai_tool_schemas, name-&gt;async-handler) for the given strategy."""
+    extra = " May take a few extra seconds when it expands into the original spec text." if strategy_name == "v2" else ""
+    search_schema = _fn(
+        "search_wiki",
+        "Search wiki and/or original spec markdown for a query. "
+        f"Returns up to {SEARCH_RESULT_LIMIT} hits with file paths and ~{SEARCH_SNIPPET_CHARS}-char snippets. "
+        "scope: 'wiki' for curated content, 'sources' for original spec text, 'both' to search everything."
+        + extra,
+        {"query": {"type": "string"},
+         "scope": {"type": "string", "enum": ["wiki", "sources", "both"]}},
+        ["query"],
+    )
+
+    async def _h_list(args: dict) -&gt; str:
+        return _list_index()
+
+    async def _h_search(args: dict) -&gt; str:
+        return await _search_wiki_async(args.get("query") or "", args.get("scope") or "both", strategy_name)
+
+    async def _h_page(args: dict) -&gt; str:
+        return _read_page(args.get("path") or "")
+
+    async def _h_source(args: dict) -&gt; str:
+        return _read_source(args.get("version") or "", args.get("vol") or "", args.get("part") or "")
+
+    schemas = [_LIST_INDEX, search_schema, _READ_PAGE, _READ_SOURCE]
+    handlers = {"list_index": _h_list, "search_wiki": _h_search, "read_page": _h_page, "read_source": _h_source}
+    return schemas, handlers
+</code></pre>
+<p class="meta">Keep the module's existing backward-compat block only if it does not import <code>claude_agent_sdk</code>; delete the old default tool-list line that referenced the SDK tools (the "Backward-compatible default tool list" comment at the file's end).</p>
+</li>
+
+<li><h4>Step 4: Run the tests, verify they pass</h4>
+Run: <code>python -m pytest tests/agent/test_tool_registry.py -v</code><br>
+Expected: 2 passed.
+</li>
+
+<li><h4>Step 5: Commit</h4>
+<pre><code>git add agent/tools.py tests/agent/test_tool_registry.py
+git commit -m "refactor(agent): provider-neutral OpenAI tool registry (schemas + handlers)
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<!-- TASK 3 -->
+<div class="task">
+<h3>Task 3: Hand-rolled agent tool-calling loop</h3>
+<dl class="files">
+  <dt>Modify</dt><dd><code>agent/agent.py</code> — replace the ClaudeSDKClient loop with an OpenAI <code>chat.completions</code> loop. Keep <code>AgentResponse</code> and <code>_parse_final_text</code> unchanged.</dd>
+  <dt>Test</dt><dd><code>tests/agent/test_agent_loop.py</code></dd>
+</dl>
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li><strong>Consumes:</strong> <code>agent.llm.get_client()</code> (Task 1), <code>agent.tools.build_tools()</code> → <code>(schemas, handlers)</code> (Task 2), existing <code>_parse_final_text</code> / <code>hydrate_citations</code> / <code>extract_json_payload</code>.</li>
+  <li><strong>Produces:</strong> <code>BluetoothWikiAgent(model=MODEL, search_strategy=SEARCH_STRATEGY)</code> with <code>async ask(question: str) -&gt; AgentResponse</code> (unchanged shape).</li>
+</ul>
+
+<ol class="step">
+<li><h4>Step 1: Write the failing test (fake client, no network)</h4>
+Create <code>tests/agent/test_agent_loop.py</code>:
+<pre><code>import asyncio
+import json
+from types import SimpleNamespace
+
+import pytest
+
+
+def _msg(content=None, tool_calls=None):
+    return SimpleNamespace(content=content, tool_calls=tool_calls)
+
+
+def _resp(message):
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=message, finish_reason="stop")],
+        usage=SimpleNamespace(prompt_tokens=10, completion_tokens=5),
+    )
+
+
+def _tool_call(cid, name, args):
+    return SimpleNamespace(id=cid, function=SimpleNamespace(name=name, arguments=json.dumps(args)))
+
+
+class FakeClient:
+    """Turn 1: model calls search_wiki. Turn 2: model returns the final JSON answer."""
+    def __init__(self):
+        self.calls = 0
+        self.seen_messages = []
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
+
+    async def _create(self, *, model, messages, tools, tool_choice):
+        self.calls += 1
+        self.seen_messages = messages
+        if self.calls == 1:
+            return _resp(_msg(tool_calls=[_tool_call("c1", "search_wiki", {"query": "channel sounding", "scope": "wiki"})]))
+        final = '```json\\n{"answer": "CS measures distance.", "citations": [], "reasoning": "found it"}\\n```'
+        return _resp(_msg(content=final))
+
+
+def test_agent_ask_runs_tool_then_parses_answer(monkeypatch):
+    from agent import agent as agent_mod
+    fake = FakeClient()
+    monkeypatch.setattr(agent_mod, "get_client", lambda: fake)
+
+    a = agent_mod.BluetoothWikiAgent(model="gpt-oss-120b", search_strategy="v1")
+    resp = asyncio.run(a.ask("What is channel sounding?"))
+
+    assert fake.calls == 2
+    assert resp.answer == "CS measures distance."
+    assert resp.reasoning == "found it"
+    assert resp.tool_calls == 1
+    assert resp.tools_used == {"search_wiki": 1}
+    assert resp.num_turns == 2
+    assert resp.usage == {"prompt_tokens": 20, "completion_tokens": 10}
+    assert resp.total_cost_usd is None
+    # a tool-result message was appended for the tool call
+    assert any(m.get("role") == "tool" and m.get("tool_call_id") == "c1" for m in fake.seen_messages)
+
+
+class UnknownToolClient(FakeClient):
+    async def _create(self, *, model, messages, tools, tool_choice):
+        self.calls += 1
+        self.seen_messages = messages
+        if self.calls == 1:
+            return _resp(_msg(tool_calls=[_tool_call("c9", "no_such_tool", {})]))
+        return _resp(_msg(content='{"answer": "ok", "citations": [], "reasoning": ""}'))
+
+
+def test_unknown_tool_call_is_fed_back_not_fatal(monkeypatch):
+    from agent import agent as agent_mod
+    fake = UnknownToolClient()
+    monkeypatch.setattr(agent_mod, "get_client", lambda: fake)
+    a = agent_mod.BluetoothWikiAgent(model="gpt-oss-120b", search_strategy="v1")
+    resp = asyncio.run(a.ask("q"))
+    assert resp.answer == "ok"
+    tool_msgs = [m for m in fake.seen_messages if m.get("role") == "tool"]
+    assert tool_msgs and "unknown tool" in tool_msgs[0]["content"].lower()
+</code></pre>
+</li>
+
+<li><h4>Step 2: Run it, verify it fails</h4>
+Run: <code>python -m pytest tests/agent/test_agent_loop.py -v</code><br>
+Expected: FAIL — <code>agent.agent</code> still imports <code>claude_agent_sdk</code> (ImportError once uninstalled) and has no module-level <code>get_client</code> to patch.
+</li>
+
+<li><h4>Step 3: Rewrite <code>agent/agent.py</code></h4>
+Replace the whole file with (the <code>AgentResponse</code> dataclass and <code>_parse_final_text</code> are unchanged from the original — reproduced here in full so the file is self-contained):
+<pre><code>"""BluetoothWikiAgent — the embedded agentic loop (OpenAI-compatible backend).
+
+External clients call ``ask(question)`` and receive a structured
+``{answer, citations, reasoning}`` payload. Model, tool surface, system prompt,
+and citation resolution are locked in here so every client (HTTP, MCP, web
+sidebar) gets the same answer quality. The LLM is a company-hosted gpt-oss-120B
+behind an OpenAI-compatible endpoint (see agent/llm.py).
+"""
+from __future__ import annotations
+
+import json
+import time
+from dataclasses import asdict, dataclass
+
+from .citations import hydrate_citations
+from .config import MAX_TURNS, MODEL, SEARCH_STRATEGY, SYSTEM_PROMPT_PATH
+from .json_extract import extract_json_payload
+from .llm import get_client
+from .tools import build_tools
+
+
+@dataclass
+class AgentResponse:
+    answer: str
+    citations: list[dict]
+    reasoning: str
+    raw: str
+    num_turns: int = 0
+    tool_calls: int = 0
+    tools_used: dict[str, int] | None = None
+    duration_ms: int = 0
+    duration_api_ms: int = 0
+    total_cost_usd: float | None = None
+    usage: dict | None = None
+    stop_reason: str | None = None
+
+    def to_dict(self) -&gt; dict:
+        return asdict(self)
+
+
+def _parse_final_text(text: str) -&gt; AgentResponse:
+    """Extract the JSON-formatted answer block the agent is instructed to emit."""
+    data = extract_json_payload(text)
+    if data is not None:
+        citations = data.get("citations") or []
+        hydrated = [asdict(c) for c in hydrate_citations(citations)]
+        return AgentResponse(
+            answer=str(data.get("answer", "")).strip(),
+            citations=hydrated,
+            reasoning=str(data.get("reasoning", "")).strip(),
+            raw=text,
+        )
+    return AgentResponse(answer=text.strip(), citations=[], reasoning="", raw=text)
+
+
+class BluetoothWikiAgent:
+    def __init__(self, model: str = MODEL, search_strategy: str = SEARCH_STRATEGY):
+        self._model = model
+        self._system_prompt = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+        self.search_strategy = search_strategy
+        self._schemas, self._handlers = build_tools(search_strategy)
+
+    async def ask(self, question: str) -&gt; AgentResponse:
+        client = get_client()
+        messages: list[dict] = [
+            {"role": "system", "content": self._system_prompt},
+            {"role": "user", "content": question},
+        ]
+        tool_calls = 0
+        tools_used: dict[str, int] = {}
+        prompt_tokens = completion_tokens = 0
+        finish_reason: str | None = None
+        final_text = ""
+        num_turns = 0
+        t0 = time.time()
+
+        for _ in range(MAX_TURNS):
+            num_turns += 1
+            resp = await client.chat.completions.create(
+                model=self._model, messages=messages, tools=self._schemas, tool_choice="auto",
+            )
+            usage = getattr(resp, "usage", None)
+            if usage:
+                prompt_tokens += getattr(usage, "prompt_tokens", 0) or 0
+                completion_tokens += getattr(usage, "completion_tokens", 0) or 0
+            choice = resp.choices[0]
+            msg = choice.message
+            finish_reason = choice.finish_reason
+            calls = getattr(msg, "tool_calls", None)
+
+            # Record the assistant turn (must echo tool_calls so the tool
+            # results that follow are well-formed for the next request).
+            assistant_msg: dict = {"role": "assistant", "content": msg.content or ""}
+            if calls:
+                assistant_msg["tool_calls"] = [
+                    {"id": c.id, "type": "function",
+                     "function": {"name": c.function.name, "arguments": c.function.arguments}}
+                    for c in calls
+                ]
+            messages.append(assistant_msg)
+
+            if not calls:
+                final_text = msg.content or ""
+                break
+
+            for c in calls:
+                tool_calls += 1
+                name = c.function.name
+                tools_used[name] = tools_used.get(name, 0) + 1
+                try:
+                    args = json.loads(c.function.arguments or "{}")
+                    if not isinstance(args, dict):
+                        args = {}
+                except json.JSONDecodeError:
+                    args = {}
+                handler = self._handlers.get(name)
+                if handler is None:
+                    result = f"Error: unknown tool {name!r}. Available: {list(self._handlers)}."
+                else:
+                    try:
+                        result = await handler(args)
+                    except Exception as exc:  # keep the loop alive; let the model recover
+                        result = f"Error running {name}: {exc}"
+                messages.append({"role": "tool", "tool_call_id": c.id, "content": result})
+
+        response = _parse_final_text(final_text or "")
+        response.tool_calls = tool_calls
+        response.tools_used = tools_used or None
+        response.num_turns = num_turns
+        response.duration_ms = int((time.time() - t0) * 1000)
+        response.usage = {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
+        response.total_cost_usd = None  # internal endpoint reports no cost
+        response.stop_reason = finish_reason
+        return response
+</code></pre>
+</li>
+
+<li><h4>Step 4: Run the tests, verify they pass</h4>
+Run: <code>python -m pytest tests/agent/test_agent_loop.py -v</code><br>
+Expected: 2 passed.
+</li>
+
+<li><h4>Step 5: Commit</h4>
+<pre><code>git add agent/agent.py tests/agent/test_agent_loop.py
+git commit -m "feat(agent): hand-rolled OpenAI tool-calling loop (replaces Claude Agent SDK)
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<!-- TASK 4 -->
+<div class="task">
+<h3>Task 4: Judge + sufficiency on the shared client</h3>
+<dl class="files">
+  <dt>Modify</dt><dd><code>eval/judge.py</code>, <code>search/sufficiency.py</code></dd>
+  <dt>Test</dt><dd><code>tests/agent/test_llm_roles.py</code></dd>
+</dl>
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li><strong>Consumes:</strong> <code>agent.llm.get_client()</code>.</li>
+  <li><strong>Produces:</strong> <code>eval.judge.judge(question, system_answer, *, model=JUDGE_MODEL) -&gt; dict</code> and <code>search.sufficiency.check_sufficiency(question, query, hits, *, model=SUFFICIENCY_MODEL) -&gt; SufficiencyVerdict</code> — signatures unchanged, now OpenAI-backed.</li>
+</ul>
+
+<ol class="step">
+<li><h4>Step 1: Write the failing test</h4>
+Create <code>tests/agent/test_llm_roles.py</code>:
+<pre><code>import asyncio
+from types import SimpleNamespace
+
+
+def _fake_client_returning(content: str):
+    async def _create(*, model, messages, max_tokens):
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+    return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=_create)))
+
+
+def test_sufficiency_parses_openai_json(monkeypatch):
+    import search.sufficiency as suf
+    from search.base import SearchHit
+    monkeypatch.setattr(
+        suf, "get_client",
+        lambda: _fake_client_returning('{"sufficient": false, "reason": "thin", "reformulated_query": "CS step mode"}'),
+    )
+    hits = [SearchHit(file_path="wiki/x.md", snippet="...")]
+    v = asyncio.run(suf.check_sufficiency("q", "query", hits))
+    assert v.sufficient is False
+    assert v.reformulated_query == "CS step mode"
+    assert v.llm_called is True
+
+
+def test_judge_parses_openai_json(monkeypatch):
+    import eval.judge as jm
+    monkeypatch.setattr(
+        jm, "get_client",
+        lambda: _fake_client_returning('{"accuracy": 5, "completeness": 5, "citation": 5, "hallucination_penalty": 0, "usability": 5}'),
+    )
+    q = {"question": "q", "reference_answer": "r", "key_facts": ["a"], "expected_citations": ["[Core 6.0]"]}
+    verdict = asyncio.run(jm.judge(q, "some answer"))
+    assert verdict["accuracy"] == 5 and verdict["usability"] == 5
+</code></pre>
+</li>
+
+<li><h4>Step 2: Run it, verify it fails</h4>
+Run: <code>python -m pytest tests/agent/test_llm_roles.py -v</code><br>
+Expected: FAIL — the modules import <code>anthropic</code> and have no module-level <code>get_client</code> to patch.
+</li>
+
+<li><h4>Step 3: Swap <code>search/sufficiency.py</code></h4>
+Change the import block: replace <code>from agent.config import SUFFICIENCY_MODEL</code> line's neighbourhood by adding <code>from agent.llm import get_client</code> at module top (next to the other imports). In <code>check_sufficiency</code>, replace:
+<pre><code>    from anthropic import AsyncAnthropic  # deferred: keeps import-time deps light
+
+    client = AsyncAnthropic()
+    user = (
+        f"## Question\n{question or query}\n\n"
+        f"## Search query used\n{query}\n\n"
+        f"## Current results ({len(hits)} hits, top {min(len(hits), _MAX_PREVIEW_HITS)} shown)\n"
+        f"{_render_previews(hits)}"
+    )
+    msg = await client.messages.create(
+        model=model,
+        max_tokens=300,
+        system=_SYSTEM,
+        messages=[{"role": "user", "content": user}],
+    )
+    text = "".join(b.text for b in msg.content if hasattr(b, "text"))</code></pre>
+with:
+<pre><code>    client = get_client()
+    user = (
+        f"## Question\n{question or query}\n\n"
+        f"## Search query used\n{query}\n\n"
+        f"## Current results ({len(hits)} hits, top {min(len(hits), _MAX_PREVIEW_HITS)} shown)\n"
+        f"{_render_previews(hits)}"
+    )
+    resp = await client.chat.completions.create(
+        model=model,
+        max_tokens=300,
+        messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": user}],
+    )
+    text = resp.choices[0].message.content or ""</code></pre>
+(Leave the rest of the function — the <code>extract_json_payload</code> parsing and <code>SufficiencyVerdict</code> assembly — unchanged.)
+</li>
+
+<li><h4>Step 4: Swap <code>eval/judge.py</code></h4>
+Replace the hardcoded model line:
+<pre><code>JUDGE_MODEL = "claude-sonnet-4-5"</code></pre>
+with an import from config (add to the existing <code>from agent...</code> imports near the top):
+<pre><code>from agent.config import JUDGE_MODEL</code></pre>
+Then in <code>judge(...)</code> replace:
+<pre><code>    from anthropic import AsyncAnthropic
+
+    client = AsyncAnthropic()
+    user = JUDGE_USER_TEMPLATE.format(
+        question=question["question"],
+        reference=question["reference_answer"],
+        key_facts="\n".join(f"- {f}" for f in question["key_facts"]),
+        expected_citations=", ".join(question["expected_citations"]),
+        system_answer=system_answer,
+    )
+    msg = await client.messages.create(
+        model=model,
+        max_tokens=2048,
+        system=JUDGE_SYSTEM,
+        messages=[{"role": "user", "content": user}],
+    )
+    text = "".join(b.text for b in msg.content if hasattr(b, "text"))</code></pre>
+with:
+<pre><code>    from agent.llm import get_client
+
+    client = get_client()
+    user = JUDGE_USER_TEMPLATE.format(
+        question=question["question"],
+        reference=question["reference_answer"],
+        key_facts="\n".join(f"- {f}" for f in question["key_facts"]),
+        expected_citations=", ".join(question["expected_citations"]),
+        system_answer=system_answer,
+    )
+    resp = await client.chat.completions.create(
+        model=model,
+        max_tokens=2048,
+        messages=[{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": user}],
+    )
+    text = resp.choices[0].message.content or ""</code></pre>
+<p class="meta">The test patches <code>eval.judge.get_client</code> / <code>search.sufficiency.get_client</code>, so those names must be importable at module scope. For <code>judge.py</code>, the <code>get_client</code> import is inside <code>judge()</code>; to make it patchable, add <code>from agent.llm import get_client</code> at module top instead and drop the in-function import. Do the same for <code>sufficiency.py</code> (module-top import).</p>
+</li>
+
+<li><h4>Step 5: Run the tests, verify they pass</h4>
+Run: <code>python -m pytest tests/agent/test_llm_roles.py -v</code><br>
+Expected: 2 passed.
+</li>
+
+<li><h4>Step 6: Commit</h4>
+<pre><code>git add eval/judge.py search/sufficiency.py tests/agent/test_llm_roles.py
+git commit -m "refactor(eval,search): judge + sufficiency use shared OpenAI client
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<!-- TASK 5 -->
+<div class="task">
+<h3>Task 5: Env, docs, cleanup, full-suite + optional real smoke</h3>
+<dl class="files">
+  <dt>Modify</dt><dd><code>.env.example</code>, <code>agent/__init__.py</code> (docstring), <code>README.md</code>, <code>CLAUDE.md</code></dd>
+</dl>
+
+<ol class="step">
+<li><h4>Step 1: Update <code>.env.example</code></h4>
+Replace the Anthropic key line <code>ANTHROPIC_API_KEY=sk-ant-...</code> with:
+<pre><code>OPENAI_BASE_URL=http://gpt-oss.your-company.internal/v1
+OPENAI_API_KEY=not-needed-for-internal-endpoint</code></pre>
+Change <code>BT_AGENT_MODEL=claude-opus-4-7</code> → <code>BT_AGENT_MODEL=gpt-oss-120b</code>, change <code>BT_AGENT_SUFFICIENCY_MODEL=claude-haiku-4-5</code> → <code>BT_AGENT_SUFFICIENCY_MODEL=gpt-oss-120b</code>, and add <code>BT_AGENT_JUDGE_MODEL=gpt-oss-120b</code>.
+</li>
+
+<li><h4>Step 2: Update <code>agent/__init__.py</code> docstring</h4>
+In the module docstring, change the phrase naming <code>claude_agent_sdk</code> as the reason for the lazy import to <code>openai</code> (so pure-logic consumers can import <code>agent.config</code>/<code>agent.citations</code> without <code>openai</code> installed). No code change beyond the docstring.
+</li>
+
+<li><h4>Step 3: Update docs (README.md, CLAUDE.md)</h4>
+Search both files for <code>claude-opus</code>, <code>ANTHROPIC</code>, <code>claude-agent-sdk</code>, and <code>anthropic</code> and update to the OpenAI/gpt-oss reality:
+<pre><code>grep -rniE "claude-opus|ANTHROPIC|claude-agent-sdk|anthropic|claude-haiku|claude-sonnet" README.md CLAUDE.md</code></pre>
+Update each hit: the agent/judge/sufficiency now run on an OpenAI-compatible gpt-oss-120B endpoint (env <code>OPENAI_BASE_URL</code>/<code>OPENAI_API_KEY</code>, models via <code>BT_AGENT_MODEL</code>/<code>BT_AGENT_JUDGE_MODEL</code>/<code>BT_AGENT_SUFFICIENCY_MODEL</code>); the dependency list is <code>openai</code> (not <code>claude-agent-sdk</code>/<code>anthropic</code>). Keep edits factual and minimal.
+</li>
+
+<li><h4>Step 4: Confirm no stray Anthropic references remain</h4>
+<pre><code>grep -rniE "claude_agent_sdk|from anthropic|import anthropic|AsyncAnthropic" --include=*.py . | grep -v '/\.'</code></pre>
+Expected: no output. If any remain, fix them (they will break at runtime).
+</li>
+
+<li><h4>Step 5: Run the whole suite</h4>
+Run (ripgrep on PATH for the search tests):
+<pre><code>RG_DIR="/c/Users/user/AppData/Local/Microsoft/WinGet/Packages/BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe/ripgrep-15.1.0-x86_64-pc-windows-msvc"
+PATH="$RG_DIR:$PATH" python -m pytest tests/ -q</code></pre>
+Expected: all tests pass (the 6 pre-existing + the new agent/llm/tool/loop/roles tests).
+</li>
+
+<li><h4>Step 6: Optional real-endpoint smoke test (gated)</h4>
+Only when a real endpoint is configured (<code>OPENAI_BASE_URL</code> set in <code>.env</code>): run one live question and confirm the gpt-oss model actually emits a tool call and a parseable answer — this is the tool-calling reliability check.
+<pre><code>python -c "import asyncio; from agent.agent import BluetoothWikiAgent; \
+r=asyncio.run(BluetoothWikiAgent(search_strategy='v1').ask('What is Channel Sounding in Bluetooth 6.0?')); \
+print('tool_calls:', r.tool_calls, 'turns:', r.num_turns); print('answer:', r.answer[:200])"</code></pre>
+Expected: <code>tool_calls &gt;= 1</code> and a non-empty answer. If the model does not reliably emit tool calls, that is a prompt/tool-description tuning follow-up (out of this plan's scope) — record the observation.
+</li>
+
+<li><h4>Step 7: Commit</h4>
+<pre><code>git add .env.example agent/__init__.py README.md CLAUDE.md
+git commit -m "docs+env: point agent stack at OpenAI-compatible gpt-oss-120B endpoint
+
+Co-Authored-By: Claude Opus 4.8 &lt;noreply@anthropic.com&gt;"</code></pre>
+</li>
+</ol>
+</div>
+
+<hr>
+<h2>Verification (whole feature)</h2>
+<ul class="tight">
+  <li><code>python -m pytest tests/ -q</code> — all pass (with rg on PATH).</li>
+  <li><code>grep -rniE "claude_agent_sdk|anthropic" --include=*.py .</code> — no matches.</li>
+  <li>Spec coverage: Task 1 = llm client + config + deps; Task 2 = tool registry; Task 3 = agent loop; Task 4 = judge + sufficiency; Task 5 = env/docs/cleanup + real smoke. Non-goals respected — no provider abstraction, no prompt re-tuning, no server/ change, tool logic untouched.</li>
+</ul>
+
+</main>
+</body>
+</html>
