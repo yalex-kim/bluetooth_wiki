@@ -12,11 +12,11 @@ import statistics
 from pathlib import Path
 
 from agent.json_extract import extract_json_payload
+from agent.config import JUDGE_MODEL
+from agent.llm import get_client
 
 REPO = Path(__file__).resolve().parent.parent
 DATASET_PATH = REPO / "eval" / "dataset.json"
-
-JUDGE_MODEL = "claude-sonnet-4-5"
 
 DIFFICULTY_WEIGHTS = {"easy": 1.0, "medium": 1.5, "hard": 2.0, "expert": 2.5}
 RAW_MAX = 11  # accuracy 3 + completeness 3 + citation 3 + usability 2 (hallucination ≤ 0)
@@ -116,9 +116,7 @@ def raw_total(verdict: dict) -> int:
 
 async def judge(question: dict, system_answer: str, *, model: str = JUDGE_MODEL) -> dict:
     """Score one answer. Returns the normalized judge verdict dict."""
-    from anthropic import AsyncAnthropic
-
-    client = AsyncAnthropic()
+    client = get_client()
     user = JUDGE_USER_TEMPLATE.format(
         question=question["question"],
         reference=question["reference_answer"],
@@ -126,13 +124,12 @@ async def judge(question: dict, system_answer: str, *, model: str = JUDGE_MODEL)
         expected_citations=", ".join(question["expected_citations"]),
         system_answer=system_answer,
     )
-    msg = await client.messages.create(
+    resp = await client.chat.completions.create(
         model=model,
         max_tokens=2048,
-        system=JUDGE_SYSTEM,
-        messages=[{"role": "user", "content": user}],
+        messages=[{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": user}],
     )
-    text = "".join(b.text for b in msg.content if hasattr(b, "text"))
+    text = resp.choices[0].message.content or ""
     return normalize_verdict(extract_json(text))
 
 

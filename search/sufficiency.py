@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from agent.config import SUFFICIENCY_MODEL
 from agent.json_extract import extract_json_payload
+from agent.llm import get_client
 
 from .base import SearchHit
 
@@ -57,22 +58,19 @@ async def check_sufficiency(
     if not hits:
         return SufficiencyVerdict(sufficient=False, reason="no hits at all", llm_called=False)
 
-    from anthropic import AsyncAnthropic  # deferred: keeps import-time deps light
-
-    client = AsyncAnthropic()
+    client = get_client()
     user = (
         f"## Question\n{question or query}\n\n"
         f"## Search query used\n{query}\n\n"
         f"## Current results ({len(hits)} hits, top {min(len(hits), _MAX_PREVIEW_HITS)} shown)\n"
         f"{_render_previews(hits)}"
     )
-    msg = await client.messages.create(
+    resp = await client.chat.completions.create(
         model=model,
         max_tokens=300,
-        system=_SYSTEM,
-        messages=[{"role": "user", "content": user}],
+        messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": user}],
     )
-    text = "".join(b.text for b in msg.content if hasattr(b, "text"))
+    text = resp.choices[0].message.content or ""
     data = extract_json_payload(text) or {}
     reformulated = data.get("reformulated_query")
     if isinstance(reformulated, str):
