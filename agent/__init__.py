@@ -2,7 +2,7 @@
 
 ``BluetoothWikiAgent`` is imported lazily so that SDK-free consumers (the
 ``search`` package, index build scripts, unit tests of pure logic) can import
-``agent.config``/``agent.citations`` without requiring ``claude_agent_sdk``.
+``agent.config``/``agent.citations`` without requiring ``openai``.
 """
 
 from .citations import citation_to_url, file_path_to_url, parse_citation

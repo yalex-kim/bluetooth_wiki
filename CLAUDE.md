@@ -86,7 +86,7 @@ bluetooth_wiki/
 │   ├── report.html                    ← Visual evaluation dashboard (LLM-Wiki baseline)
 │   └── report_search_compare.html     ← Search-strategy comparison report (generated)
 ├── agent/
-│   ├── agent.py                       ← BluetoothWikiAgent — embedded Claude Agent SDK loop
+│   ├── agent.py                       ← BluetoothWikiAgent — hand-rolled OpenAI-compatible tool-calling loop
 │   ├── system_prompt.md               ← Citation rules + anti-hallucination prompt
 │   ├── tools.py                       ← list_index, search_wiki (pluggable strategy), read_page, read_source
 │   ├── citations.py                   ← Citation ↔ hosted-site URL mapping (single source of truth)
@@ -101,7 +101,7 @@ bluetooth_wiki/
 │   ├── embeddings.py                  ← Local embedding model (bge-small) + cosine top-k
 │   ├── index_store.py                 ← On-disk chunk/embedding index build & load
 │   ├── fusion.py                      ← Reciprocal Rank Fusion
-│   ├── sufficiency.py                 ← Haiku-class "are these hits enough?" judge
+│   ├── sufficiency.py                 ← gpt-oss-120b "are these hits enough?" judge
 │   ├── rg_util.py                     ← ripgrep subprocess wrapper
 │   ├── render.py                      ← SearchResult → tool-output text envelope
 │   └── index/                         ← Generated chunk/embedding indexes (gitignored)
@@ -119,8 +119,8 @@ bluetooth_wiki/
 │   ├── run_search_eval.py             ← Run eval dataset across search strategies
 │   ├── generate_search_report.py      ← Render strategy-comparison HTML report
 │   └── smoke_test_agent.py            ← End-to-end agent smoke test
-├── pyproject.toml                     ← Python deps: claude-agent-sdk, anthropic, mcp, fastapi, numpy (+ embeddings extra: sentence-transformers)
-├── .env.example                       ← Env template (ANTHROPIC_API_KEY, BT_AGENT_MODEL, BT_AGENT_SEARCH_STRATEGY, …)
+├── pyproject.toml                     ← Python deps: openai, mcp, fastapi, numpy (+ embeddings extra: sentence-transformers)
+├── .env.example                       ← Env template (OPENAI_BASE_URL, OPENAI_API_KEY, BT_AGENT_MODEL, BT_AGENT_SEARCH_STRATEGY, …)
 └── guide/
     └── claude-code-integration.md     ← How to use this wiki with Claude Code
 ```
@@ -180,7 +180,7 @@ only retrieval quality and latency differ:
 |----------|-----------|-------------|
 | `v0` | Naive case-insensitive substring scan (original) | Baseline / control in evals |
 | `v1` | ripgrep multi-term ranked search (coverage/proximity/phrase scoring) | Fast, better lexical relevance |
-| `v2` | v1 → Haiku sufficiency judge → hybrid source fallback: ripgrep + local-embedding vector search fused with RRF, bounded reformulation loop (max `BT_AGENT_SUFFICIENCY_MAX_ITER`) | Deep questions needing raw spec text (opcodes, PDU details) |
+| `v2` | v1 → gpt-oss-120b sufficiency judge → hybrid source fallback: ripgrep + local-embedding vector search fused with RRF, bounded reformulation loop (max `BT_AGENT_SUFFICIENCY_MAX_ITER`) | Deep questions needing raw spec text (opcodes, PDU details) |
 
 Supporting workflows:
 - **Index build** (required for v2's vector arm and chunk-precise citations):

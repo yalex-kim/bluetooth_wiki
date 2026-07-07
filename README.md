@@ -179,14 +179,14 @@ claude
 
 ## Agent (Phase 1)
 
-The `agent/` package wraps the wiki in an embedded agentic loop so any client (HTTP, MCP, web sidebar) gets the same answer quality. Built on [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk).
+The `agent/` package wraps the wiki in an embedded agentic loop so any client (HTTP, MCP, web sidebar) gets the same answer quality. Built on a hand-rolled OpenAI-compatible tool-calling loop, talking to a gpt-oss-120B endpoint.
 
 ```bash
 python3 -m venv .venv --without-pip
 curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python
 .venv/bin/pip install -e .
 
-cp .env.example .env  # fill in ANTHROPIC_API_KEY, SITE_BASE_URL
+cp .env.example .env  # fill in OPENAI_BASE_URL, OPENAI_API_KEY, SITE_BASE_URL
 .venv/bin/python scripts/smoke_test_agent.py "Which version introduced Channel Sounding?"
 ```
 
@@ -197,7 +197,7 @@ Per-question evaluation:
 # → score breakdown + saves to eval/results_agent.json
 ```
 
-Tunable env vars: `BT_AGENT_MODEL` (default `claude-opus-4-7`), `BT_AGENT_MAX_TURNS`, `SITE_BASE_URL`, plus the search-strategy knobs below.
+Tunable env vars: `BT_AGENT_MODEL` (default `gpt-oss-120b`), `BT_AGENT_MAX_TURNS`, `SITE_BASE_URL`, plus the search-strategy knobs below.
 
 The agent emits citations as `{label, file_path}` and `agent/citations.py` resolves them to deep-link URLs into a hosted MkDocs site (planned Phase 3).
 
@@ -211,7 +211,7 @@ The agent's `search_wiki` tool is pluggable — three backends live in `search/`
 |----------|-----------|-----------|
 | `v0` | Naive substring scan over all markdown (the original) | Baseline for evals |
 | `v1` **(default)** | ripgrep multi-term search, ranked by term coverage / proximity / exact-phrase; source hits bucketed to Vol/Part chunks | Fast, much better lexical relevance; no ML deps |
-| `v2` | v1 first → a Haiku-class judge decides if hits suffice → if not, hybrid retrieval over `sources/specs/` (ripgrep + local-embedding vector search fused with Reciprocal Rank Fusion), with a bounded query-reformulation loop | Highest quality on deep spec questions (opcodes, PDU details); slower per call |
+| `v2` | v1 first → a gpt-oss-120b judge decides if hits suffice → if not, hybrid retrieval over `sources/specs/` (ripgrep + local-embedding vector search fused with Reciprocal Rank Fusion), with a bounded query-reformulation loop | Highest quality on deep spec questions (opcodes, PDU details); slower per call |
 
 v2's sufficiency loop runs *inside* one tool call, so it never consumes the main agent's turn budget. Source hits are resolved to structural chunks (`search/chunker.py`) carrying correct `Vol/Part/§` metadata — this chunker also fixed `read_source`, which previously matched only front-matter `[Vol N]` tags and returned the wrong sections.
 
