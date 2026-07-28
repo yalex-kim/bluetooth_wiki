@@ -23,6 +23,12 @@ VISION_MODEL = os.getenv("BT_QA_VISION_MODEL", MODEL)
 EMBED_MODEL = os.getenv("BT_QA_EMBED_MODEL", "bge-m3")
 EMBED_DIM = int(os.getenv("BT_QA_EMBED_DIM", "1024"))
 
+# Offline alternative to the endpoint's embedding API (qa/embeddings_local.py).
+# BGE-M3 is multilingual and 1024-dim, matching EMBED_DIM above, so an index
+# built locally stays dimension-compatible with the endpoint's bge-m3.
+LOCAL_EMBED_MODEL = os.getenv("BT_QA_LOCAL_EMBED_MODEL", "BAAI/bge-m3")
+LOCAL_EMBED_BATCH = int(os.getenv("BT_QA_LOCAL_EMBED_BATCH", "16"))
+
 # §7.2 loop budget. DEADLINE_MS stands in for the undecided §12 p95 SLA.
 MAX_ITERATIONS = int(os.getenv("BT_QA_MAX_ITERATIONS", "6"))
 MAX_TOOL_CALLS = int(os.getenv("BT_QA_MAX_TOOL_CALLS", "12"))

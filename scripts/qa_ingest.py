@@ -5,6 +5,13 @@
     python scripts/qa_ingest.py --version 6.0 --figures   # + §5.4 figure descriptions
     python scripts/qa_ingest.py --all
     python scripts/qa_ingest.py --version 6.0 --dry-run   # parse only, no endpoint calls
+    python scripts/qa_ingest.py --version 6.0 --local-embed   # embed locally, no endpoint
+
+--local-embed swaps the endpoint's embedding API for a local sentence-transformers
+model (default BAAI/bge-m3: multilingual, 1024-dim, so the vectors stay
+dimension-compatible with the endpoint's bge-m3). Needs the `embeddings` extra:
+    pip install torch --index-url https://download.pytorch.org/whl/cpu
+    pip install "sentence-transformers>=3.0"
 
 --extract and --figures are off by default: §14.7 flags LLM extraction as the
 quota-dominant stage, and the deterministic skeleton alone already supports the
@@ -86,6 +93,21 @@ async def run(args):
     registry = (json.loads(registry_path.read_text(encoding="utf-8"))
                 if registry_path.is_file() else {})
 
+    embed_fn = None
+    if args.local_embed:
+        from qa import embeddings_local
+
+        if not embeddings_local.available():
+            print("--local-embed needs sentence-transformers:\n"
+                  "  pip install torch --index-url https://download.pytorch.org/whl/cpu\n"
+                  '  pip install "sentence-transformers>=3.0"')
+            return 1
+        model_name = args.embed_model or config.LOCAL_EMBED_MODEL
+        print(f"Loading local embedding model {model_name} (first run downloads it) …")
+        embeddings_local.load_model(model_name)
+        embed_fn = embeddings_local.make_embed_fn(model_name=model_name,
+                                                  show_progress_bar=True)
+
     try:
         for doc in docs:
             print(f"Ingesting {doc['title']} …")
@@ -93,7 +115,7 @@ async def run(args):
                 doc["path"], doc_id=doc["doc_id"], title=doc["title"],
                 doc_type=doc["doc_type"], version=doc["version"],
                 vector_store=vector, graph_store=graph, manifest=manifest,
-                extract=args.extract, figures=args.figures,
+                extract=args.extract, figures=args.figures, embed_fn=embed_fn,
             )
             print(f"  sections {stats.sections} "
                   f"(changed {stats.sections_changed}, skipped {stats.sections_skipped}) "
@@ -120,6 +142,11 @@ def main():
     parser.add_argument("--index-dir", help="Override the index directory.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Parse and report counts without embedding or writing.")
+    parser.add_argument("--local-embed", action="store_true",
+                        help="Embed with a local sentence-transformers model instead of "
+                             "the endpoint (needs the 'embeddings' extra).")
+    parser.add_argument("--embed-model",
+                        help=f"Local model id (default {config.LOCAL_EMBED_MODEL}).")
     args = parser.parse_args()
     raise SystemExit(asyncio.run(run(args)))
 
