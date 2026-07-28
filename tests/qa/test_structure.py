@@ -72,6 +72,59 @@ def test_crossrefs_extracted_for_sections_and_figures():
     assert ("figure", "4.3") in targets
 
 
+DUPLICATE_NUMBERING = """# Core
+
+## 1 ARCHITECTURE
+
+Volume one chapter one.
+
+### 1.1 OVERVIEW
+
+Volume one, section 1.1.
+
+## 1 LINK LAYER
+
+Volume six chapter one — numbering restarts per volume.
+
+### 1.1 OVERVIEW
+
+Volume six, section 1.1.
+
+| Parameter | Min |
+|---|---|
+| connInterval | 7.5 ms |
+"""
+
+
+def test_repeated_section_numbers_get_distinct_ids():
+    # Core specs restart numbering in every Volume/Part, so '1.1' occurs many
+    # times. Colliding ids would let graph nodes overwrite each other and make a
+    # citation point at the wrong volume.
+    doc = structure.parse_markdown(DUPLICATE_NUMBERING, doc_id="core-6.0",
+                                   title="Core 6.0", version="6.0")
+    ids = [s.id for s in doc.sections]
+    assert len(ids) == len(set(ids)), f"duplicate section ids: {ids}"
+
+
+def test_a_repeated_number_parents_to_its_own_nearest_ancestor():
+    doc = structure.parse_markdown(DUPLICATE_NUMBERING, doc_id="core-6.0",
+                                   title="Core 6.0", version="6.0")
+    chapters = [s for s in doc.sections if s.number == "1"]
+    subsections = [s for s in doc.sections if s.number == "1.1"]
+    assert len(chapters) == 2 and len(subsections) == 2
+    # each 1.1 belongs to the chapter 1 that precedes it, not to the first one
+    assert subsections[0].parent_id == chapters[0].id
+    assert subsections[1].parent_id == chapters[1].id
+
+
+def test_a_table_is_attributed_to_exactly_one_section():
+    doc = structure.parse_markdown(DUPLICATE_NUMBERING, doc_id="core-6.0",
+                                   title="Core 6.0", version="6.0")
+    assert len(doc.tables) == 1
+    owners = [t.section_id for t in doc.tables]
+    assert owners == [doc.sections[-1].id]
+
+
 def test_section_hash_is_stable_and_text_sensitive():
     doc = _parse()
     s = doc.sections[0]

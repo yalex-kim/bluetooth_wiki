@@ -105,8 +105,30 @@ bluetooth_wiki/
 │   ├── rg_util.py                     ← ripgrep subprocess wrapper
 │   ├── render.py                      ← SearchResult → tool-output text envelope
 │   └── index/                         ← Generated chunk/embedding indexes (gitignored)
+├── qa/                                ← Spec Q&A Agent — Vector+Graph RAG behind one Tool (see §4.5)
+│   ├── config.py                      ← Env-driven settings (BT_QA_*: models, budgets, paths)
+│   ├── llm.py                         ← Shared chat/embeddings + schema-validated structured calls
+│   ├── ontology.py                    ← Fixed entity/relation schema for constrained extraction
+│   ├── prefilter.py                   ← Out-of-scope gate + document-family scope hint
+│   ├── prompts.py                     ← Loop + forced-synthesis system prompts
+│   ├── loop.py                        ← Agentic retrieval loop (budget, context compaction)
+│   ├── verify.py                      ← Citation ↔ observed-evidence grounding check
+│   ├── service.py                     ← SpecQAService.ask() → frozen Tool response
+│   ├── ingest/
+│   │   ├── structure.py               ← Markdown → sections/tables/figures/cross-refs
+│   │   ├── pipeline.py                ← Graph skeleton + chunking + incremental embedding
+│   │   └── extract.py                 ← Opt-in LLM entity extraction + figure descriptions
+│   ├── retrieval/actions.py           ← vector_search, graph_lookup, graph_traverse,
+│   │                                     get_section_text, get_figure, get_table
+│   ├── store/
+│   │   ├── base.py                    ← VectorStore / GraphStore protocols
+│   │   ├── vector_local.py            ← numpy cosine top-k with metadata filtering
+│   │   └── graph_sqlite.py            ← SQLite nodes/edges, alias lookup, bounded BFS
+│   └── index/                         ← Generated vectors/graph.db/manifest/registry (gitignored)
 ├── server/
 │   ├── http.py                        ← FastAPI test server (bluetooth-wiki-agent-http)
+│   ├── qa_http.py                     ← Spec Q&A HTTP API (bluetooth-spec-qa-http)
+│   ├── qa_mcp.py                      ← Spec Q&A MCP server (bluetooth-spec-qa-mcp)
 │   ├── jobs.py                        ← In-memory background eval jobs
 │   ├── schemas.py                     ← Pydantic request/response models
 │   └── static/index.html              ← Single-page strategy comparison UI
@@ -118,6 +140,7 @@ bluetooth_wiki/
 │   ├── build_search_index.py          ← Build chunk/embedding index per spec version
 │   ├── run_search_eval.py             ← Run eval dataset across search strategies
 │   ├── generate_search_report.py      ← Render strategy-comparison HTML report
+│   ├── qa_ingest.py                   ← Build the Spec Q&A index (qa/index/)
 │   └── smoke_test_agent.py            ← End-to-end agent smoke test
 ├── pyproject.toml                     ← Python deps: openai, mcp, fastapi, numpy (+ embeddings extra: sentence-transformers)
 ├── .env.example                       ← Env template (OPENAI_BASE_URL, OPENAI_API_KEY, BT_AGENT_MODEL, BT_AGENT_SEARCH_STRATEGY, …)
@@ -196,6 +219,46 @@ Supporting workflows:
 - `search/chunker.py` is also the authority for `read_source`'s Vol/Part slicing
   (the old `[Vol N]` tagged-heading walk only matched front-matter and returned
   wrong sections; do not reintroduce it).
+
+### 4.5 SPEC Q&A AGENT — Vector + Graph RAG behind one Tool
+
+The `qa/` package is a **separate system** from the LLM-Wiki agent above, built to the
+design in `docs/superpowers/plans/Bluetooth_Spec_QA_Agent_Design.md`. Where the wiki agent
+searches curated wiki pages, this one indexes the **raw spec corpus** up front — removing
+the wiki's cold-start problem — and is exposed to orchestrators as a single stateless Tool.
+
+**Do not mix the two.** `qa/` must not import from `agent/` or `search/`, and vice versa.
+
+Workflow:
+
+1. **Ingest** — `python scripts/qa_ingest.py --version 6.0`
+   Parses markdown structure into a graph skeleton (sections/tables/figures/cross-refs),
+   chunks it (tables get their own chunks), and embeds via the endpoint's embedding API.
+   Re-runs are cheap: a per-section content hash skips unchanged sections.
+   `--dry-run` reports counts without calling the endpoint.
+   `--extract` / `--figures` add the LLM-cost stages (ontology-constrained entity
+   extraction, figure descriptions) — off by default.
+2. **Serve** — `bluetooth-spec-qa-http` (POST `/qa/ask`) or `bluetooth-spec-qa-mcp`
+   (MCP tool `bluetooth_spec_qa`). Both return the identical frozen response.
+3. **Ask** — the loop pre-filters out-of-scope questions, then repeatedly chooses among six
+   actions (`vector_search`, `graph_lookup`, `graph_traverse`, `get_section_text`,
+   `get_figure`, `get_table`) until the evidence supports an answer or the budget runs out.
+
+Invariants to preserve when changing this package:
+
+- **The response key set is frozen**: `answer`, `citations`, `related_entities`,
+  `confidence`, `out_of_scope`, `retrieval_trace`. Citations are
+  `{doc, section, page, path}`. Orchestrators depend on this shape.
+- **Citations are verified, never trusted.** `qa/verify.py` drops any citation with no
+  matching evidence actually returned by an action during that run.
+- **Budget exhaustion must stay visible** — it forces `confidence: "low"` rather than
+  presenting a thin answer as a confident one.
+- **Storage stays behind the protocols** in `qa/store/base.py`. The choice between
+  server-form (Qdrant/Neo4j) and embedded (Chroma/KuzuDB) is still open; today's numpy +
+  SQLite backends are the zero-dependency stand-in, not a commitment.
+- **Section ids must stay unique.** Core specs restart section numbering in every
+  Volume/Part, so `qa/ingest/structure.py` disambiguates repeated numbers by line. Removing
+  that makes graph nodes overwrite each other and citations point at the wrong volume.
 
 ---
 

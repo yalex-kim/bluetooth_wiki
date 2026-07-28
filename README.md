@@ -79,8 +79,20 @@ bluetooth_wiki/
 │   ├── embeddings.py / index_store.py / fusion.py / sufficiency.py / rg_util.py / render.py
 │   └── index/                      ← Generated chunk/embedding indexes (gitignored)
 │
+├── qa/                             ← Spec Q&A Agent — Vector+Graph RAG over the raw spec corpus
+│   ├── ingest/                     ← structure.py (MD → sections/tables/figures) ,
+│   │                                  pipeline.py (skeleton+chunks+incremental embed), extract.py
+│   ├── retrieval/actions.py        ← Six loop actions (vector_search, graph_*, get_section/figure/table)
+│   ├── store/                      ← VectorStore/GraphStore protocols + numpy & SQLite backends
+│   ├── loop.py / verify.py         ← Agentic loop with budget; citations verified against evidence
+│   ├── prefilter.py / prompts.py   ← Out-of-scope gate; loop + forced-synthesis prompts
+│   ├── service.py / ontology.py    ← SpecQAService.ask() (frozen contract); extraction schema
+│   └── index/                      ← Generated vectors/graph.db/manifest/registry (gitignored)
+│
 ├── server/                         ← FastAPI test server + web UI
 │   ├── http.py                     ← Routes (/api/compare, /api/eval/run, …)
+│   ├── qa_http.py                  ← Spec Q&A HTTP API (POST /qa/ask, GET /qa/health)
+│   ├── qa_mcp.py                   ← Spec Q&A MCP server (tool: bluetooth_spec_qa)
 │   ├── jobs.py                     ← In-memory background eval jobs
 │   ├── schemas.py                  ← Pydantic models
 │   └── static/index.html           ← Single-page strategy comparison UI
@@ -94,6 +106,7 @@ bluetooth_wiki/
 │   ├── build_search_index.py       ← Build chunk/embedding index per spec version
 │   ├── run_search_eval.py          ← Run eval dataset across search strategies
 │   ├── generate_search_report.py   ← Render strategy-comparison HTML report
+│   ├── qa_ingest.py                ← Build the Spec Q&A index (qa/index/)
 │   └── smoke_test_agent.py         ← End-to-end agent smoke test
 │
 └── guide/
@@ -245,6 +258,72 @@ bluetooth-wiki-agent-http                 # or: .venv/bin/uvicorn server.http:ap
 - **Run eval** — trigger an eval-suite run (with a question limit) in the background, watch progress, then open the generated comparison report.
 
 API: `POST /api/compare`, `POST /api/eval/run` → `{job_id}`, `GET /api/eval/status/{job_id}`, `GET /api/eval/report/{job_id}`, `GET /api/health`. Jobs are in-memory (single process; lost on restart). Env: `BT_AGENT_HTTP_HOST`, `BT_AGENT_HTTP_PORT` (default 8080).
+
+---
+
+## Spec Q&A Agent (`qa/`)
+
+A **second, independent system** ([design doc](docs/superpowers/plans/Bluetooth_Spec_QA_Agent_Design.md)).
+The wiki agent above answers from curated wiki pages, which means coverage grows only as
+questions arrive. This one indexes the **raw spec corpus** up front — Vector RAG for
+semantic recall plus a Graph RAG skeleton for multi-hop and cross-reference questions — and
+exposes the whole thing to orchestrators as a single stateless Tool.
+
+### Build the index
+
+```bash
+python scripts/qa_ingest.py --version 6.0 --dry-run   # parse + report counts, no endpoint calls
+python scripts/qa_ingest.py --version 6.0             # structure + embeddings
+python scripts/qa_ingest.py --version 6.0 --extract --figures   # + LLM entity/figure enrichment
+```
+
+Re-running is cheap: a per-section content hash means unchanged sections are not
+re-embedded, so a new spec revision only pays for what actually changed. `--extract` and
+`--figures` are opt-in because they are the quota-heavy stages.
+
+### Serve
+
+```bash
+bluetooth-spec-qa-http     # POST /qa/ask, GET /qa/health   (default port 8090)
+bluetooth-spec-qa-mcp      # MCP stdio server, tool: bluetooth_spec_qa
+```
+
+Both entry points return the identical response. Callers never touch the vector or graph
+store directly — the Tool interface is the only surface.
+
+### The contract
+
+```jsonc
+// request
+{"query": "L2CAP 연결 실패 시 재시도 절차는?",
+ "spec_scope": "Core-LE", "spec_version": "5.4",   // both optional hints
+ "conversation_context": [], "include_trace": false}
+
+// response — key set is frozen
+{"answer": "...",
+ "citations": [{"doc": "Core Spec v6.0", "section": "3.5.2", "page": 512, "path": "..."}],
+ "related_entities": ["L2CAP"],
+ "confidence": "high",        // "high" | "medium" | "low"
+ "out_of_scope": false,
+ "retrieval_trace": null}     // populated only when include_trace is set
+```
+
+Three behaviours worth knowing when consuming it:
+
+- **Citations are verified, not asserted.** After the model answers, every citation is
+  checked against evidence the retrieval actions actually returned; unmatched ones are
+  dropped, and an answer that loses all of them is reported as `confidence: "low"`.
+- **`out_of_scope: true` means no search ran at all** — a cheap pre-filter rejected the
+  question, so route it elsewhere.
+- **A thin answer says so.** If the retrieval budget (iterations / tool calls / deadline)
+  runs out, the agent still answers from what it found but pins confidence to `"low"`.
+
+Storage is deliberately uncommitted: `qa/store/base.py` defines `VectorStore` and
+`GraphStore` protocols, and v0.1 ships zero-dependency numpy and SQLite backends. Moving to
+Qdrant + Neo4j (or Chroma + KuzuDB) means writing an adapter, not rewriting the agent.
+
+Config lives under `BT_QA_*` in `.env.example` — model ids (a light model picks retrieval
+actions, a larger one writes the answer), loop budgets, and context limits.
 
 ---
 

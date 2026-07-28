@@ -110,6 +110,7 @@ def parse_markdown(text, *, doc_id, title, doc_type="Core", version="", path="")
 
     stack: list[tuple[int, str]] = []  # [(level, section_id)]
     id_by_number: dict[str, str] = {}
+    used_ids: set[str] = set()
     page = None
     for idx, (line_idx, level, number, heading_title) in enumerate(heads):
         end = heads[idx + 1][0] if idx + 1 < len(heads) else len(lines)
@@ -118,14 +119,22 @@ def parse_markdown(text, *, doc_id, title, doc_type="Core", version="", path="")
         # Heading depth is unreliable in converted specs — 4.5 and 4.5.2 are both
         # '###' in Core conversions. When a heading carries a dotted number, the
         # number is the authority on parentage; the level stack is the fallback
-        # for unnumbered headings.
+        # for unnumbered headings. id_by_number holds the most recent occurrence,
+        # so a repeated number binds to its own volume's ancestor, not the first.
         parent_id = None
         if "." in number:
-            parent_number = number.rsplit(".", 1)[0]
-            parent_id = id_by_number.get(parent_number)
+            parent_id = id_by_number.get(number.rsplit(".", 1)[0])
         if parent_id is None:
             parent_id = stack[-1][1] if stack else None
-        sid = f"{doc_id}#{number or _slug(heading_title)}"
+
+        # Core specs restart section numbering in every Volume/Part, so '4.5'
+        # occurs dozens of times per document. Colliding ids would let graph
+        # nodes overwrite each other, collapse distinct chunks onto one id, and
+        # point citations at the wrong volume — so ids are made unique here.
+        sid = base_id = f"{doc_id}#{number or _slug(heading_title)}"
+        if sid in used_ids:
+            sid = f"{base_id}~{line_idx + 1}"
+        used_ids.add(sid)
         if number:
             id_by_number[number] = sid
         body_lines = lines[line_idx + 1 : end]
