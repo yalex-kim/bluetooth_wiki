@@ -1,0 +1,2914 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bluetooth Spec Q&amp;A Agent v0.1 — Implementation Plan</title>
+<style>
+  :root {
+    --bg:#fff; --fg:#1b1f24; --muted:#57606a; --border:#d0d7de;
+    --code-bg:#f6f8fa; --accent:#0969da; --accent-bg:#ddf4ff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;
+    --code-bg:#161b22;--accent:#4493f8;--accent-bg:#0c2d4a;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  main{max-width:900px;margin:0 auto;padding:2.5rem 1.25rem 6rem}
+  h1{font-size:1.9rem;line-height:1.25;margin:0 0 1rem}
+  h2{font-size:1.35rem;margin:2.5rem 0 1rem;padding-bottom:.35rem;border-bottom:1px solid var(--border)}
+  h3{font-size:1.1rem;margin:0 0 .75rem}
+  h4{font-size:.98rem;margin:1.25rem 0 .4rem}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;
+    background:var(--code-bg);padding:.12em .4em;border-radius:6px;border:1px solid var(--border)}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;
+    padding:1rem;overflow-x:auto;font-size:.84rem;line-height:1.5}
+  pre code{background:none;border:none;padding:0;font-size:inherit}
+  .callout{background:var(--accent-bg);border:1px solid var(--border);border-left:4px solid var(--accent);
+    border-radius:6px;padding:.85rem 1rem;margin:1.25rem 0}
+  .task{border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.4rem;margin:1.5rem 0}
+  .files dt{font-weight:600;margin-top:.5rem}
+  .files dd{margin:0 0 0 1rem}
+  .step{list-style:none;padding-left:0}
+  .step>li{margin:1rem 0;padding-left:1.9rem;position:relative}
+  .step>li::before{content:"[ ]";position:absolute;left:0;top:0;
+    font-family:ui-monospace,monospace;color:var(--muted);font-weight:700}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+  th,td{border:1px solid var(--border);padding:.4rem .6rem;text-align:left}
+  .meta{color:var(--muted);font-size:.92rem}
+  ul.tight{margin:.3rem 0}
+  hr{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Bluetooth Spec Q&amp;A Agent v0.1 — Implementation Plan</h1>
+
+<div class="callout">
+  <strong>For agentic workers:</strong> REQUIRED SUB-SKILL — use
+  <code>superpowers:subagent-driven-development</code> (recommended) or
+  <code>superpowers:executing-plans</code>. Steps use <code>[ ]</code> /
+  <code>[x]</code> markers for tracking.
+</div>
+
+<p class="meta">Spec: <code>docs/superpowers/plans/Bluetooth_Spec_QA_Agent_Design.md</code> (Draft v0.1) · Date: 2026-07-29</p>
+
+<p><strong>Goal:</strong> Build the Phase&nbsp;1 vertical slice of the spec design — a
+Vector&nbsp;+&nbsp;Graph hybrid retriever driven by an agentic loop, exposed as one
+stateless Tool (HTTP&nbsp;+&nbsp;MCP) with verified citations — running end-to-end over the
+Core Spec markdown already in <code>sources/specs/</code>.</p>
+
+<p><strong>Architecture:</strong> A new self-contained <code>qa/</code> package. Ingestion
+parses the markdown heading tree into a deterministic graph skeleton (§5.1) whose
+node/edge types come from a fixed ontology (§5.2), chunks sections and tables for the
+vector index, and optionally enriches with LLM entity extraction (§5.3) and Vision
+figure descriptions (§5.4). Serving runs the agentic loop of §7: pre-filter →
+repeated <code>vector_search</code>/<code>graph_lookup</code>/<code>graph_traverse</code>/
+<code>get_section_text</code>/<code>get_figure</code>/<code>get_table</code> →
+answer synthesis → programmatic citation verification (§7.4) → the fixed §8.1 output schema.</p>
+
+<p><strong>Tech Stack:</strong> Python ≥3.10, the existing OpenAI-compatible endpoint
+(chat + embeddings), numpy, SQLite (stdlib), FastAPI, MCP, pytest + pytest-asyncio.
+No new third-party dependencies.</p>
+
+<h2>Scope decisions (and why)</h2>
+
+<p>The spec is a Draft with an open-issues section (§12). These are the calls this plan
+makes so that code can exist now; each is isolated behind an interface so the §12
+decision can land later without a rewrite.</p>
+
+<table>
+<tr><th>Open issue</th><th>v0.1 decision</th><th>Isolation</th></tr>
+<tr>
+  <td>§12 Vector DB / Graph DB: server (Qdrant+Neo4j) vs embedded (Chroma+KuzuDB)</td>
+  <td>Neither yet. Ship <code>VectorStore</code>/<code>GraphStore</code> protocols with
+      zero-dependency local backends (numpy <code>.npy</code> + SQLite).</td>
+  <td>Swapping in Qdrant/Neo4j is a new class implementing the same protocol
+      (Task 4/5); nothing above the protocol changes.</td>
+</tr>
+<tr>
+  <td>§12 which of the 3 candidate models</td>
+  <td>Model ids come from env (<code>BT_QA_MODEL</code>, <code>BT_QA_ACTION_MODEL</code>).
+      §7.3's role split (light model decides actions, large model synthesises) is wired
+      in as two config values, so the Phase&nbsp;0 bake-off is a config change.</td>
+  <td><code>qa/config.py</code></td>
+</tr>
+<tr>
+  <td>§5.3 grammar-based constrained decoding availability unknown</td>
+  <td>Implement fallback (b) unconditionally: JSON-schema validation + bounded retry
+      around every structured call. If the serving stack later exposes guided JSON,
+      it becomes an extra kwarg in one place.</td>
+  <td><code>qa/llm.py::structured_call</code></td>
+</tr>
+<tr>
+  <td>§12 latency SLA (p95) undecided — drives <code>max_iterations</code></td>
+  <td>Budget is explicit and configurable (<code>BT_QA_MAX_ITERATIONS</code>,
+      <code>BT_QA_MAX_TOOL_CALLS</code>, <code>BT_QA_DEADLINE_MS</code>) and enforced by a
+      wall-clock deadline as well as a step count, so setting the SLA later is a config change.</td>
+  <td><code>qa/loop.py</code></td>
+</tr>
+<tr>
+  <td>§12 Pre-filter: classifier vs LLM prompt</td>
+  <td>Cheap deterministic lexical gate first (free, catches the obvious), LLM only for
+      the ambiguous middle — one function, one swap point.</td>
+  <td><code>qa/prefilter.py</code></td>
+</tr>
+<tr>
+  <td>§5.3 / §5.4 LLM extraction and Vision figure descriptions cost quota (§14.7)</td>
+  <td>Implemented but opt-in per ingest run (<code>--extract</code>, <code>--figures</code>).
+      The deterministic skeleton (§5.1) is always built and is what the tests exercise.</td>
+  <td><code>scripts/qa_ingest.py</code> flags</td>
+</tr>
+</table>
+
+<p><strong>Deferred out of v0.1</strong> (spec sections with no task here — they need
+decisions or corpora we do not have): §14.1 embedding-based entity resolution beyond
+alias-table normalisation, §14.5 observability dashboards, §14.6 per-caller access
+control, §14.9 backup/rollback, §14.14 semantic caching. §14.10 cross-lingual gets a
+translation hook (Task 8) but not a Phase&nbsp;0 evaluation.</p>
+
+<h2>Global Constraints</h2>
+
+<ul class="tight">
+  <li>Python ≥ 3.10. <strong>No new third-party dependencies</strong> — only what
+      <code>pyproject.toml</code> already declares (<code>openai</code>, <code>mcp</code>,
+      <code>fastapi</code>, <code>uvicorn</code>, <code>pydantic</code>,
+      <code>python-dotenv</code>, <code>httpx</code>, <code>numpy</code>).</li>
+  <li>The new code lives in a new top-level <code>qa/</code> package. <strong>Do not modify</strong>
+      <code>agent/</code>, <code>search/</code>, <code>eval/</code>, <code>wiki/</code>, or
+      <code>sources/</code>. The existing <code>BluetoothWikiAgent</code> keeps working unchanged.</li>
+  <li>The §8.1 Tool contract is frozen. Input keys: <code>query</code>,
+      <code>spec_scope?</code>, <code>spec_version?</code>, <code>conversation_context?</code>.
+      Output keys, exactly: <code>answer</code>, <code>citations</code>,
+      <code>related_entities</code>, <code>confidence</code>, <code>out_of_scope</code>,
+      <code>retrieval_trace</code>. Citation objects: <code>doc</code>, <code>section</code>,
+      <code>page</code>, <code>path</code>.</li>
+  <li><code>confidence</code> is one of <code>"high" | "medium" | "low"</code>.
+      Budget exhaustion forces <code>"low"</code> (§7.2) — never hide missing evidence.</li>
+  <li>Every LLM call goes through <code>qa/llm.py</code>. No module constructs its own client.</li>
+  <li>Tests must run with no network and no LLM endpoint: every test either uses the
+      deterministic path or injects a fake client.</li>
+  <li>TDD: write the failing test, watch it fail, implement, watch it pass, commit.</li>
+</ul>
+
+<h2>File structure</h2>
+
+<table>
+<tr><th>File</th><th>Responsibility</th><th>Task</th></tr>
+<tr><td><code>qa/config.py</code></td><td>Env-driven settings (models, budgets, paths)</td><td>1</td></tr>
+<tr><td><code>qa/llm.py</code></td><td>Chat / embeddings / schema-validated structured calls</td><td>1</td></tr>
+<tr><td><code>qa/ontology.py</code></td><td>§5.2 node + relation types, validation</td><td>2</td></tr>
+<tr><td><code>qa/ingest/structure.py</code></td><td>§5.1 markdown → section tree, tables, figures, cross-refs</td><td>3</td></tr>
+<tr><td><code>qa/store/base.py</code></td><td><code>VectorStore</code> / <code>GraphStore</code> protocols + record types</td><td>4</td></tr>
+<tr><td><code>qa/store/vector_local.py</code></td><td>numpy cosine top-k with metadata filtering</td><td>4</td></tr>
+<tr><td><code>qa/store/graph_sqlite.py</code></td><td>SQLite nodes/edges, lookup + traverse</td><td>5</td></tr>
+<tr><td><code>qa/ingest/pipeline.py</code></td><td>skeleton build, chunking, embedding, §5.5 incremental diff</td><td>6</td></tr>
+<tr><td><code>qa/ingest/extract.py</code></td><td>§5.3 ontology-constrained LLM extraction, §5.4 figure descriptions</td><td>6</td></tr>
+<tr><td><code>qa/retrieval/actions.py</code></td><td>§7.1 six actions + OpenAI tool schemas</td><td>7</td></tr>
+<tr><td><code>qa/prefilter.py</code></td><td>§7.0 out-of-scope gate + scope hint</td><td>8</td></tr>
+<tr><td><code>qa/loop.py</code></td><td>§7.2 agentic loop, budget, context accumulation</td><td>9</td></tr>
+<tr><td><code>qa/verify.py</code></td><td>§7.4 citation ↔ observed-evidence check</td><td>9</td></tr>
+<tr><td><code>qa/service.py</code></td><td>§8 facade: <code>SpecQAService.ask()</code> → frozen output dict</td><td>10</td></tr>
+<tr><td><code>server/qa_http.py</code>, <code>server/qa_mcp.py</code></td><td>§1.2 MCP / API exposure</td><td>10</td></tr>
+<tr><td><code>scripts/qa_ingest.py</code></td><td>ingest CLI</td><td>10</td></tr>
+</table>
+
+<hr>
+
+<h2>Task 1: Config + LLM access layer</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt>
+  <dd><code>qa/__init__.py</code>, <code>qa/config.py</code>, <code>qa/llm.py</code></dd>
+  <dt>Test:</dt>
+  <dd><code>tests/qa/test_llm.py</code></dd>
+</dl>
+
+<h4>Interfaces — Produces</h4>
+<pre><code># qa/config.py (module-level constants)
+QA_ROOT: Path                 # repo_root / "qa"
+QA_INDEX_DIR: Path            # repo_root / "qa" / "index"   (gitignored)
+SOURCES_DIR: Path
+MODEL: str                    # BT_QA_MODEL           — synthesis model (§7.3 large)
+ACTION_MODEL: str             # BT_QA_ACTION_MODEL    — loop action model (§7.3 light)
+EXTRACT_MODEL: str            # BT_QA_EXTRACT_MODEL   — §5.3 extraction
+EMBED_MODEL: str              # BT_QA_EMBED_MODEL     — endpoint embedding model id
+EMBED_DIM: int                # BT_QA_EMBED_DIM, default 1024
+MAX_ITERATIONS: int           # BT_QA_MAX_ITERATIONS, default 6      (§7.2)
+MAX_TOOL_CALLS: int           # BT_QA_MAX_TOOL_CALLS, default 12     (§7.2)
+DEADLINE_MS: int              # BT_QA_DEADLINE_MS, default 60000     (§12 SLA)
+SNIPPET_CHARS: int            # BT_QA_SNIPPET_CHARS, default 700     (§7.2/§14.8)
+CONTEXT_BUDGET_CHARS: int     # BT_QA_CONTEXT_BUDGET, default 24000  (§14.8)
+TRAVERSE_NODE_CAP: int        # BT_QA_TRAVERSE_CAP, default 40       (§14.2)
+STRUCTURED_RETRIES: int       # BT_QA_STRUCTURED_RETRIES, default 2  (§5.3)
+
+# qa/llm.py
+def get_client()                                  -> AsyncOpenAI      # process-cached
+async def chat(messages, *, model=None, tools=None, tool_choice="auto") -> ChatCompletion
+async def embed(texts: list[str], *, model=None)  -> list[list[float]]
+async def structured_call(messages, schema: dict, *, model=None,
+                          retries=None)           -> dict             # validated, or raises StructuredOutputError
+class StructuredOutputError(RuntimeError): ...
+</code></pre>
+
+<p><code>structured_call</code> is the §5.3 fallback-(b) layer: it asks for JSON, extracts
+the payload, validates it against a small subset of JSON Schema
+(<code>type</code>, <code>required</code>, <code>properties</code>, <code>items</code>,
+<code>enum</code>), and on failure re-prompts with the validator's error message, up to
+<code>retries</code> times.</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+
+<pre><code>« tests/qa/test_llm.py »
+import pytest
+from qa import llm
+
+
+class _FakeMsg:
+    def __init__(self, content): self.content = content; self.tool_calls = None
+class _FakeChoice:
+    def __init__(self, content): self.message = _FakeMsg(content); self.finish_reason = "stop"
+class _FakeResp:
+    def __init__(self, content): self.choices = [_FakeChoice(content)]; self.usage = None
+
+
+class _FakeCompletions:
+    def __init__(self, replies): self.replies = list(replies); self.calls = []
+    async def create(self, **kw):
+        self.calls.append(kw)
+        return _FakeResp(self.replies.pop(0))
+
+
+class _FakeClient:
+    def __init__(self, replies):
+        self.chat = type("C", (), {"completions": _FakeCompletions(replies)})()
+
+
+SCHEMA = {
+    "type": "object",
+    "required": ["entities"],
+    "properties": {
+        "entities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "type"],
+                "properties": {"name": {"type": "string"},
+                               "type": {"type": "string", "enum": ["Procedure", "State"]}},
+            },
+        }
+    },
+}
+
+
+@pytest.mark.asyncio
+async def test_structured_call_accepts_valid_payload(monkeypatch):
+    fake = _FakeClient(['{"entities": [{"name": "Connection", "type": "Procedure"}]}'])
+    monkeypatch.setattr(llm, "get_client", lambda: fake)
+    out = await llm.structured_call([{"role": "user", "content": "x"}], SCHEMA)
+    assert out == {"entities": [{"name": "Connection", "type": "Procedure"}]}
+
+
+@pytest.mark.asyncio
+async def test_structured_call_retries_on_schema_violation(monkeypatch):
+    fake = _FakeClient([
+        '{"entities": [{"name": "Connection", "type": "Banana"}]}',   # enum violation
+        '{"entities": [{"name": "Connection", "type": "State"}]}',    # repaired
+    ])
+    monkeypatch.setattr(llm, "get_client", lambda: fake)
+    out = await llm.structured_call([{"role": "user", "content": "x"}], SCHEMA)
+    assert out["entities"][0]["type"] == "State"
+    # the repair turn must tell the model what was wrong
+    assert "Banana" in str(fake.chat.completions.calls[1]["messages"])
+
+
+@pytest.mark.asyncio
+async def test_structured_call_raises_after_retries(monkeypatch):
+    fake = _FakeClient(["not json", "still not json", "nope"])
+    monkeypatch.setattr(llm, "get_client", lambda: fake)
+    with pytest.raises(llm.StructuredOutputError):
+        await llm.structured_call([{"role": "user", "content": "x"}], SCHEMA, retries=2)
+
+
+@pytest.mark.asyncio
+async def test_structured_call_strips_code_fence(monkeypatch):
+    fake = _FakeClient(['```json\n{"entities": []}\n```'])
+    monkeypatch.setattr(llm, "get_client", lambda: fake)
+    assert await llm.structured_call([{"role": "user", "content": "x"}], SCHEMA) == {"entities": []}
+</code></pre></li>
+
+<li><strong>Step 2: Run the test, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_llm.py -v</code><br>
+Expected: FAIL — <code>ModuleNotFoundError: No module named 'qa'</code>.</li>
+
+<li><strong>Step 3: Create <code>qa/__init__.py</code> and <code>qa/config.py</code></strong>
+
+<pre><code>« qa/__init__.py »
+"""Bluetooth Spec Q&amp;A Agent — Vector + Graph hybrid retriever behind one Tool.
+
+See docs/superpowers/plans/Bluetooth_Spec_QA_Agent_Design.md. Self-contained:
+nothing here imports agent/ or search/.
+"""
+
+« qa/config.py »
+import os
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+QA_ROOT = REPO_ROOT / "qa"
+QA_INDEX_DIR = Path(os.getenv("BT_QA_INDEX_DIR", str(QA_ROOT / "index")))
+SOURCES_DIR = REPO_ROOT / "sources"
+
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+# §7.3 role split: a light model decides the next action, a large one synthesises.
+MODEL = os.getenv("BT_QA_MODEL", "gpt-oss-120b")
+ACTION_MODEL = os.getenv("BT_QA_ACTION_MODEL", MODEL)
+EXTRACT_MODEL = os.getenv("BT_QA_EXTRACT_MODEL", MODEL)
+VISION_MODEL = os.getenv("BT_QA_VISION_MODEL", MODEL)
+EMBED_MODEL = os.getenv("BT_QA_EMBED_MODEL", "bge-m3")
+EMBED_DIM = int(os.getenv("BT_QA_EMBED_DIM", "1024"))
+
+# §7.2 loop budget. DEADLINE_MS stands in for the undecided §12 p95 SLA.
+MAX_ITERATIONS = int(os.getenv("BT_QA_MAX_ITERATIONS", "6"))
+MAX_TOOL_CALLS = int(os.getenv("BT_QA_MAX_TOOL_CALLS", "12"))
+DEADLINE_MS = int(os.getenv("BT_QA_DEADLINE_MS", "60000"))
+
+# §14.8 context accumulation limits.
+SNIPPET_CHARS = int(os.getenv("BT_QA_SNIPPET_CHARS", "700"))
+CONTEXT_BUDGET_CHARS = int(os.getenv("BT_QA_CONTEXT_BUDGET", "24000"))
+EXPAND_LIMIT = int(os.getenv("BT_QA_EXPAND_LIMIT", "4"))
+
+TRAVERSE_NODE_CAP = int(os.getenv("BT_QA_TRAVERSE_CAP", "40"))   # §14.2
+VECTOR_TOP_K = int(os.getenv("BT_QA_TOP_K", "8"))
+STRUCTURED_RETRIES = int(os.getenv("BT_QA_STRUCTURED_RETRIES", "2"))
+CHUNK_MAX_CHARS = int(os.getenv("BT_QA_CHUNK_MAX_CHARS", "3000"))
+</code></pre></li>
+
+<li><strong>Step 4: Create <code>qa/llm.py</code></strong>
+
+<pre><code>« qa/llm.py »
+"""Single entry point for every LLM call the Q&amp;A agent makes.
+
+The company endpoint is OpenAI-compatible (chat + embeddings). Structured
+output goes through `structured_call`, which validates against a JSON schema
+and re-prompts on violation — the §5.3 fallback for a serving stack whose
+grammar-constrained decoding support is still unconfirmed.
+"""
+from __future__ import annotations
+
+import json
+import re
+
+from qa import config
+
+_client = None
+
+
+class StructuredOutputError(RuntimeError):
+    """The model could not produce schema-valid JSON within the retry budget."""
+
+
+def get_client():
+    global _client
+    if _client is None:
+        from openai import AsyncOpenAI
+        _client = AsyncOpenAI(
+            base_url=config.OPENAI_BASE_URL or None,
+            api_key=config.OPENAI_API_KEY or "not-needed",
+        )
+    return _client
+
+
+async def chat(messages, *, model=None, tools=None, tool_choice="auto"):
+    kwargs = {"model": model or config.MODEL, "messages": messages}
+    if tools:
+        kwargs["tools"] = tools
+        kwargs["tool_choice"] = tool_choice
+    return await get_client().chat.completions.create(**kwargs)
+
+
+async def embed(texts, *, model=None):
+    resp = await get_client().embeddings.create(model=model or config.EMBED_MODEL, input=list(texts))
+    return [d.embedding for d in resp.data]
+
+
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.S)
+
+
+def extract_json(text):
+    """Best-effort JSON object out of a model reply (fenced, bare, or embedded)."""
+    if not text:
+        return None
+    for candidate in ([m.group(1) for m in _FENCE_RE.finditer(text)] + [text]):
+        candidate = candidate.strip()
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            start, end = candidate.find("{"), candidate.rfind("}")
+            if start != -1 and end > start:
+                try:
+                    return json.loads(candidate[start:end + 1])
+                except json.JSONDecodeError:
+                    continue
+    return None
+
+
+def validate(payload, schema, path="$"):
+    """Validate against the JSON-Schema subset we actually emit.
+
+    Returns a list of human-readable error strings (empty == valid). Kept
+    deliberately small: type/required/properties/items/enum is everything the
+    ontology and tool schemas use, and a real validator would be a new
+    dependency.
+    """
+    errors = []
+    expected = schema.get("type")
+    checks = {
+        "object": dict, "array": list, "string": str,
+        "integer": int, "number": (int, float), "boolean": bool,
+    }
+    if expected in checks and not isinstance(payload, checks[expected]):
+        # bool is an int subclass — reject it where a number is expected
+        if not (expected in ("integer", "number") and isinstance(payload, bool)):
+            if isinstance(payload, checks[expected]):
+                pass
+            else:
+                return [f"{path}: expected {expected}, got {type(payload).__name__}"]
+        else:
+            return [f"{path}: expected {expected}, got bool"]
+    if "enum" in schema and payload not in schema["enum"]:
+        errors.append(f"{path}: {payload!r} is not one of {schema['enum']}")
+    if expected == "object":
+        for key in schema.get("required", []):
+            if key not in payload:
+                errors.append(f"{path}: missing required key {key!r}")
+        for key, sub in schema.get("properties", {}).items():
+            if key in payload:
+                errors.extend(validate(payload[key], sub, f"{path}.{key}"))
+    if expected == "array" and "items" in schema:
+        for i, item in enumerate(payload):
+            errors.extend(validate(item, schema["items"], f"{path}[{i}]"))
+    return errors
+
+
+async def structured_call(messages, schema, *, model=None, retries=None):
+    retries = config.STRUCTURED_RETRIES if retries is None else retries
+    convo = list(messages)
+    last_error = "no response"
+    for attempt in range(retries + 1):
+        resp = await chat(convo, model=model or config.EXTRACT_MODEL)
+        text = resp.choices[0].message.content or ""
+        payload = extract_json(text)
+        if payload is None:
+            last_error = "response was not valid JSON"
+        else:
+            errors = validate(payload, schema)
+            if not errors:
+                return payload
+            last_error = "; ".join(errors)
+        if attempt == retries:
+            break
+        convo = convo + [
+            {"role": "assistant", "content": text},
+            {"role": "user", "content":
+                f"That reply was rejected: {last_error}. "
+                f"Reply again with JSON only, matching this schema exactly:\n"
+                f"{json.dumps(schema)}"},
+        ]
+    raise StructuredOutputError(last_error)
+</code></pre></li>
+
+<li><strong>Step 5: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_llm.py -v</code><br>
+Expected: 4 passed.</li>
+
+<li><strong>Step 6: Commit</strong>
+<pre><code>git add qa/__init__.py qa/config.py qa/llm.py tests/qa/test_llm.py
+git commit -m "feat(qa): config + LLM layer with schema-validated structured calls"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 2: Ontology (§5.2)</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/ontology.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_ontology.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li>Consumes: nothing.</li>
+  <li>Produces:
+<pre><code>STRUCTURAL_TYPES: frozenset   # Document, Chapter, Section, Subsection, Table, Figure
+CORE_ENTITY_TYPES: frozenset  # §5.2 common core
+EXTENSION_TYPES: dict[str, frozenset]   # {"Mesh": {...}, "LEAudio": {...}}
+RELATION_TYPES: frozenset     # §5.2 common relations + structural + amends
+def entity_types(doc_type: str) -> frozenset
+def is_valid_node_type(t: str, doc_type: str = "Core") -> bool
+def is_valid_relation(t: str) -> bool
+def extraction_schema(doc_type: str) -> dict     # JSON schema for structured_call
+</code></pre></li>
+</ul>
+
+<p>Relation set, verbatim from §5.2 plus the ones other sections require:
+<code>triggers</code>, <code>requires</code>, <code>definedIn</code>, <code>partOf</code>,
+<code>mandatoryFor</code>, <code>optionalFor</code>, <code>supersedes</code>,
+<code>references</code>, and — added because §14.11 needs it — <code>amends</code>,
+plus <code>hasTable</code> / <code>hasFigure</code> for the §5.1 skeleton.</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_ontology.py »
+from qa import ontology
+from qa.llm import validate
+
+
+def test_core_entity_types_cover_section_5_2():
+    for t in ["Procedure", "State", "Event", "PDU", "Parameter", "Timer",
+              "ErrorCode", "Role", "Layer", "Profile", "Characteristic"]:
+        assert t in ontology.CORE_ENTITY_TYPES
+
+
+def test_relation_types_include_amends_for_errata():
+    for r in ["triggers", "requires", "definedIn", "partOf", "mandatoryFor",
+              "optionalFor", "supersedes", "references", "amends"]:
+        assert ontology.is_valid_relation(r)
+    assert not ontology.is_valid_relation("causes")
+
+
+def test_mesh_extension_types_only_valid_for_mesh():
+    assert ontology.is_valid_node_type("Model", doc_type="Mesh")
+    assert not ontology.is_valid_node_type("Model", doc_type="Core")
+    assert ontology.is_valid_node_type("Codec", doc_type="LEAudio")
+
+
+def test_extraction_schema_constrains_types_to_the_doc_type():
+    schema = ontology.extraction_schema("Mesh")
+    node_enum = schema["properties"]["entities"]["items"]["properties"]["type"]["enum"]
+    assert "Model" in node_enum and "Codec" not in node_enum
+    # a payload using a valid Mesh type validates; an invalid one does not
+    ok = {"entities": [{"name": "Config Server", "type": "Model"}],
+          "relations": [{"source": "Config Server", "target": "Element",
+                         "type": "partOf"}]}
+    assert validate(ok, schema) == []
+    bad = {"entities": [{"name": "x", "type": "Codec"}], "relations": []}
+    assert validate(bad, schema) != []
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_ontology.py -v</code> → FAIL (no module <code>qa.ontology</code>).</li>
+
+<li><strong>Step 3: Implement <code>qa/ontology.py</code></strong>
+<pre><code>« qa/ontology.py »
+"""§5.2 ontology — the fixed schema every extracted node and edge must fit.
+
+Extraction is constrained to these types (not open extraction) so that the same
+concept named differently across sections normalises to one node and traversal
+queries stay writable.
+"""
+from __future__ import annotations
+
+# §5.1 deterministic skeleton — built from markdown structure, never from an LLM.
+STRUCTURAL_TYPES = frozenset({"Document", "Chapter", "Section", "Subsection", "Table", "Figure"})
+
+# §5.2 common core entity types.
+CORE_ENTITY_TYPES = frozenset({
+    "Procedure", "State", "Event", "PDU", "Parameter", "Timer",
+    "ErrorCode", "Role", "Layer", "Profile", "Characteristic",
+})
+
+# §5.2 "문서 유형별 확장".
+EXTENSION_TYPES = {
+    "Mesh": frozenset({"Model", "Element", "Message"}),
+    "LEAudio": frozenset({"Codec", "ContextType"}),
+}
+
+RELATION_TYPES = frozenset({
+    "triggers", "requires", "definedIn", "partOf", "mandatoryFor",
+    "optionalFor", "supersedes", "references",
+    "amends",        # §14.11 errata overrides the clause it amends
+    "hasTable", "hasFigure",   # structural, emitted by §5.1
+})
+
+DOC_TYPES = ("Core", "GATT", "Profile", "Mesh", "LEAudio", "Reference", "Errata")
+
+
+def entity_types(doc_type: str) -> frozenset:
+    return CORE_ENTITY_TYPES | EXTENSION_TYPES.get(doc_type, frozenset())
+
+
+def is_valid_node_type(t: str, doc_type: str = "Core") -> bool:
+    return t in STRUCTURAL_TYPES or t in entity_types(doc_type)
+
+
+def is_valid_relation(t: str) -> bool:
+    return t in RELATION_TYPES
+
+
+def extraction_schema(doc_type: str) -> dict:
+    """JSON schema handed to qa.llm.structured_call for §5.3 extraction."""
+    types = sorted(entity_types(doc_type))
+    relations = sorted(RELATION_TYPES - {"hasTable", "hasFigure"})
+    return {
+        "type": "object",
+        "required": ["entities", "relations"],
+        "properties": {
+            "entities": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["name", "type"],
+                    "properties": {
+                        "name": {"type": "string"},
+                        "type": {"type": "string", "enum": types},
+                        "aliases": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+            },
+            "relations": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["source", "target", "type"],
+                    "properties": {
+                        "source": {"type": "string"},
+                        "target": {"type": "string"},
+                        "type": {"type": "string", "enum": relations},
+                    },
+                },
+            },
+        },
+    }
+</code></pre></li>
+
+<li><strong>Step 4: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_ontology.py -v</code> → 4 passed.</li>
+
+<li><strong>Step 5: Commit</strong>
+<pre><code>git add qa/ontology.py tests/qa/test_ontology.py
+git commit -m "feat(qa): ontology schema for constrained entity/relation extraction"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 3: Markdown structure parser (§5.1)</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/ingest/__init__.py</code>, <code>qa/ingest/structure.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_structure.py</code></dd>
+</dl>
+
+<h4>Interfaces — Produces</h4>
+<pre><code>@dataclass SectionNode:
+    id: str            # f"{doc_id}#{number or slug}"
+    doc_id: str
+    number: str        # "4.5.2"  ("" when the heading carries no number)
+    title: str
+    level: int         # markdown heading depth
+    parent_id: str | None
+    line_start: int    # 1-based inclusive
+    line_end: int      # 1-based inclusive
+    text: str          # body, excluding nested subsections' bodies
+    page: int | None   # from a "[page N]"-style marker if the conversion has one
+
+@dataclass TableNode:  id, doc_id, section_id, caption, markdown, line_start, line_end
+@dataclass FigureNode: id, doc_id, section_id, caption, image_path, line_start
+@dataclass CrossRef:   source_section_id, target_kind ("section"|"figure"|"table"), target_ref, raw
+
+@dataclass ParsedDocument:
+    doc_id: str; title: str; doc_type: str; version: str; path: str
+    sections: list[SectionNode]; tables: list[TableNode]
+    figures: list[FigureNode]; crossrefs: list[CrossRef]
+
+def parse_markdown(text: str, *, doc_id: str, title: str,
+                   doc_type: str = "Core", version: str = "",
+                   path: str = "") -> ParsedDocument
+def section_hash(section: SectionNode) -> str    # sha1 of normalised text, for §5.5 diff
+</code></pre>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_structure.py »
+from qa.ingest import structure
+
+SAMPLE = """# Core Specification
+
+## 4 LINK LAYER SPECIFICATION
+
+Intro paragraph for chapter 4.
+
+### 4.5 CONNECTION STATE
+
+The Link Layer enters the Connection State. See Section 4.5.2 for timing.
+
+| Parameter | Min | Max |
+|---|---|---|
+| connInterval | 7.5 ms | 4 s |
+
+Table 4.1: Connection parameters
+
+### 4.5.2 CONNECTION TIMING
+
+![Figure 4.3](Core_v6.0_images/Vol6_PartB_Figure4_3.png)
+
+Figure 4.3: Connection event timing
+
+Timing is derived from connInterval as shown in Figure 4.3.
+"""
+
+
+def _parse():
+    return structure.parse_markdown(SAMPLE, doc_id="core-6.0", title="Core 6.0",
+                                    doc_type="Core", version="6.0")
+
+
+def test_headings_become_a_parent_linked_section_tree():
+    doc = _parse()
+    by_number = {s.number: s for s in doc.sections}
+    assert set(by_number) >= {"4", "4.5", "4.5.2"}
+    assert by_number["4.5"].parent_id == by_number["4"].id
+    assert by_number["4.5.2"].parent_id == by_number["4.5"].id
+    assert by_number["4.5"].title == "CONNECTION STATE"
+
+
+def test_section_text_excludes_nested_subsection_bodies():
+    doc = _parse()
+    ch4 = next(s for s in doc.sections if s.number == "4")
+    assert "Intro paragraph" in ch4.text
+    assert "CONNECTION TIMING" not in ch4.text
+
+
+def test_tables_are_captured_as_their_own_nodes_with_markdown_preserved():
+    doc = _parse()
+    assert len(doc.tables) == 1
+    tbl = doc.tables[0]
+    assert tbl.caption.startswith("Table 4.1")
+    assert "connInterval" in tbl.markdown and "| Parameter |" in tbl.markdown
+    assert tbl.section_id == next(s for s in doc.sections if s.number == "4.5").id
+
+
+def test_figures_capture_image_path_and_caption():
+    doc = _parse()
+    assert len(doc.figures) == 1
+    fig = doc.figures[0]
+    assert fig.image_path.endswith("Vol6_PartB_Figure4_3.png")
+    assert fig.caption.startswith("Figure 4.3")
+    assert fig.section_id == next(s for s in doc.sections if s.number == "4.5.2").id
+
+
+def test_crossrefs_extracted_for_sections_and_figures():
+    doc = _parse()
+    targets = {(c.target_kind, c.target_ref) for c in doc.crossrefs}
+    assert ("section", "4.5.2") in targets
+    assert ("figure", "4.3") in targets
+
+
+def test_section_hash_is_stable_and_text_sensitive():
+    doc = _parse()
+    s = doc.sections[0]
+    assert structure.section_hash(s) == structure.section_hash(s)
+    other = structure.SectionNode(**{**s.__dict__, "text": s.text + " changed"})
+    assert structure.section_hash(other) != structure.section_hash(s)
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_structure.py -v</code> → FAIL (no <code>qa.ingest</code>).</li>
+
+<li><strong>Step 3: Implement <code>qa/ingest/structure.py</code></strong>
+<pre><code>« qa/ingest/structure.py »
+"""§5.1 deterministic structure parsing.
+
+The converted markdown already carries the spec's explicit structure, so the
+graph skeleton is transcription, not inference: heading tree -> Section nodes,
+pipe tables -> Table nodes, image links -> Figure nodes, "see Section 4.5.2" /
+"Figure 3.2" -> REFERENCES edges. No LLM involved, so this layer is cheap and
+accurate; §5.3 extraction only decorates what is built here.
+"""
+from __future__ import annotations
+
+import hashlib
+import re
+from dataclasses import dataclass, field
+
+_HEADING_RE = re.compile(r"^(#{1,6})\s+(?P&lt;rest&gt;\S.*)$")
+_NUMBER_RE = re.compile(r"^(?P&lt;num&gt;\d+(?:\.\d+)*)\s+(?P&lt;title&gt;\S.*)$")
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
+_TABLE_CAPTION_RE = re.compile(r"^\**\s*(Table\s+[\w.\-]+)\s*[:.\-]\s*(.*)$", re.I)
+_FIGURE_CAPTION_RE = re.compile(r"^\**\s*(Figure\s+[\w.\-]+)\s*[:.\-]\s*(.*)$", re.I)
+_IMAGE_RE = re.compile(r"!\[(?P&lt;alt&gt;[^\]]*)\]\((?P&lt;path&gt;[^)]+)\)")
+_PAGE_RE = re.compile(r"^\s*\[?page\s+(?P&lt;n&gt;\d+)\]?\s*$", re.I)
+_XREF_SECTION_RE = re.compile(r"\b(?:see\s+)?Section\s+(\d+(?:\.\d+)+)", re.I)
+_XREF_FIGURE_RE = re.compile(r"\bFigure\s+(\d+(?:\.\d+)*)", re.I)
+_XREF_TABLE_RE = re.compile(r"\bTable\s+(\d+(?:\.\d+)*)", re.I)
+
+
+def _slug(text):
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "section"
+
+
+@dataclass
+class SectionNode:
+    id: str
+    doc_id: str
+    number: str
+    title: str
+    level: int
+    parent_id: str | None
+    line_start: int
+    line_end: int
+    text: str
+    page: int | None = None
+
+
+@dataclass
+class TableNode:
+    id: str
+    doc_id: str
+    section_id: str
+    caption: str
+    markdown: str
+    line_start: int
+    line_end: int
+
+
+@dataclass
+class FigureNode:
+    id: str
+    doc_id: str
+    section_id: str
+    caption: str
+    image_path: str
+    line_start: int
+
+
+@dataclass
+class CrossRef:
+    source_section_id: str
+    target_kind: str
+    target_ref: str
+    raw: str
+
+
+@dataclass
+class ParsedDocument:
+    doc_id: str
+    title: str
+    doc_type: str
+    version: str
+    path: str
+    sections: list = field(default_factory=list)
+    tables: list = field(default_factory=list)
+    figures: list = field(default_factory=list)
+    crossrefs: list = field(default_factory=list)
+
+
+def section_hash(section) -> str:
+    """§5.5 change detection: identity of a section's content, whitespace-insensitive."""
+    normalised = re.sub(r"\s+", " ", f"{section.number}|{section.title}|{section.text}").strip()
+    return hashlib.sha1(normalised.encode("utf-8")).hexdigest()
+
+
+def parse_markdown(text, *, doc_id, title, doc_type="Core", version="", path=""):
+    lines = text.split("\n")
+    doc = ParsedDocument(doc_id=doc_id, title=title, doc_type=doc_type,
+                         version=version, path=path)
+
+    # 1. Heading boundaries -> section spans, parents from the level stack.
+    heads = []   # (line_idx, level, number, title)
+    for i, line in enumerate(lines):
+        m = _HEADING_RE.match(line)
+        if not m:
+            continue
+        level, rest = len(m.group(1)), m.group("rest").strip()
+        nm = _NUMBER_RE.match(rest)
+        number, heading_title = (nm.group("num"), nm.group("title").strip()) if nm else ("", rest)
+        heads.append((i, level, number, heading_title))
+    if not heads:
+        return doc
+
+    stack = []   # [(level, section_id)]
+    page = None
+    for idx, (line_idx, level, number, heading_title) in enumerate(heads):
+        end = heads[idx + 1][0] if idx + 1 &lt; len(heads) else len(lines)
+        while stack and stack[-1][0] &gt;= level:
+            stack.pop()
+        parent_id = stack[-1][1] if stack else None
+        sid = f"{doc_id}#{number or _slug(heading_title)}"
+        body_lines = lines[line_idx + 1:end]
+        for bl in body_lines:
+            pm = _PAGE_RE.match(bl)
+            if pm:
+                page = int(pm.group("n"))
+        doc.sections.append(SectionNode(
+            id=sid, doc_id=doc_id, number=number, title=heading_title, level=level,
+            parent_id=parent_id, line_start=line_idx + 1, line_end=end,
+            text="\n".join(body_lines).strip(), page=page,
+        ))
+        stack.append((level, sid))
+
+    # 2. Tables, figures and cross-references, attributed to the owning section.
+    span_of = [(s.line_start, s.line_end, s.id) for s in doc.sections]
+
+    def owner(line_idx_1based):
+        for start, end, sid in span_of:
+            if start &lt;= line_idx_1based &lt;= end:
+                return sid
+        return doc.sections[0].id
+
+    i = 0
+    table_seq = fig_seq = 0
+    while i &lt; len(lines):
+        if _TABLE_ROW_RE.match(lines[i]):
+            start = i
+            while i &lt; len(lines) and _TABLE_ROW_RE.match(lines[i]):
+                i += 1
+            block = "\n".join(lines[start:i])
+            caption = ""
+            for probe in list(range(i, min(i + 3, len(lines)))) + list(range(max(start - 3, 0), start)):
+                cm = _TABLE_CAPTION_RE.match(lines[probe].strip())
+                if cm:
+                    caption = f"{cm.group(1)}: {cm.group(2)}".strip().rstrip(":")
+                    break
+            table_seq += 1
+            doc.tables.append(TableNode(
+                id=f"{doc_id}:table:{table_seq}", doc_id=doc_id,
+                section_id=owner(start + 1), caption=caption or f"Table {table_seq}",
+                markdown=block, line_start=start + 1, line_end=i,
+            ))
+            continue
+        im = _IMAGE_RE.search(lines[i])
+        if im:
+            caption = ""
+            for probe in range(i + 1, min(i + 4, len(lines))):
+                fm = _FIGURE_CAPTION_RE.match(lines[probe].strip())
+                if fm:
+                    caption = f"{fm.group(1)}: {fm.group(2)}".strip().rstrip(":")
+                    break
+            fig_seq += 1
+            doc.figures.append(FigureNode(
+                id=f"{doc_id}:figure:{fig_seq}", doc_id=doc_id,
+                section_id=owner(i + 1), caption=caption or im.group("alt"),
+                image_path=im.group("path"), line_start=i + 1,
+            ))
+        i += 1
+
+    for section in doc.sections:
+        body = section.text
+        seen = set()
+        for kind, regex in (("section", _XREF_SECTION_RE),
+                            ("figure", _XREF_FIGURE_RE),
+                            ("table", _XREF_TABLE_RE)):
+            for m in regex.finditer(body):
+                ref = m.group(1)
+                if kind == "section" and ref == section.number:
+                    continue
+                key = (kind, ref)
+                if key in seen:
+                    continue
+                seen.add(key)
+                doc.crossrefs.append(CrossRef(
+                    source_section_id=section.id, target_kind=kind,
+                    target_ref=ref, raw=m.group(0),
+                ))
+    return doc
+</code></pre>
+
+<p class="meta">Note: the <code>&amp;lt;</code>/<code>&amp;gt;</code> sequences above are HTML
+escapes for <code>&lt;</code>/<code>&gt;</code> — write real angle brackets in the file.</p></li>
+
+<li><strong>Step 4: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_structure.py -v</code> → 6 passed.</li>
+
+<li><strong>Step 5: Sanity-check against a real spec file</strong>
+<pre><code>python -c "
+from pathlib import Path
+from qa.ingest.structure import parse_markdown
+t = Path('sources/specs/6.0/Core_v6.0.md').read_text(encoding='utf-8', errors='ignore')
+d = parse_markdown(t, doc_id='core-6.0', title='Core 6.0', version='6.0')
+print(len(d.sections), 'sections', len(d.tables), 'tables', len(d.figures), 'figures', len(d.crossrefs), 'xrefs')
+"</code></pre>
+Expected: four non-zero counts (thousands of sections, hundreds of figures).</li>
+
+<li><strong>Step 6: Commit</strong>
+<pre><code>git add qa/ingest/__init__.py qa/ingest/structure.py tests/qa/test_structure.py
+git commit -m "feat(qa): deterministic markdown structure parser (sections/tables/figures/xrefs)"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 4: Store protocols + local vector backend</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/store/__init__.py</code>, <code>qa/store/base.py</code>, <code>qa/store/vector_local.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_vector_store.py</code></dd>
+</dl>
+
+<h4>Interfaces — Produces</h4>
+<pre><code>@dataclass VectorRecord: id, text, embedding: list[float], metadata: dict
+@dataclass VectorHit:    id, text, score: float, metadata: dict
+
+class VectorStore(Protocol):
+    def upsert(self, records: list[VectorRecord]) -> None
+    def delete(self, ids: list[str]) -> None
+    def search(self, embedding, *, top_k=8, filters: dict | None = None) -> list[VectorHit]
+    def get(self, id: str) -> VectorRecord | None
+    def count(self) -> int
+    def persist(self) -> None
+
+class LocalVectorStore(VectorStore):   # numpy + json on disk
+    def __init__(self, path: Path)
+    @classmethod def load(cls, path: Path) -> "LocalVectorStore"
+</code></pre>
+<p><code>filters</code> matches metadata by equality, and a list value means "any of"
+(so <code>{"doc_type": ["Core", "GATT"]}</code> is the §7.1 <code>scope_filter</code>).</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_vector_store.py »
+from qa.store.base import VectorRecord
+from qa.store.vector_local import LocalVectorStore
+
+
+def _store(tmp_path):
+    s = LocalVectorStore(tmp_path / "vec")
+    s.upsert([
+        VectorRecord("a", "connection interval", [1.0, 0.0], {"doc_type": "Core", "version": "6.0"}),
+        VectorRecord("b", "mesh provisioning",   [0.0, 1.0], {"doc_type": "Mesh", "version": "1.1"}),
+        VectorRecord("c", "connection timing",   [0.9, 0.1], {"doc_type": "Core", "version": "5.4"}),
+    ])
+    return s
+
+
+def test_search_ranks_by_cosine_similarity(tmp_path):
+    hits = _store(tmp_path).search([1.0, 0.0], top_k=3)
+    assert [h.id for h in hits] == ["a", "c", "b"]
+    assert hits[0].score > hits[1].score > hits[2].score
+
+
+def test_filters_restrict_by_metadata_equality_and_membership(tmp_path):
+    s = _store(tmp_path)
+    assert [h.id for h in s.search([1.0, 0.0], top_k=5, filters={"doc_type": "Mesh"})] == ["b"]
+    ids = {h.id for h in s.search([1.0, 0.0], top_k=5, filters={"version": ["6.0", "5.4"]})}
+    assert ids == {"a", "c"}
+
+
+def test_upsert_replaces_an_existing_id(tmp_path):
+    s = _store(tmp_path)
+    s.upsert([VectorRecord("a", "replaced", [0.0, 1.0], {"doc_type": "Core"})])
+    assert s.count() == 3
+    assert s.get("a").text == "replaced"
+
+
+def test_delete_removes_records(tmp_path):
+    s = _store(tmp_path)
+    s.delete(["a", "missing"])
+    assert s.count() == 2 and s.get("a") is None
+
+
+def test_persist_then_load_round_trips(tmp_path):
+    _store(tmp_path).persist()
+    reloaded = LocalVectorStore.load(tmp_path / "vec")
+    assert reloaded.count() == 3
+    assert [h.id for h in reloaded.search([1.0, 0.0], top_k=1)] == ["a"]
+
+
+def test_search_on_empty_store_returns_empty(tmp_path):
+    assert LocalVectorStore(tmp_path / "empty").search([1.0, 0.0]) == []
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_vector_store.py -v</code> → FAIL (no <code>qa.store</code>).</li>
+
+<li><strong>Step 3: Implement <code>qa/store/base.py</code></strong>
+<pre><code>« qa/store/base.py »
+"""Storage protocols (§6).
+
+§12 leaves the server-vs-embedded DB choice open, so nothing above this module
+names a product. v0.1 ships dependency-free local backends; a Qdrant or Neo4j
+adapter is a new class implementing the same protocol, and callers do not change.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Protocol, runtime_checkable
+
+
+@dataclass
+class VectorRecord:
+    id: str
+    text: str
+    embedding: list
+    metadata: dict = field(default_factory=dict)
+
+
+@dataclass
+class VectorHit:
+    id: str
+    text: str
+    score: float
+    metadata: dict = field(default_factory=dict)
+
+
+@dataclass
+class GraphNode:
+    id: str
+    type: str
+    name: str
+    properties: dict = field(default_factory=dict)
+
+
+@dataclass
+class GraphEdge:
+    source: str
+    target: str
+    type: str
+    properties: dict = field(default_factory=dict)
+
+
+@runtime_checkable
+class VectorStore(Protocol):
+    def upsert(self, records: list) -> None: ...
+    def delete(self, ids: list) -> None: ...
+    def search(self, embedding, *, top_k: int = 8, filters: dict | None = None) -> list: ...
+    def get(self, id: str): ...
+    def count(self) -> int: ...
+    def persist(self) -> None: ...
+
+
+@runtime_checkable
+class GraphStore(Protocol):
+    def add_nodes(self, nodes: list) -> None: ...
+    def add_edges(self, edges: list) -> None: ...
+    def get_node(self, node_id: str): ...
+    def lookup(self, name: str, *, type: str | None = None, limit: int = 10) -> list: ...
+    def neighbors(self, node_id: str, *, relation_types: list | None = None,
+                  hops: int = 1, limit: int = 40) -> list: ...
+    def delete_document(self, doc_id: str) -> None: ...
+    def close(self) -> None: ...
+
+
+def matches(metadata: dict, filters: dict | None) -> bool:
+    """Equality match; a list/tuple/set filter value means 'any of'."""
+    if not filters:
+        return True
+    for key, want in filters.items():
+        got = metadata.get(key)
+        if isinstance(want, (list, tuple, set)):
+            if got not in want:
+                return False
+        elif got != want:
+            return False
+    return True
+</code></pre></li>
+
+<li><strong>Step 4: Implement <code>qa/store/vector_local.py</code></strong>
+<pre><code>« qa/store/vector_local.py »
+"""Dependency-free vector store: numpy matrix + JSON sidecar on disk.
+
+Adequate for the Phase 1 corpus (Core + GATT, ~10^5 chunks): a brute-force
+cosine scan over a normalised float32 matrix is milliseconds at that size, and
+it removes the §12 DB decision from the critical path.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+from qa.store.base import VectorHit, VectorRecord, matches
+
+
+class LocalVectorStore:
+    def __init__(self, path):
+        self.path = Path(path)
+        self._ids: list[str] = []
+        self._pos: dict[str, int] = {}
+        self._texts: list[str] = []
+        self._meta: list[dict] = []
+        self._vectors: list = []
+
+    # ── writes ──────────────────────────────────────────────────────────
+    def upsert(self, records) -> None:
+        for rec in records:
+            vec = np.asarray(rec.embedding, dtype=np.float32)
+            if rec.id in self._pos:
+                i = self._pos[rec.id]
+                self._texts[i], self._meta[i], self._vectors[i] = rec.text, dict(rec.metadata), vec
+                continue
+            self._pos[rec.id] = len(self._ids)
+            self._ids.append(rec.id)
+            self._texts.append(rec.text)
+            self._meta.append(dict(rec.metadata))
+            self._vectors.append(vec)
+
+    def delete(self, ids) -> None:
+        drop = {i for i in ids if i in self._pos}
+        if not drop:
+            return
+        keep = [i for i, rid in enumerate(self._ids) if rid not in drop]
+        self._ids = [self._ids[i] for i in keep]
+        self._texts = [self._texts[i] for i in keep]
+        self._meta = [self._meta[i] for i in keep]
+        self._vectors = [self._vectors[i] for i in keep]
+        self._pos = {rid: i for i, rid in enumerate(self._ids)}
+
+    # ── reads ───────────────────────────────────────────────────────────
+    def search(self, embedding, *, top_k=8, filters=None):
+        if not self._ids:
+            return []
+        candidates = [i for i in range(len(self._ids)) if matches(self._meta[i], filters)]
+        if not candidates:
+            return []
+        matrix = np.stack([self._vectors[i] for i in candidates])
+        query = np.asarray(embedding, dtype=np.float32)
+        denom = (np.linalg.norm(matrix, axis=1) * np.linalg.norm(query)) + 1e-12
+        scores = (matrix @ query) / denom
+        order = np.argsort(-scores)[:top_k]
+        return [
+            VectorHit(id=self._ids[candidates[j]], text=self._texts[candidates[j]],
+                      score=float(scores[j]), metadata=self._meta[candidates[j]])
+            for j in order
+        ]
+
+    def get(self, id):
+        i = self._pos.get(id)
+        if i is None:
+            return None
+        return VectorRecord(id=id, text=self._texts[i],
+                            embedding=self._vectors[i].tolist(), metadata=self._meta[i])
+
+    def count(self) -> int:
+        return len(self._ids)
+
+    # ── persistence ─────────────────────────────────────────────────────
+    def persist(self) -> None:
+        self.path.mkdir(parents=True, exist_ok=True)
+        matrix = np.stack(self._vectors) if self._vectors else np.zeros((0, 0), dtype=np.float32)
+        np.save(self.path / "vectors.npy", matrix)
+        (self.path / "records.json").write_text(
+            json.dumps({"ids": self._ids, "texts": self._texts, "metadata": self._meta}),
+            encoding="utf-8",
+        )
+
+    @classmethod
+    def load(cls, path):
+        store = cls(path)
+        records_file = Path(path) / "records.json"
+        vectors_file = Path(path) / "vectors.npy"
+        if not records_file.is_file() or not vectors_file.is_file():
+            return store
+        payload = json.loads(records_file.read_text(encoding="utf-8"))
+        matrix = np.load(vectors_file)
+        store._ids = payload["ids"]
+        store._texts = payload["texts"]
+        store._meta = payload["metadata"]
+        store._vectors = [matrix[i] for i in range(len(store._ids))]
+        store._pos = {rid: i for i, rid in enumerate(store._ids)}
+        return store
+</code></pre></li>
+
+<li><strong>Step 5: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_vector_store.py -v</code> → 6 passed.</li>
+
+<li><strong>Step 6: Commit</strong>
+<pre><code>git add qa/store tests/qa/test_vector_store.py
+git commit -m "feat(qa): store protocols + dependency-free local vector backend"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 5: SQLite graph backend</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/store/graph_sqlite.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_graph_store.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li>Consumes: <code>GraphNode</code>, <code>GraphEdge</code>, <code>GraphStore</code> from Task 4.</li>
+  <li>Produces:
+<pre><code>@dataclass Neighbor: node: GraphNode; edge: GraphEdge; hop: int; direction: "out"|"in"
+
+class SqliteGraphStore(GraphStore):
+    def __init__(self, path: Path | str)      # ":memory:" supported
+    def add_nodes(self, nodes) / add_edges(self, edges)   # idempotent upsert
+    def get_node(self, node_id) -> GraphNode | None
+    def lookup(self, name, *, type=None, limit=10) -> list[GraphNode]   # exact → alias → prefix
+    def neighbors(self, node_id, *, relation_types=None, hops=1, limit=40) -> list[Neighbor]
+    def delete_document(self, doc_id) -> None
+</code></pre></li>
+</ul>
+<p><code>lookup</code> is the §14.1 entity-resolution surface for v0.1: case-insensitive
+exact match, then the node's <code>aliases</code> property, then prefix. <code>neighbors</code>
+is BFS bounded by both <code>hops</code> and <code>limit</code> (the §14.2 per-call node cap).</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_graph_store.py »
+import pytest
+
+from qa.store.base import GraphEdge, GraphNode
+from qa.store.graph_sqlite import SqliteGraphStore
+
+
+@pytest.fixture
+def store():
+    s = SqliteGraphStore(":memory:")
+    s.add_nodes([
+        GraphNode("n1", "Procedure", "Connection Establishment",
+                  {"doc_id": "core-6.0", "aliases": ["Connection Setup"]}),
+        GraphNode("n2", "State", "Connection State", {"doc_id": "core-6.0"}),
+        GraphNode("n3", "Timer", "connSupervisionTimeout", {"doc_id": "core-6.0"}),
+        GraphNode("n4", "Event", "Disconnection Event", {"doc_id": "core-5.4"}),
+    ])
+    s.add_edges([
+        GraphEdge("n1", "n2", "triggers"),
+        GraphEdge("n2", "n3", "requires"),
+        GraphEdge("n2", "n4", "triggers"),
+    ])
+    yield s
+    s.close()
+
+
+def test_lookup_is_case_insensitive_and_alias_aware(store):
+    assert [n.id for n in store.lookup("connection establishment")] == ["n1"]
+    assert [n.id for n in store.lookup("Connection Setup")] == ["n1"]
+
+
+def test_lookup_can_filter_by_type(store):
+    assert [n.id for n in store.lookup("Connection State", type="State")] == ["n2"]
+    assert store.lookup("Connection State", type="Procedure") == []
+
+
+def test_neighbors_one_hop_returns_both_directions(store):
+    got = {(n.node.id, n.direction) for n in store.neighbors("n2", hops=1)}
+    assert got == {("n1", "in"), ("n3", "out"), ("n4", "out")}
+
+
+def test_neighbors_respects_relation_type_filter(store):
+    got = [n.node.id for n in store.neighbors("n2", relation_types=["requires"], hops=1)]
+    assert got == ["n3"]
+
+
+def test_neighbors_two_hops_reaches_transitive_nodes_with_hop_recorded(store):
+    by_id = {n.node.id: n for n in store.neighbors("n1", hops=2)}
+    assert by_id["n2"].hop == 1
+    assert by_id["n3"].hop == 2
+
+
+def test_neighbors_limit_caps_the_result(store):
+    assert len(store.neighbors("n2", hops=2, limit=2)) == 2
+
+
+def test_add_nodes_is_idempotent_and_updates_properties(store):
+    store.add_nodes([GraphNode("n1", "Procedure", "Connection Establishment",
+                               {"doc_id": "core-6.0", "note": "updated"})])
+    node = store.get_node("n1")
+    assert node.properties["note"] == "updated"
+    assert len(store.lookup("Connection Establishment")) == 1
+
+
+def test_delete_document_removes_its_nodes_and_incident_edges(store):
+    store.delete_document("core-5.4")
+    assert store.get_node("n4") is None
+    assert [n.node.id for n in store.neighbors("n2", relation_types=["triggers"], hops=1)] == ["n1"]
+
+
+def test_persists_to_a_file(tmp_path):
+    path = tmp_path / "graph.db"
+    s = SqliteGraphStore(path)
+    s.add_nodes([GraphNode("x", "Layer", "L2CAP", {"doc_id": "core-6.0"})])
+    s.close()
+    again = SqliteGraphStore(path)
+    assert again.get_node("x").name == "L2CAP"
+    again.close()
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_graph_store.py -v</code> → FAIL (no <code>qa.store.graph_sqlite</code>).</li>
+
+<li><strong>Step 3: Implement <code>qa/store/graph_sqlite.py</code></strong>
+<pre><code>« qa/store/graph_sqlite.py »
+"""Graph store on stdlib SQLite (§6.2 placeholder while §12 is undecided).
+
+Nodes and edges are two tables with an index on lowercased name; traversal is
+BFS in Python. That is enough for the §7.1 graph actions at Phase 1 volume and
+keeps the deployment story to "one file on disk".
+"""
+from __future__ import annotations
+
+import json
+import sqlite3
+from collections import deque
+from dataclasses import dataclass
+from pathlib import Path
+
+from qa.store.base import GraphEdge, GraphNode
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS nodes (
+    id TEXT PRIMARY KEY, type TEXT NOT NULL, name TEXT NOT NULL,
+    name_lc TEXT NOT NULL, doc_id TEXT, properties TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_nodes_name_lc ON nodes(name_lc);
+CREATE INDEX IF NOT EXISTS idx_nodes_doc ON nodes(doc_id);
+CREATE TABLE IF NOT EXISTS edges (
+    source TEXT NOT NULL, target TEXT NOT NULL, type TEXT NOT NULL,
+    properties TEXT NOT NULL, PRIMARY KEY (source, target, type)
+);
+CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source);
+CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target);
+"""
+
+
+@dataclass
+class Neighbor:
+    node: GraphNode
+    edge: GraphEdge
+    hop: int
+    direction: str
+
+
+def _row_to_node(row):
+    return GraphNode(id=row["id"], type=row["type"], name=row["name"],
+                     properties=json.loads(row["properties"]))
+
+
+class SqliteGraphStore:
+    def __init__(self, path=":memory:"):
+        if path != ":memory:":
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(str(path))
+        self._conn.row_factory = sqlite3.Row
+        self._conn.executescript(_SCHEMA)
+        self._conn.commit()
+
+    def add_nodes(self, nodes) -> None:
+        self._conn.executemany(
+            "INSERT INTO nodes (id, type, name, name_lc, doc_id, properties) VALUES (?,?,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET type=excluded.type, name=excluded.name, "
+            "name_lc=excluded.name_lc, doc_id=excluded.doc_id, properties=excluded.properties",
+            [(n.id, n.type, n.name, n.name.lower(),
+              (n.properties or {}).get("doc_id"), json.dumps(n.properties or {})) for n in nodes],
+        )
+        self._conn.commit()
+
+    def add_edges(self, edges) -> None:
+        self._conn.executemany(
+            "INSERT INTO edges (source, target, type, properties) VALUES (?,?,?,?) "
+            "ON CONFLICT(source, target, type) DO UPDATE SET properties=excluded.properties",
+            [(e.source, e.target, e.type, json.dumps(e.properties or {})) for e in edges],
+        )
+        self._conn.commit()
+
+    def get_node(self, node_id):
+        row = self._conn.execute("SELECT * FROM nodes WHERE id = ?", (node_id,)).fetchone()
+        return _row_to_node(row) if row else None
+
+    def lookup(self, name, *, type=None, limit=10):
+        """§14.1 v0.1 entity resolution: exact (case-insensitive) → alias → prefix."""
+        needle = (name or "").strip().lower()
+        if not needle:
+            return []
+        clause, params = ("AND type = ?", [type]) if type else ("", [])
+
+        rows = self._conn.execute(
+            f"SELECT * FROM nodes WHERE name_lc = ? {clause} LIMIT ?", [needle, *params, limit]
+        ).fetchall()
+        if rows:
+            return [_row_to_node(r) for r in rows]
+
+        alias_hits = []
+        for row in self._conn.execute(
+            f"SELECT * FROM nodes WHERE properties LIKE ? {clause} LIMIT ?",
+            [f'%{name}%', *params, limit * 5],
+        ):
+            aliases = [a.lower() for a in (json.loads(row["properties"]).get("aliases") or [])]
+            if needle in aliases:
+                alias_hits.append(_row_to_node(row))
+                if len(alias_hits) >= limit:
+                    break
+        if alias_hits:
+            return alias_hits
+
+        rows = self._conn.execute(
+            f"SELECT * FROM nodes WHERE name_lc LIKE ? {clause} LIMIT ?",
+            [f"{needle}%", *params, limit],
+        ).fetchall()
+        return [_row_to_node(r) for r in rows]
+
+    def neighbors(self, node_id, *, relation_types=None, hops=1, limit=40):
+        """BFS bounded by hops and by the §14.2 per-call node cap."""
+        out, seen = [], {node_id}
+        queue = deque([(node_id, 0)])
+        while queue and len(out) < limit:
+            current, depth = queue.popleft()
+            if depth >= hops:
+                continue
+            for direction, own, other in (("out", "source", "target"), ("in", "target", "source")):
+                sql = f"SELECT * FROM edges WHERE {own} = ?"
+                params = [current]
+                if relation_types:
+                    sql += f" AND type IN ({','.join('?' * len(relation_types))})"
+                    params += list(relation_types)
+                for row in self._conn.execute(sql, params):
+                    nid = row[other]
+                    if nid in seen:
+                        continue
+                    node = self.get_node(nid)
+                    if node is None:
+                        continue
+                    seen.add(nid)
+                    out.append(Neighbor(
+                        node=node,
+                        edge=GraphEdge(row["source"], row["target"], row["type"],
+                                       json.loads(row["properties"])),
+                        hop=depth + 1, direction=direction,
+                    ))
+                    queue.append((nid, depth + 1))
+                    if len(out) >= limit:
+                        return out
+        return out
+
+    def delete_document(self, doc_id) -> None:
+        ids = [r["id"] for r in self._conn.execute(
+            "SELECT id FROM nodes WHERE doc_id = ?", (doc_id,))]
+        if not ids:
+            return
+        marks = ",".join("?" * len(ids))
+        self._conn.execute(f"DELETE FROM edges WHERE source IN ({marks}) OR target IN ({marks})",
+                           ids + ids)
+        self._conn.execute(f"DELETE FROM nodes WHERE id IN ({marks})", ids)
+        self._conn.commit()
+
+    def close(self) -> None:
+        self._conn.close()
+</code></pre></li>
+
+<li><strong>Step 4: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_graph_store.py -v</code> → 9 passed.</li>
+
+<li><strong>Step 5: Commit</strong>
+<pre><code>git add qa/store/graph_sqlite.py tests/qa/test_graph_store.py
+git commit -m "feat(qa): SQLite graph store with alias lookup and bounded traversal"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 6: Ingestion pipeline (§5.1 skeleton, chunking, §5.5 incremental)</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/ingest/pipeline.py</code>, <code>qa/ingest/extract.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_pipeline.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li>Consumes: <code>parse_markdown</code>, <code>section_hash</code> (Task 3);
+      <code>GraphNode</code>/<code>GraphEdge</code>/<code>VectorRecord</code> (Task 4);
+      <code>SqliteGraphStore</code> (Task 5); <code>ontology.extraction_schema</code> (Task 2);
+      <code>llm.embed</code>, <code>llm.structured_call</code> (Task 1).</li>
+  <li>Produces:
+<pre><code>@dataclass IngestStats: doc_id, sections, sections_changed, sections_skipped,
+                        chunks, tables, figures, edges, entities, elapsed_ms
+
+def build_skeleton(doc: ParsedDocument) -> tuple[list[GraphNode], list[GraphEdge]]
+def build_chunks(doc: ParsedDocument, *, max_chars: int) -> list[dict]
+    # dict keys: id, text, metadata{doc_id, doc_type, version, section, section_id,
+    #            title, kind ("section"|"table"|"figure"), page, path, content_hash}
+async def ingest_document(path, *, doc_id, title, doc_type, version,
+                          vector_store, graph_store, manifest: Manifest,
+                          extract=False, figures=False,
+                          embed_fn=None) -> IngestStats
+
+class Manifest:                      # §5.5/§10 incremental state
+    def __init__(self, path: Path)
+    def hash_of(self, section_id: str) -> str | None
+    def set(self, section_id: str, content_hash: str) -> None
+    def prune(self, doc_id: str, live_ids: set[str]) -> list[str]   # returns removed ids
+    def save(self) -> None
+    @classmethod def load(cls, path) -> "Manifest"
+</code></pre></li>
+</ul>
+
+<p>Chunking follows §6.1: one chunk per section, <strong>tables chunked separately</strong>
+(§14.12) with caption + header text prepended so they are lexically findable, and figure
+descriptions embedded as their own chunks (§5.4b). Re-ingest only embeds sections whose
+<code>content_hash</code> changed (§5.5); unchanged sections just get the version tag.</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_pipeline.py »
+import pytest
+
+from qa.ingest import pipeline
+from qa.ingest.structure import parse_markdown
+from qa.store.graph_sqlite import SqliteGraphStore
+from qa.store.vector_local import LocalVectorStore
+
+DOC = """# Core
+
+## 4 LINK LAYER
+
+Body of chapter four. See Section 4.5 for details.
+
+### 4.5 CONNECTION STATE
+
+Connection state body.
+
+| Parameter | Min |
+|---|---|
+| connInterval | 7.5 ms |
+
+Table 4.1: Connection parameters
+"""
+
+
+def _fake_embed(texts):
+    # deterministic 4-dim stand-in: no endpoint needed in tests
+    async def _run(items):
+        return [[float(len(t) % 7), 1.0, 0.0, 0.0] for t in items]
+    return _run(texts)
+
+
+def _parsed():
+    return parse_markdown(DOC, doc_id="core-6.0", title="Core 6.0",
+                          doc_type="Core", version="6.0")
+
+
+def test_skeleton_nodes_mirror_the_document_structure():
+    nodes, edges = pipeline.build_skeleton(_parsed())
+    kinds = {n.type for n in nodes}
+    assert {"Document", "Section", "Table"} <= kinds
+    partof = {(e.source, e.target) for e in edges if e.type == "partOf"}
+    section_ids = {n.id for n in nodes if n.type == "Section"}
+    assert any(src in section_ids for src, _ in partof)
+    assert any(e.type == "references" for e in edges)
+    assert any(e.type == "hasTable" for e in edges)
+
+
+def test_tables_become_their_own_chunk_with_caption_prepended():
+    chunks = pipeline.build_chunks(_parsed(), max_chars=3000)
+    tables = [c for c in chunks if c["metadata"]["kind"] == "table"]
+    assert len(tables) == 1
+    assert "Table 4.1" in tables[0]["text"] and "connInterval" in tables[0]["text"]
+
+
+def test_every_chunk_carries_scope_metadata_for_filtering():
+    for chunk in pipeline.build_chunks(_parsed(), max_chars=3000):
+        md = chunk["metadata"]
+        assert md["doc_type"] == "Core" and md["version"] == "6.0"
+        assert md["section"] and md["content_hash"]
+
+
+@pytest.mark.asyncio
+async def test_ingest_populates_both_stores(tmp_path):
+    vec = LocalVectorStore(tmp_path / "vec")
+    graph = SqliteGraphStore(":memory:")
+    manifest = pipeline.Manifest(tmp_path / "manifest.json")
+    src = tmp_path / "Core_v6.0.md"
+    src.write_text(DOC, encoding="utf-8")
+
+    stats = await pipeline.ingest_document(
+        src, doc_id="core-6.0", title="Core 6.0", doc_type="Core", version="6.0",
+        vector_store=vec, graph_store=graph, manifest=manifest, embed_fn=_fake_embed,
+    )
+    assert stats.chunks > 0 and vec.count() == stats.chunks
+    assert graph.lookup("CONNECTION STATE")
+    graph.close()
+
+
+@pytest.mark.asyncio
+async def test_reingest_only_embeds_changed_sections(tmp_path):
+    vec = LocalVectorStore(tmp_path / "vec")
+    graph = SqliteGraphStore(":memory:")
+    manifest = pipeline.Manifest(tmp_path / "manifest.json")
+    src = tmp_path / "Core_v6.0.md"
+    src.write_text(DOC, encoding="utf-8")
+    common = dict(doc_id="core-6.0", title="Core 6.0", doc_type="Core", version="6.0",
+                  vector_store=vec, graph_store=graph, manifest=manifest, embed_fn=_fake_embed)
+
+    first = await pipeline.ingest_document(src, **common)
+    second = await pipeline.ingest_document(src, **common)
+    assert second.sections_changed == 0
+    assert second.sections_skipped == first.sections
+
+    src.write_text(DOC.replace("Connection state body.", "Connection state body, revised."),
+                   encoding="utf-8")
+    third = await pipeline.ingest_document(src, **common)
+    assert third.sections_changed == 1
+    graph.close()
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_pipeline.py -v</code> → FAIL (no <code>qa.ingest.pipeline</code>).</li>
+
+<li><strong>Step 3: Implement <code>qa/ingest/pipeline.py</code></strong>
+<pre><code>« qa/ingest/pipeline.py »
+"""Ingestion (§5): markdown -> graph skeleton + vector chunks, incrementally.
+
+The skeleton (§5.1) is rebuilt deterministically on every run — it is cheap.
+Embedding is the expensive half, so it is gated on a per-section content hash
+(§5.5): a re-ingest of an unchanged document costs zero LLM calls.
+"""
+from __future__ import annotations
+
+import json
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from qa import config
+from qa.ingest.structure import parse_markdown, section_hash
+from qa.store.base import GraphEdge, GraphNode, VectorRecord
+
+
+@dataclass
+class IngestStats:
+    doc_id: str
+    sections: int = 0
+    sections_changed: int = 0
+    sections_skipped: int = 0
+    chunks: int = 0
+    tables: int = 0
+    figures: int = 0
+    edges: int = 0
+    entities: int = 0
+    elapsed_ms: int = 0
+
+
+class Manifest:
+    """Per-section content hashes from previous runs (§5.5 / §10)."""
+
+    def __init__(self, path):
+        self.path = Path(path)
+        self._hashes: dict[str, str] = {}
+
+    @classmethod
+    def load(cls, path):
+        m = cls(path)
+        if m.path.is_file():
+            m._hashes = json.loads(m.path.read_text(encoding="utf-8"))
+        return m
+
+    def hash_of(self, section_id):
+        return self._hashes.get(section_id)
+
+    def set(self, section_id, content_hash):
+        self._hashes[section_id] = content_hash
+
+    def prune(self, doc_id, live_ids):
+        stale = [k for k in self._hashes
+                 if k.split("#")[0] == doc_id and k not in live_ids]
+        for k in stale:
+            del self._hashes[k]
+        return stale
+
+    def save(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(self._hashes), encoding="utf-8")
+
+
+def build_skeleton(doc):
+    """§5.1: transcribe document structure into ontology-typed nodes and edges."""
+    nodes = [GraphNode(id=doc.doc_id, type="Document", name=doc.title,
+                       properties={"doc_id": doc.doc_id, "doc_type": doc.doc_type,
+                                   "version": doc.version, "path": doc.path})]
+    edges = []
+    by_number = {}
+    for section in doc.sections:
+        node_type = "Chapter" if section.level <= 2 else ("Section" if section.level == 3 else "Subsection")
+        nodes.append(GraphNode(
+            id=section.id, type=node_type, name=section.title,
+            properties={"doc_id": doc.doc_id, "doc_type": doc.doc_type,
+                        "version": doc.version, "number": section.number,
+                        "line_start": section.line_start, "line_end": section.line_end,
+                        "page": section.page},
+        ))
+        edges.append(GraphEdge(section.id, section.parent_id or doc.doc_id, "partOf"))
+        if section.number:
+            by_number[section.number] = section.id
+
+    for table in doc.tables:
+        nodes.append(GraphNode(id=table.id, type="Table", name=table.caption,
+                               properties={"doc_id": doc.doc_id, "doc_type": doc.doc_type,
+                                           "version": doc.version, "section_id": table.section_id,
+                                           "markdown": table.markdown}))
+        edges.append(GraphEdge(table.section_id, table.id, "hasTable"))
+    for figure in doc.figures:
+        nodes.append(GraphNode(id=figure.id, type="Figure", name=figure.caption,
+                               properties={"doc_id": doc.doc_id, "doc_type": doc.doc_type,
+                                           "version": doc.version, "section_id": figure.section_id,
+                                           "image_path": figure.image_path}))
+        edges.append(GraphEdge(figure.section_id, figure.id, "hasFigure"))
+
+    for ref in doc.crossrefs:
+        if ref.target_kind == "section" and ref.target_ref in by_number:
+            edges.append(GraphEdge(ref.source_section_id, by_number[ref.target_ref],
+                                   "references", {"raw": ref.raw}))
+    return nodes, edges
+
+
+def _table_chunk_text(table):
+    return f"{table.caption}\n\n{table.markdown}".strip()
+
+
+def build_chunks(doc, *, max_chars=None):
+    """§6.1 chunking: one chunk per section, tables separately (§14.12)."""
+    max_chars = max_chars or config.CHUNK_MAX_CHARS
+    tables_by_section = {}
+    for table in doc.tables:
+        tables_by_section.setdefault(table.section_id, []).append(table)
+
+    chunks = []
+
+    def _meta(section, kind, **extra):
+        return {"doc_id": doc.doc_id, "doc_type": doc.doc_type, "version": doc.version,
+                "path": doc.path, "section": section.number or section.title,
+                "section_id": section.id, "title": section.title, "kind": kind,
+                "page": section.page, **extra}
+
+    for section in doc.sections:
+        body = section.text.strip()
+        if body:
+            header = f"[{doc.title} §{section.number} {section.title}]"
+            for i, piece in enumerate(_split(body, max_chars)):
+                text = f"{header}\n{piece}"
+                chunks.append({
+                    "id": f"{section.id}::s{i}",
+                    "text": text,
+                    "metadata": _meta(section, "section", content_hash=section_hash(section)),
+                })
+        for table in tables_by_section.get(section.id, []):
+            chunks.append({
+                "id": f"{table.id}::t",
+                "text": _table_chunk_text(table),
+                "metadata": _meta(section, "table", table_id=table.id,
+                                  content_hash=section_hash(section)),
+            })
+    return chunks
+
+
+def _split(text, max_chars):
+    if len(text) <= max_chars:
+        return [text]
+    pieces, current = [], []
+    size = 0
+    for para in text.split("\n\n"):
+        if size + len(para) > max_chars and current:
+            pieces.append("\n\n".join(current))
+            current, size = [], 0
+        current.append(para)
+        size += len(para) + 2
+    if current:
+        pieces.append("\n\n".join(current))
+    return pieces
+
+
+async def ingest_document(path, *, doc_id, title, doc_type, version,
+                          vector_store, graph_store, manifest,
+                          extract=False, figures=False, embed_fn=None):
+    from qa import llm
+
+    t0 = time.time()
+    embed_fn = embed_fn or llm.embed
+    text = Path(path).read_text(encoding="utf-8", errors="ignore")
+    doc = parse_markdown(text, doc_id=doc_id, title=title, doc_type=doc_type,
+                         version=version, path=str(path))
+    stats = IngestStats(doc_id=doc_id, sections=len(doc.sections),
+                        tables=len(doc.tables), figures=len(doc.figures))
+
+    nodes, edges = build_skeleton(doc)
+    graph_store.add_nodes(nodes)
+    graph_store.add_edges(edges)
+    stats.edges = len(edges)
+
+    chunks = build_chunks(doc, max_chars=config.CHUNK_MAX_CHARS)
+    changed_sections = set()
+    fresh, reused = [], 0
+    for chunk in chunks:
+        sid = chunk["metadata"]["section_id"]
+        content_hash = chunk["metadata"]["content_hash"]
+        if manifest.hash_of(sid) == content_hash and vector_store.get(chunk["id"]) is not None:
+            reused += 1
+            continue
+        fresh.append(chunk)
+        changed_sections.add(sid)
+
+    if fresh:
+        vectors = await embed_fn([c["text"] for c in fresh])
+        vector_store.upsert([
+            VectorRecord(id=c["id"], text=c["text"], embedding=v, metadata=c["metadata"])
+            for c, v in zip(fresh, vectors)
+        ])
+    for chunk in chunks:
+        manifest.set(chunk["metadata"]["section_id"], chunk["metadata"]["content_hash"])
+
+    live_section_ids = {s.id for s in doc.sections}
+    removed = manifest.prune(doc_id, live_section_ids)
+    if removed:
+        vector_store.delete([c for c in removed])
+
+    stats.chunks = len(chunks)
+    stats.sections_changed = len(changed_sections)
+    stats.sections_skipped = len({c["metadata"]["section_id"] for c in chunks}) - len(changed_sections)
+
+    if extract or figures:
+        from qa.ingest.extract import enrich
+        stats.entities = await enrich(doc, graph_store=graph_store,
+                                      sections=[s for s in doc.sections if s.id in changed_sections],
+                                      do_entities=extract, do_figures=figures)
+
+    manifest.save()
+    vector_store.persist()
+    stats.elapsed_ms = int((time.time() - t0) * 1000)
+    return stats
+</code></pre></li>
+
+<li><strong>Step 4: Implement <code>qa/ingest/extract.py</code></strong>
+<pre><code>« qa/ingest/extract.py »
+"""§5.3 ontology-constrained entity/relation extraction and §5.4 figure descriptions.
+
+Both are opt-in per ingest run because they are the quota-hungry stages (§14.7).
+Extraction is constrained to qa.ontology types; anything the model invents that
+falls outside the schema is rejected by structured_call before it reaches the graph.
+Low-confidence figure output is flagged rather than silently trusted (§13).
+"""
+from __future__ import annotations
+
+import re
+
+from qa import config, ontology
+from qa.llm import StructuredOutputError, structured_call
+from qa.store.base import GraphEdge, GraphNode
+
+_EXTRACT_SYSTEM = (
+    "You extract Bluetooth specification entities and relations. "
+    "Use ONLY the entity types and relation types given in the schema. "
+    "Do not invent types. Prefer the exact wording the specification uses for names. "
+    "Return JSON only."
+)
+
+_FIGURE_SYSTEM = (
+    "You describe a Bluetooth specification figure. Identify the states, events and "
+    "transitions it shows. Be literal: describe only what the figure depicts. "
+    "Return JSON only."
+)
+
+_FIGURE_SCHEMA = {
+    "type": "object",
+    "required": ["description", "confidence"],
+    "properties": {
+        "description": {"type": "string"},
+        "states": {"type": "array", "items": {"type": "string"}},
+        "events": {"type": "array", "items": {"type": "string"}},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+    },
+}
+
+
+def _entity_id(doc_id, name):
+    return f"{doc_id}:entity:{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}"
+
+
+async def enrich(doc, *, graph_store, sections, do_entities=True, do_figures=False):
+    added = 0
+    if do_entities:
+        schema = ontology.extraction_schema(doc.doc_type)
+        for section in sections:
+            body = (section.text or "").strip()
+            if len(body) < 200:
+                continue
+            try:
+                payload = await structured_call(
+                    [{"role": "system", "content": _EXTRACT_SYSTEM},
+                     {"role": "user", "content":
+                        f"Schema:\n{schema}\n\nSection {section.number} {section.title}:\n"
+                        f"{body[:6000]}"}],
+                    schema, model=config.EXTRACT_MODEL,
+                )
+            except StructuredOutputError:
+                continue   # §13: a section that will not extract is skipped, not guessed
+
+            nodes, edges, by_name = [], [], {}
+            for entity in payload.get("entities", []):
+                nid = _entity_id(doc.doc_id, entity["name"])
+                by_name[entity["name"]] = nid
+                nodes.append(GraphNode(
+                    id=nid, type=entity["type"], name=entity["name"],
+                    properties={"doc_id": doc.doc_id, "doc_type": doc.doc_type,
+                                "version": doc.version, "aliases": entity.get("aliases", []),
+                                "section_id": section.id},
+                ))
+                edges.append(GraphEdge(nid, section.id, "definedIn"))
+            for relation in payload.get("relations", []):
+                src = by_name.get(relation["source"])
+                dst = by_name.get(relation["target"])
+                if src and dst and ontology.is_valid_relation(relation["type"]):
+                    edges.append(GraphEdge(src, dst, relation["type"]))
+            if nodes:
+                graph_store.add_nodes(nodes)
+            if edges:
+                graph_store.add_edges(edges)
+            added += len(nodes)
+
+    if do_figures:
+        section_ids = {s.id for s in sections}
+        for figure in doc.figures:
+            if figure.section_id not in section_ids:
+                continue
+            try:
+                payload = await structured_call(
+                    [{"role": "system", "content": _FIGURE_SYSTEM},
+                     {"role": "user", "content":
+                        f"Figure caption: {figure.caption}\nImage file: {figure.image_path}\n"
+                        f"Describe it as JSON matching the schema."}],
+                    _FIGURE_SCHEMA, model=config.VISION_MODEL,
+                )
+            except StructuredOutputError:
+                continue
+            graph_store.add_nodes([GraphNode(
+                id=figure.id, type="Figure", name=figure.caption,
+                properties={"doc_id": doc.doc_id, "doc_type": doc.doc_type,
+                            "version": doc.version, "section_id": figure.section_id,
+                            "image_path": figure.image_path,
+                            "description": payload["description"],
+                            "states": payload.get("states", []),
+                            "events": payload.get("events", []),
+                            "confidence": payload["confidence"],
+                            "low_confidence": payload["confidence"] == "low"},
+            )])
+            added += 1
+    return added
+</code></pre></li>
+
+<li><strong>Step 5: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_pipeline.py -v</code> → 5 passed.</li>
+
+<li><strong>Step 6: Commit</strong>
+<pre><code>git add qa/ingest/pipeline.py qa/ingest/extract.py tests/qa/test_pipeline.py
+git commit -m "feat(qa): ingestion pipeline with incremental re-embedding and optional LLM enrichment"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 7: Retrieval actions (§7.1)</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/retrieval/__init__.py</code>, <code>qa/retrieval/actions.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_actions.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<ul class="tight">
+  <li>Consumes: stores from Tasks 4–5, <code>llm.embed</code> from Task 1.</li>
+  <li>Produces:
+<pre><code>@dataclass Evidence:      # one observed piece of evidence, the unit §7.4 verifies against
+    ref_id: str; doc: str; section: str; page: int | None; path: str
+    kind: str             # "chunk" | "section" | "table" | "figure" | "node"
+    text: str
+
+@dataclass ActionResult:
+    text: str                     # what the model sees
+    evidence: list[Evidence]      # what the verifier sees
+
+class RetrievalActions:
+    def __init__(self, vector_store, graph_store, *, embed_fn=None, doc_registry: dict)
+    TOOL_SCHEMAS: list[dict]                       # OpenAI function schemas, §7.1 names
+    async def run(self, name: str, args: dict) -> ActionResult
+    async def vector_search(self, query, scope_filter=None, top_k=None) -> ActionResult
+    def graph_lookup(self, entity_name) -> ActionResult
+    def graph_traverse(self, node_id, relation_types=None, hops=1) -> ActionResult
+    def get_section_text(self, doc, section_id) -> ActionResult
+    def get_figure(self, figure_id) -> ActionResult
+    def get_table(self, table_id=None, section_id=None) -> ActionResult
+</code></pre></li>
+</ul>
+
+<p><code>doc_registry</code> maps <code>doc_id → {"title", "path", "doc_type", "version"}</code>
+so <code>get_section_text</code> can slice the original file by the line span stored on the node.
+Every action returns evidence with a stable <code>ref_id</code>; the loop accumulates these and
+§7.4 checks the model's citations against them. §14.11 is enforced here: when a section
+carries an inbound <code>amends</code> edge, its result appends the amending text and a
+"errata takes precedence" marker.</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_actions.py »
+import pytest
+
+from qa.retrieval.actions import RetrievalActions
+from qa.store.base import GraphEdge, GraphNode, VectorRecord
+from qa.store.graph_sqlite import SqliteGraphStore
+from qa.store.vector_local import LocalVectorStore
+
+SECTION_TEXT = """# Core
+
+## 4 LINK LAYER
+
+Chapter body.
+
+### 4.5 CONNECTION STATE
+
+The peripheral shall use connSupervisionTimeout.
+"""
+
+
+@pytest.fixture
+def actions(tmp_path):
+    src = tmp_path / "Core_v6.0.md"
+    src.write_text(SECTION_TEXT, encoding="utf-8")
+
+    vec = LocalVectorStore(tmp_path / "vec")
+    vec.upsert([
+        VectorRecord("core-6.0#4.5::s0", "connection state and supervision timeout",
+                     [1.0, 0.0], {"doc_id": "core-6.0", "doc_type": "Core", "version": "6.0",
+                                  "section": "4.5", "section_id": "core-6.0#4.5",
+                                  "title": "CONNECTION STATE", "kind": "section", "page": 512}),
+        VectorRecord("mesh#2::s0", "provisioning bearer",
+                     [0.0, 1.0], {"doc_id": "mesh-1.1", "doc_type": "Mesh", "version": "1.1",
+                                  "section": "2", "section_id": "mesh-1.1#2",
+                                  "title": "PROVISIONING", "kind": "section", "page": 20}),
+    ])
+
+    graph = SqliteGraphStore(":memory:")
+    graph.add_nodes([
+        GraphNode("core-6.0", "Document", "Core 6.0", {"doc_id": "core-6.0"}),
+        GraphNode("core-6.0#4.5", "Section", "CONNECTION STATE",
+                  {"doc_id": "core-6.0", "number": "4.5", "line_start": 7, "line_end": 10,
+                   "page": 512, "version": "6.0"}),
+        GraphNode("core-6.0:entity:connsupervisiontimeout", "Timer", "connSupervisionTimeout",
+                  {"doc_id": "core-6.0", "aliases": ["supervision timeout"], "section_id": "core-6.0#4.5"}),
+        GraphNode("core-6.0:table:1", "Table", "Table 4.1: Connection parameters",
+                  {"doc_id": "core-6.0", "section_id": "core-6.0#4.5",
+                   "markdown": "| Parameter | Min |\n|---|---|\n| connInterval | 7.5 ms |"}),
+        GraphNode("core-6.0:figure:1", "Figure", "Figure 4.3: Connection event timing",
+                  {"doc_id": "core-6.0", "section_id": "core-6.0#4.5",
+                   "image_path": "img/f43.png", "description": "Timing diagram."}),
+    ])
+    graph.add_edges([
+        GraphEdge("core-6.0:entity:connsupervisiontimeout", "core-6.0#4.5", "definedIn"),
+        GraphEdge("core-6.0#4.5", "core-6.0:table:1", "hasTable"),
+        GraphEdge("core-6.0#4.5", "core-6.0:figure:1", "hasFigure"),
+    ])
+
+    async def fake_embed(texts):
+        return [[1.0, 0.0] for _ in texts]
+
+    yield RetrievalActions(
+        vec, graph, embed_fn=fake_embed,
+        doc_registry={"core-6.0": {"title": "Core Spec v6.0", "path": str(src),
+                                   "doc_type": "Core", "version": "6.0"}},
+    )
+    graph.close()
+
+
+@pytest.mark.asyncio
+async def test_vector_search_returns_text_and_evidence(actions):
+    result = await actions.vector_search("supervision timeout")
+    assert "CONNECTION STATE" in result.text
+    assert result.evidence and result.evidence[0].section == "4.5"
+    assert result.evidence[0].page == 512
+
+
+@pytest.mark.asyncio
+async def test_vector_search_scope_filter_restricts_doc_type(actions):
+    result = await actions.vector_search("provisioning", scope_filter={"doc_type": "Mesh"})
+    assert all(e.doc.startswith("mesh") or "Mesh" in e.doc for e in result.evidence)
+    assert len(result.evidence) == 1
+
+
+def test_graph_lookup_finds_by_alias_and_reports_node_ids(actions):
+    result = actions.graph_lookup("supervision timeout")
+    assert "connSupervisionTimeout" in result.text
+    assert "core-6.0:entity:connsupervisiontimeout" in result.text
+
+
+def test_graph_traverse_lists_typed_neighbours(actions):
+    result = actions.graph_traverse("core-6.0#4.5", hops=1)
+    assert "hasTable" in result.text and "definedIn" in result.text
+
+
+def test_get_section_text_slices_the_source_file(actions):
+    result = actions.get_section_text("core-6.0", "core-6.0#4.5")
+    assert "connSupervisionTimeout" in result.text
+    assert result.evidence[0].kind == "section"
+
+
+def test_get_table_returns_markdown_preserved(actions):
+    result = actions.get_table(table_id="core-6.0:table:1")
+    assert "| connInterval | 7.5 ms |" in result.text
+
+
+def test_get_table_by_section_finds_the_sections_tables(actions):
+    result = actions.get_table(section_id="core-6.0#4.5")
+    assert "Table 4.1" in result.text
+
+
+def test_get_figure_returns_description_and_path(actions):
+    result = actions.get_figure("core-6.0:figure:1")
+    assert "Timing diagram." in result.text and "img/f43.png" in result.text
+
+
+@pytest.mark.asyncio
+async def test_run_dispatches_by_name_and_reports_unknown_actions(actions):
+    ok = await actions.run("get_table", {"table_id": "core-6.0:table:1"})
+    assert "connInterval" in ok.text
+    bad = await actions.run("teleport", {})
+    assert "unknown action" in bad.text.lower() and bad.evidence == []
+
+
+@pytest.mark.asyncio
+async def test_missing_ids_return_a_message_not_an_exception(actions):
+    result = await actions.run("get_figure", {"figure_id": "nope"})
+    assert "not found" in result.text.lower() and result.evidence == []
+
+
+def test_tool_schemas_cover_all_six_actions():
+    names = {s["function"]["name"] for s in RetrievalActions.TOOL_SCHEMAS}
+    assert names == {"vector_search", "graph_lookup", "graph_traverse",
+                     "get_section_text", "get_figure", "get_table"}
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_actions.py -v</code> → FAIL (no <code>qa.retrieval</code>).</li>
+
+<li><strong>Step 3: Implement <code>qa/retrieval/actions.py</code></strong>
+<p>Write the module with: the <code>Evidence</code>/<code>ActionResult</code> dataclasses;
+<code>TOOL_SCHEMAS</code> (six OpenAI function schemas, parameter names exactly as in §7.1:
+<code>query</code>/<code>scope_filter</code>, <code>entity_name</code>,
+<code>node_id</code>/<code>relation_types</code>/<code>hops</code>,
+<code>doc</code>/<code>section_id</code>, <code>figure_id</code>,
+<code>table_id</code>/<code>section_id</code>); a <code>run()</code> dispatch table; and the six
+methods. Rules baked in:</p>
+<ul class="tight">
+  <li><code>vector_search</code>: <code>embed_fn([query])</code> → <code>store.search</code>,
+      truncate each hit to <code>config.SNIPPET_CHARS</code>, emit one
+      <code>Evidence</code> per hit with <code>ref_id = hit.id</code>.</li>
+  <li><code>graph_traverse</code>: cap at <code>config.TRAVERSE_NODE_CAP</code> (§14.2) and
+      say so in the text when the cap truncates.</li>
+  <li><code>get_section_text</code>: read <code>doc_registry[doc]["path"]</code>, slice
+      <code>line_start..line_end</code> from the node's properties.</li>
+  <li>§14.11: after building a section/table result, query inbound <code>amends</code>
+      edges; if any exist, append their text under
+      <code>"[ERRATUM — takes precedence over the text above]"</code>.</li>
+  <li>Every "not found" path returns <code>ActionResult(text="… not found …", evidence=[])</code>
+      — never raises, so a wrong id costs one loop step instead of a 500.</li>
+</ul></li>
+
+<li><strong>Step 4: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_actions.py -v</code> → 11 passed.</li>
+
+<li><strong>Step 5: Commit</strong>
+<pre><code>git add qa/retrieval tests/qa/test_actions.py
+git commit -m "feat(qa): six retrieval actions over vector+graph with evidence tracking"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 8: Pre-filter (§7.0)</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/prefilter.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_prefilter.py</code></dd>
+</dl>
+
+<h4>Interfaces — Produces</h4>
+<pre><code>@dataclass ScopeDecision:
+    out_of_scope: bool
+    scope_filter: dict | None      # e.g. {"doc_type": ["Core", "GATT"]}
+    reason: str
+    used_llm: bool
+
+async def classify(query, *, spec_scope=None, spec_version=None,
+                   llm_fn=None) -> ScopeDecision
+</code></pre>
+<p>Order: an explicit <code>spec_scope</code> from the Orchestrator wins outright (no LLM).
+Otherwise a lexical gate — Bluetooth vocabulary present → in scope with a doc-type hint;
+clearly-other-domain markers and no Bluetooth vocabulary → out of scope. Only the
+ambiguous middle costs an LLM call. §7.0 says the hint is <em>not</em> a hard constraint,
+so the loop may widen it later.</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_prefilter.py »
+import pytest
+
+from qa import prefilter
+
+
+@pytest.mark.asyncio
+async def test_explicit_scope_from_orchestrator_skips_the_llm():
+    d = await prefilter.classify("무슨 뜻인가요?", spec_scope="Core-LE", spec_version="5.4")
+    assert d.out_of_scope is False and d.used_llm is False
+    assert d.scope_filter["doc_type"] == ["Core"]
+    assert d.scope_filter["version"] == ["5.4"]
+
+
+@pytest.mark.asyncio
+async def test_obvious_bluetooth_query_is_in_scope_without_the_llm():
+    d = await prefilter.classify("What is connSupervisionTimeout in the LE Link Layer?")
+    assert d.out_of_scope is False and d.used_llm is False
+
+
+@pytest.mark.asyncio
+async def test_mesh_vocabulary_produces_a_mesh_hint():
+    d = await prefilter.classify("Mesh provisioning bearer 절차 알려줘")
+    assert "Mesh" in d.scope_filter["doc_type"]
+
+
+@pytest.mark.asyncio
+async def test_obviously_unrelated_query_is_rejected_without_the_llm():
+    d = await prefilter.classify("What is the capital of France?")
+    assert d.out_of_scope is True and d.used_llm is False
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_query_falls_back_to_the_llm():
+    calls = []
+
+    async def fake_llm(query):
+        calls.append(query)
+        return {"out_of_scope": False, "doc_types": ["Core"], "reason": "protocol question"}
+
+    d = await prefilter.classify("How does the pairing handshake work?", llm_fn=fake_llm)
+    assert d.used_llm is True and calls
+    assert d.out_of_scope is False
+
+
+@pytest.mark.asyncio
+async def test_llm_failure_fails_open_into_the_loop():
+    async def boom(query):
+        raise RuntimeError("endpoint down")
+
+    d = await prefilter.classify("Something entirely ambiguous here", llm_fn=boom)
+    assert d.out_of_scope is False   # never reject a question because the gate broke
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_prefilter.py -v</code> → FAIL.</li>
+
+<li><strong>Step 3: Implement <code>qa/prefilter.py</code></strong>
+<p>Contents: <code>_BT_TERMS</code> (a frozenset of unambiguous Bluetooth vocabulary —
+<code>bluetooth</code>, <code>ble</code>, <code>gatt</code>, <code>att</code>,
+<code>l2cap</code>, <code>hci</code>, <code>acl</code>, <code>advertis</code>,
+<code>peripheral</code>, <code>central</code>, <code>a2dp</code>, <code>avrcp</code>,
+<code>hfp</code>, <code>mesh</code>, <code>lc3</code>, <code>bap</code>, <code>cap</code>,
+<code>csip</code>, <code>rpa</code>, <code>smp</code>, <code>pdu</code>, <code>uuid</code>,
+<code>rssi</code>, <code>conninterval</code>, …), <code>_DOC_TYPE_HINTS</code> mapping term
+groups to doc types (<code>mesh</code>→Mesh, <code>bap|cap|lc3|auracast</code>→LEAudio,
+<code>a2dp|avrcp|hfp|hid|pbap|map</code>→Profile, <code>gatt|characteristic|uuid</code>→GATT),
+and <code>_OFF_DOMAIN</code> markers (<code>capital of</code>, <code>recipe</code>,
+<code>weather</code>, <code>stock price</code>, …). <code>classify</code> applies:
+explicit scope → lexical in-scope → lexical out-of-scope → LLM (schema-validated via
+<code>structured_call</code>) → on any exception, fail open with
+<code>out_of_scope=False</code> and <code>scope_filter=None</code>.
+<code>spec_scope</code> parsing maps <code>"Core-LE"</code>/<code>"Core"</code>→
+<code>["Core"]</code>, <code>"Mesh"</code>→<code>["Mesh"]</code>, and any unrecognised
+string to <code>None</code> (treated as no hint).</p></li>
+
+<li><strong>Step 4: Run the tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_prefilter.py -v</code> → 6 passed.</li>
+
+<li><strong>Step 5: Commit</strong>
+<pre><code>git add qa/prefilter.py tests/qa/test_prefilter.py
+git commit -m "feat(qa): out-of-scope pre-filter with lexical gate and LLM fallback"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 9: Agentic loop (§7.2) + citation verification (§7.4)</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/verify.py</code>, <code>qa/loop.py</code>, <code>qa/prompts.py</code></dd>
+  <dt>Test:</dt><dd><code>tests/qa/test_verify.py</code>, <code>tests/qa/test_loop.py</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<pre><code># qa/verify.py
+@dataclass VerifiedCitations:
+    citations: list[dict]     # kept, each {doc, section, page, path}
+    dropped: list[dict]       # citations with no matching observed evidence
+def verify_citations(claimed: list[dict], observed: list[Evidence]) -> VerifiedCitations
+
+# qa/loop.py
+@dataclass LoopResult:
+    answer: str; citations: list[dict]; related_entities: list[str]
+    confidence: str; evidence: list[Evidence]; trace: list[dict]
+    iterations: int; tool_calls: int; budget_exhausted: bool
+    dropped_citations: list[dict]; duration_ms: int
+
+class AgenticLoop:
+    def __init__(self, actions, *, action_model=None, synthesis_model=None,
+                 max_iterations=None, max_tool_calls=None, deadline_ms=None,
+                 chat_fn=None)
+    async def run(self, query, *, scope_filter=None, conversation_context=None) -> LoopResult
+</code></pre>
+
+<p>Loop shape: system prompt + user turn → <code>chat</code> with the six tool schemas on
+<code>ACTION_MODEL</code> → execute every returned call through <code>actions.run</code>,
+appending truncated results (§14.8: each tool message capped at
+<code>SNIPPET_CHARS</code>, total accumulated tool text capped at
+<code>CONTEXT_BUDGET_CHARS</code> — oldest results collapse to
+<code>"[ref_id … elided, re-fetch if needed]"</code>) → stop when the model answers with no
+tool calls, or when iterations / tool calls / wall-clock deadline run out. On exhaustion
+run one final synthesis turn on <code>MODEL</code> with <code>tool_choice="none"</code> and
+force <code>confidence="low"</code> (§7.2). Then §7.4: parse the JSON answer, verify each
+citation against accumulated evidence, drop the unmatched ones, and downgrade confidence
+to <code>"low"</code> if everything was dropped.</p>
+
+<ol class="step">
+<li><strong>Step 1: Write <code>tests/qa/test_verify.py</code></strong>
+<pre><code>« tests/qa/test_verify.py »
+from qa.retrieval.actions import Evidence
+from qa.verify import verify_citations
+
+OBSERVED = [
+    Evidence(ref_id="core-6.0#4.5::s0", doc="Core Spec v6.0", section="4.5", page=512,
+             path="sources/specs/6.0/Core_v6.0.md", kind="chunk", text="..."),
+    Evidence(ref_id="core-6.0:table:1", doc="Core Spec v6.0", section="4.5", page=512,
+             path="sources/specs/6.0/Core_v6.0.md", kind="table", text="..."),
+]
+
+
+def test_citation_matching_observed_evidence_is_kept_and_enriched():
+    out = verify_citations([{"doc": "Core Spec v6.0", "section": "4.5"}], OBSERVED)
+    assert out.dropped == []
+    assert out.citations[0]["page"] == 512
+    assert out.citations[0]["path"].endswith("Core_v6.0.md")
+
+
+def test_citation_with_no_observed_evidence_is_dropped():
+    out = verify_citations([{"doc": "Core Spec v6.0", "section": "9.9"}], OBSERVED)
+    assert out.citations == [] and len(out.dropped) == 1
+
+
+def test_section_matching_is_tolerant_of_formatting():
+    out = verify_citations([{"doc": "core spec v6.0", "section": "§4.5"}], OBSERVED)
+    assert len(out.citations) == 1
+
+
+def test_duplicate_citations_collapse():
+    claimed = [{"doc": "Core Spec v6.0", "section": "4.5"}] * 3
+    assert len(verify_citations(claimed, OBSERVED).citations) == 1
+
+
+def test_no_observed_evidence_drops_everything():
+    out = verify_citations([{"doc": "Core Spec v6.0", "section": "4.5"}], [])
+    assert out.citations == [] and len(out.dropped) == 1
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_verify.py -v</code> → FAIL.</li>
+
+<li><strong>Step 3: Implement <code>qa/verify.py</code></strong>
+<pre><code>« qa/verify.py »
+"""§7.4 grounding check.
+
+The model's citations are not trusted. Each claimed (doc, section) must match a
+piece of evidence an action actually returned during this run; matches are
+enriched with the real page and path, and non-matches are dropped rather than
+shipped to the Orchestrator.
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+
+
+@dataclass
+class VerifiedCitations:
+    citations: list = field(default_factory=list)
+    dropped: list = field(default_factory=list)
+
+
+def _norm(value):
+    return re.sub(r"[^a-z0-9.]+", "", str(value or "").lower())
+
+
+def verify_citations(claimed, observed):
+    index = {}
+    for ev in observed:
+        index.setdefault((_norm(ev.doc), _norm(ev.section)), ev)
+        index.setdefault((None, _norm(ev.ref_id)), ev)
+
+    result = VerifiedCitations()
+    seen = set()
+    for citation in claimed or []:
+        doc = citation.get("doc", "")
+        section = citation.get("section", "")
+        match = (index.get((_norm(doc), _norm(section)))
+                 or index.get((None, _norm(citation.get("ref_id")))))
+        if match is None:
+            result.dropped.append(dict(citation))
+            continue
+        key = (_norm(match.doc), _norm(match.section))
+        if key in seen:
+            continue
+        seen.add(key)
+        result.citations.append({"doc": match.doc, "section": match.section,
+                                 "page": match.page, "path": match.path})
+    return result
+</code></pre></li>
+
+<li><strong>Step 4: Run the verify tests, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_verify.py -v</code> → 5 passed.</li>
+
+<li><strong>Step 5: Write <code>tests/qa/test_loop.py</code></strong>
+<pre><code>« tests/qa/test_loop.py »
+import json
+
+import pytest
+
+from qa.loop import AgenticLoop
+from qa.retrieval.actions import ActionResult, Evidence
+
+
+class _Call:
+    def __init__(self, name, args, cid="c1"):
+        self.id = cid
+        self.type = "function"
+        self.function = type("F", (), {"name": name, "arguments": json.dumps(args)})()
+
+
+class _Msg:
+    def __init__(self, content="", tool_calls=None):
+        self.content = content
+        self.tool_calls = tool_calls
+
+
+class _Resp:
+    def __init__(self, msg):
+        self.choices = [type("C", (), {"message": msg, "finish_reason": "stop"})()]
+        self.usage = None
+
+
+class FakeActions:
+    TOOL_SCHEMAS = [{"type": "function", "function": {"name": "vector_search",
+                     "description": "", "parameters": {"type": "object", "properties": {}}}}]
+
+    def __init__(self):
+        self.calls = []
+
+    async def run(self, name, args):
+        self.calls.append((name, args))
+        return ActionResult(
+            text="CONNECTION STATE — the peripheral shall use connSupervisionTimeout.",
+            evidence=[Evidence(ref_id="core-6.0#4.5::s0", doc="Core Spec v6.0", section="4.5",
+                               page=512, path="sources/specs/6.0/Core_v6.0.md",
+                               kind="chunk", text="...")],
+        )
+
+
+ANSWER = json.dumps({
+    "answer": "The peripheral uses connSupervisionTimeout.",
+    "citations": [{"doc": "Core Spec v6.0", "section": "4.5"}],
+    "related_entities": ["connSupervisionTimeout"],
+    "confidence": "high",
+})
+
+
+def _chat_fn(scripted):
+    seq = list(scripted)
+
+    async def fake_chat(messages, *, model=None, tools=None, tool_choice="auto"):
+        return _Resp(seq.pop(0))
+
+    return fake_chat
+
+
+@pytest.mark.asyncio
+async def test_loop_calls_a_tool_then_answers():
+    actions = FakeActions()
+    loop = AgenticLoop(actions, chat_fn=_chat_fn([
+        _Msg(tool_calls=[_Call("vector_search", {"query": "supervision timeout"})]),
+        _Msg(content=ANSWER),
+    ]))
+    result = await loop.run("What is connSupervisionTimeout?")
+    assert actions.calls[0][0] == "vector_search"
+    assert result.answer.startswith("The peripheral")
+    assert result.citations[0]["page"] == 512
+    assert result.confidence == "high"
+    assert result.budget_exhausted is False
+
+
+@pytest.mark.asyncio
+async def test_scope_filter_is_injected_into_the_first_vector_search():
+    actions = FakeActions()
+    loop = AgenticLoop(actions, chat_fn=_chat_fn([
+        _Msg(tool_calls=[_Call("vector_search", {"query": "x"})]),
+        _Msg(content=ANSWER),
+    ]))
+    await loop.run("q", scope_filter={"doc_type": ["Core"]})
+    assert actions.calls[0][1]["scope_filter"] == {"doc_type": ["Core"]}
+
+
+@pytest.mark.asyncio
+async def test_unverifiable_citations_are_dropped_and_confidence_downgraded():
+    bad = json.dumps({"answer": "Made up.",
+                      "citations": [{"doc": "Core Spec v6.0", "section": "99.9"}],
+                      "related_entities": [], "confidence": "high"})
+    loop = AgenticLoop(FakeActions(), chat_fn=_chat_fn([
+        _Msg(tool_calls=[_Call("vector_search", {"query": "x"})]),
+        _Msg(content=bad),
+    ]))
+    result = await loop.run("q")
+    assert result.citations == []
+    assert len(result.dropped_citations) == 1
+    assert result.confidence == "low"
+
+
+@pytest.mark.asyncio
+async def test_budget_exhaustion_forces_low_confidence_and_a_final_synthesis_turn():
+    always_tool = [_Msg(tool_calls=[_Call("vector_search", {"query": "x"}, cid=f"c{i}")])
+                   for i in range(3)]
+    loop = AgenticLoop(FakeActions(), max_iterations=3,
+                       chat_fn=_chat_fn(always_tool + [_Msg(content=ANSWER)]))
+    result = await loop.run("q")
+    assert result.budget_exhausted is True
+    assert result.confidence == "low"          # §7.2: never hide thin evidence
+    assert result.answer                        # but still return a real answer
+
+
+@pytest.mark.asyncio
+async def test_max_tool_calls_is_enforced_independently():
+    many = [_Msg(tool_calls=[_Call("vector_search", {"query": "x"}, cid="a"),
+                             _Call("vector_search", {"query": "y"}, cid="b")])
+            for _ in range(5)]
+    loop = AgenticLoop(FakeActions(), max_iterations=10, max_tool_calls=3,
+                       chat_fn=_chat_fn(many + [_Msg(content=ANSWER)]))
+    result = await loop.run("q")
+    assert result.tool_calls <= 4      # the in-flight batch may finish, never a new one
+    assert result.budget_exhausted is True
+
+
+@pytest.mark.asyncio
+async def test_non_json_final_answer_still_returns_text_with_low_confidence():
+    loop = AgenticLoop(FakeActions(), chat_fn=_chat_fn([_Msg(content="just prose, no JSON")]))
+    result = await loop.run("q")
+    assert "just prose" in result.answer
+    assert result.confidence == "low" and result.citations == []
+
+
+@pytest.mark.asyncio
+async def test_trace_records_each_action_for_debugging():
+    loop = AgenticLoop(FakeActions(), chat_fn=_chat_fn([
+        _Msg(tool_calls=[_Call("vector_search", {"query": "x"})]),
+        _Msg(content=ANSWER),
+    ]))
+    result = await loop.run("q")
+    assert result.trace[0]["action"] == "vector_search"
+    assert "evidence" in result.trace[0]
+</code></pre></li>
+
+<li><strong>Step 6: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_loop.py -v</code> → FAIL (no <code>qa.loop</code>).</li>
+
+<li><strong>Step 7: Implement <code>qa/prompts.py</code> and <code>qa/loop.py</code></strong>
+<p><code>qa/prompts.py</code> holds two strings. <code>LOOP_SYSTEM</code>: describes the six
+actions, orders the model to ground every claim in retrieved text, to prefer
+<code>get_table</code> for value/range questions (§14.12), to treat an
+<code>[ERRATUM …]</code> block as overriding the base text (§14.11), and to emit the final
+answer as a JSON object with keys <code>answer</code>, <code>citations</code>
+(<code>doc</code> + <code>section</code>), <code>related_entities</code>,
+<code>confidence</code>. <code>SYNTHESIS_SYSTEM</code>: same JSON contract, plus "you have run
+out of retrieval budget — answer from what you have and set confidence to low; do not
+invent citations."</p>
+<p><code>qa/loop.py</code> implements the shape described above. Key details the tests pin:
+inject <code>scope_filter</code> into the first <code>vector_search</code> call when the model
+omits it; count tool calls across batches and stop opening new batches past
+<code>max_tool_calls</code>; check <code>time.monotonic()</code> against
+<code>deadline_ms</code> each iteration; accumulate every action's evidence into one list;
+build <code>trace</code> entries of <code>{"iteration", "action", "args", "evidence",
+"chars"}</code>; parse the final JSON with <code>llm.extract_json</code>, falling back to raw
+prose with <code>confidence="low"</code>; run <code>verify_citations</code> last and downgrade
+confidence to <code>"low"</code> when every citation was dropped.</p></li>
+
+<li><strong>Step 8: Run both test files, verify they pass</strong><br>
+Run: <code>python -m pytest tests/qa/test_loop.py tests/qa/test_verify.py -v</code> → 12 passed.</li>
+
+<li><strong>Step 9: Commit</strong>
+<pre><code>git add qa/loop.py qa/verify.py qa/prompts.py tests/qa/test_loop.py tests/qa/test_verify.py
+git commit -m "feat(qa): agentic retrieval loop with budget control and citation verification"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Task 10: Service facade, HTTP + MCP exposure, ingest CLI, docs</h2>
+
+<div class="task">
+<dl class="files">
+  <dt>Create:</dt><dd><code>qa/service.py</code>, <code>server/qa_http.py</code>,
+      <code>server/qa_mcp.py</code>, <code>scripts/qa_ingest.py</code>,
+      <code>tests/qa/test_service.py</code></dd>
+  <dt>Modify:</dt><dd><code>pyproject.toml</code> (packages + console scripts),
+      <code>.env.example</code>, <code>.gitignore</code>, <code>README.md</code>,
+      <code>CLAUDE.md</code></dd>
+</dl>
+
+<h4>Interfaces</h4>
+<pre><code>class SpecQAService:
+    def __init__(self, index_dir=None, *, loop=None, actions=None)
+    @classmethod def from_index(cls, index_dir=None) -> "SpecQAService"
+    async def ask(self, query, *, spec_scope=None, spec_version=None,
+                  conversation_context=None, include_trace=False) -> dict
+    # returns exactly the §8.1 keys:
+    # {answer, citations, related_entities, confidence, out_of_scope, retrieval_trace}
+</code></pre>
+<p>The index directory holds <code>vectors/</code>, <code>graph.db</code>,
+<code>manifest.json</code> and <code>registry.json</code> (the <code>doc_registry</code>
+written by the ingest CLI). §8.3: <code>conversation_context</code> is used only to
+re-interpret the query — it is never stored. §7.5: <code>retrieval_trace</code> is
+<code>None</code> unless <code>include_trace=True</code>.</p>
+
+<ol class="step">
+<li><strong>Step 1: Write the failing test</strong>
+<pre><code>« tests/qa/test_service.py »
+import pytest
+
+from qa.loop import LoopResult
+from qa.retrieval.actions import Evidence
+from qa.service import SpecQAService
+
+EV = [Evidence(ref_id="r", doc="Core Spec v6.0", section="4.5", page=512,
+               path="sources/specs/6.0/Core_v6.0.md", kind="chunk", text="...")]
+
+
+class FakeLoop:
+    def __init__(self):
+        self.seen = []
+
+    async def run(self, query, *, scope_filter=None, conversation_context=None):
+        self.seen.append({"query": query, "scope_filter": scope_filter,
+                          "conversation_context": conversation_context})
+        return LoopResult(
+            answer="Answer.", citations=[{"doc": "Core Spec v6.0", "section": "4.5",
+                                          "page": 512, "path": "p"}],
+            related_entities=["L2CAP"], confidence="high", evidence=EV,
+            trace=[{"action": "vector_search"}], iterations=2, tool_calls=2,
+            budget_exhausted=False, dropped_citations=[], duration_ms=10,
+        )
+
+
+@pytest.mark.asyncio
+async def test_ask_returns_exactly_the_frozen_output_keys():
+    out = await SpecQAService(loop=FakeLoop()).ask("What is L2CAP?")
+    assert set(out) == {"answer", "citations", "related_entities", "confidence",
+                        "out_of_scope", "retrieval_trace"}
+    assert out["out_of_scope"] is False
+    assert out["retrieval_trace"] is None          # §7.5 default off
+    assert set(out["citations"][0]) == {"doc", "section", "page", "path"}
+
+
+@pytest.mark.asyncio
+async def test_out_of_scope_short_circuits_before_the_loop():
+    loop = FakeLoop()
+    out = await SpecQAService(loop=loop).ask("What is the capital of France?")
+    assert out["out_of_scope"] is True
+    assert out["confidence"] == "low"
+    assert out["citations"] == []
+    assert loop.seen == []                          # §7.0 cost defence
+
+
+@pytest.mark.asyncio
+async def test_scope_hint_is_passed_into_the_loop():
+    loop = FakeLoop()
+    await SpecQAService(loop=loop).ask("pairing?", spec_scope="Core-LE", spec_version="5.4")
+    assert loop.seen[0]["scope_filter"]["doc_type"] == ["Core"]
+
+
+@pytest.mark.asyncio
+async def test_include_trace_exposes_the_retrieval_trace():
+    out = await SpecQAService(loop=FakeLoop()).ask("What is L2CAP?", include_trace=True)
+    assert out["retrieval_trace"]["iterations"] == 2
+    assert out["retrieval_trace"]["steps"][0]["action"] == "vector_search"
+
+
+@pytest.mark.asyncio
+async def test_conversation_context_reaches_the_loop_but_is_not_persisted():
+    loop = FakeLoop()
+    service = SpecQAService(loop=loop)
+    await service.ask("and in 5.4?", conversation_context=[{"role": "user", "content": "LE Audio"}])
+    assert loop.seen[0]["conversation_context"]
+    await service.ask("another")
+    assert loop.seen[1]["conversation_context"] in (None, [])   # §8.3 stateless
+</code></pre></li>
+
+<li><strong>Step 2: Run it, verify it fails</strong><br>
+Run: <code>python -m pytest tests/qa/test_service.py -v</code> → FAIL.</li>
+
+<li><strong>Step 3: Implement <code>qa/service.py</code></strong>
+<p>Compose pre-filter → loop → frozen output dict. <code>from_index</code> loads
+<code>LocalVectorStore.load(index_dir / "vectors")</code>,
+<code>SqliteGraphStore(index_dir / "graph.db")</code>, and
+<code>registry.json</code>, builds <code>RetrievalActions</code> and <code>AgenticLoop</code>.
+Out-of-scope returns <code>{"answer": &lt;short refusal naming the reason&gt;,
+"citations": [], "related_entities": [], "confidence": "low",
+"out_of_scope": True, "retrieval_trace": None}</code>.</p></li>
+
+<li><strong>Step 4: Implement <code>server/qa_http.py</code></strong>
+<p>FastAPI app with pydantic models mirroring §8.1 exactly:
+<code>POST /qa/ask</code> → the frozen dict; <code>GET /qa/health</code> →
+<code>{"status", "vector_count", "documents"}</code>. A module-level
+<code>SpecQAService.from_index()</code> is built lazily on first request so import stays
+cheap. <code>main()</code> runs uvicorn on <code>BT_QA_HTTP_HOST/PORT</code>.</p></li>
+
+<li><strong>Step 5: Implement <code>server/qa_mcp.py</code></strong>
+<p>One MCP tool named <code>bluetooth_spec_qa</code> whose input schema is §8.1's input and
+whose result is the JSON-serialised frozen output — the §1.2 "one Tool for the whole
+team" surface. Reuse the same <code>SpecQAService</code>.</p></li>
+
+<li><strong>Step 6: Implement <code>scripts/qa_ingest.py</code></strong>
+<pre><code>python scripts/qa_ingest.py --version 6.0                    # Core 6.0, skeleton + embeddings
+python scripts/qa_ingest.py --version 6.0 --extract          # + §5.3 entity extraction
+python scripts/qa_ingest.py --version 6.0 --figures          # + §5.4 figure descriptions
+python scripts/qa_ingest.py --all --limit-sections 50        # smoke run</code></pre>
+<p>Discovers <code>sources/specs/X.Y/Core_vX.Y.md</code>, calls <code>ingest_document</code>,
+writes <code>registry.json</code>, prints the <code>IngestStats</code> table.</p></li>
+
+<li><strong>Step 7: Update packaging and env</strong>
+<pre><code># pyproject.toml
+[project.scripts]
+bluetooth-wiki-agent-http = "server.http:main"
+bluetooth-wiki-agent-mcp = "server.mcp:main"
+bluetooth-spec-qa-http = "server.qa_http:main"
+bluetooth-spec-qa-mcp = "server.qa_mcp:main"
+
+[tool.setuptools.packages.find]
+include = ["agent*", "server*", "search*", "eval*", "qa*"]
+exclude = ["wiki*", "sources*", "scripts*", "search.index*", "qa.index*"]</code></pre>
+<p>Append the <code>BT_QA_*</code> block to <code>.env.example</code> with the defaults from
+Task 1, and add <code>qa/index/</code> to <code>.gitignore</code>.</p></li>
+
+<li><strong>Step 8: Update <code>README.md</code> and <code>CLAUDE.md</code></strong>
+<p>Per the CLAUDE.md standing rule, both must reflect the new state before committing:
+add the <code>qa/</code> package to the Directory Structure map, add a "§4.5 SPEC Q&amp;A
+AGENT" operation describing ingest → serve → ask, and a README section covering the
+two new console scripts and the §8.1 Tool contract.</p></li>
+
+<li><strong>Step 9: Run the whole suite</strong><br>
+Run: <code>python -m pytest tests -q</code><br>
+Expected: all pass — the 16 pre-existing tests plus the new <code>tests/qa/</code> ones.</li>
+
+<li><strong>Step 10: Commit</strong>
+<pre><code>git add qa/service.py server/qa_http.py server/qa_mcp.py scripts/qa_ingest.py \
+        tests/qa/test_service.py pyproject.toml .env.example .gitignore README.md CLAUDE.md
+git commit -m "feat(qa): SpecQAService facade with HTTP + MCP exposure and ingest CLI"</code></pre></li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Verification (whole feature)</h2>
+
+<ul class="tight">
+  <li><code>python -m pytest tests -q</code> — all pass, no network required.</li>
+  <li><code>python -c "import qa.service, server.qa_http, server.qa_mcp; print('ok')"</code>.</li>
+  <li><code>python scripts/qa_ingest.py --version 6.0 --limit-sections 50</code> against a real
+      endpoint, then <code>curl -X POST localhost:8090/qa/ask -d '{"query":"What is connSupervisionTimeout?"}'</code>
+      returns the six §8.1 keys with non-empty verified citations.</li>
+  <li>Spec coverage: §5.1 Task 3 · §5.2 Task 2 · §5.3 Tasks 1+6 · §5.4 Task 6 · §5.5 Task 6 ·
+      §6.1/§6.2 Tasks 4+5 · §7.0 Task 8 · §7.1 Task 7 · §7.2/§7.3 Task 9 · §7.4 Task 9 ·
+      §7.5 Task 10 · §8.1–8.3 Task 10 · §10 Task 6 · §14.2 Tasks 5+7 · §14.8 Task 9 ·
+      §14.11 Tasks 2+7 · §14.12 Tasks 6+7.</li>
+  <li>Non-goals respected: <code>agent/</code>, <code>search/</code>, <code>eval/</code>,
+      <code>wiki/</code>, <code>sources/</code> untouched; no new dependencies; §12's DB and
+      model decisions still open behind config and the store protocols.</li>
+</ul>
+
+</main>
+</body>
+</html>
