@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bluetooth Spec Q&amp;A Agent — Implementation Progress (v0.1)</title>
+<style>
+  :root {
+    --bg:#fff; --fg:#1b1f24; --muted:#57606a; --border:#d0d7de;
+    --code-bg:#f6f8fa; --accent:#0969da; --accent-bg:#ddf4ff;
+    --ok:#1a7f37; --ok-bg:#dafbe1; --warn:#9a6700; --warn-bg:#fff8c5;
+    --off:#57606a; --off-bg:#f6f8fa;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;
+    --code-bg:#161b22;--accent:#4493f8;--accent-bg:#0c2d4a;
+    --ok:#3fb950;--ok-bg:#0f2f17;--warn:#d29922;--warn-bg:#341a00;
+    --off:#8b949e;--off-bg:#161b22;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  main{max-width:960px;margin:0 auto;padding:2.5rem 1.25rem 6rem}
+  h1{font-size:1.9rem;line-height:1.25;margin:0 0 .5rem}
+  h2{font-size:1.35rem;margin:2.5rem 0 1rem;padding-bottom:.35rem;border-bottom:1px solid var(--border)}
+  h3{font-size:1.05rem;margin:1.75rem 0 .6rem}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;
+    background:var(--code-bg);padding:.12em .4em;border-radius:6px;border:1px solid var(--border)}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;
+    padding:1rem;overflow-x:auto;font-size:.84rem;line-height:1.5}
+  pre code{background:none;border:none;padding:0;font-size:inherit}
+  .callout{background:var(--accent-bg);border:1px solid var(--border);border-left:4px solid var(--accent);
+    border-radius:6px;padding:.85rem 1rem;margin:1.25rem 0}
+  .warnbox{background:var(--warn-bg);border:1px solid var(--border);border-left:4px solid var(--warn);
+    border-radius:6px;padding:.85rem 1rem;margin:1.25rem 0}
+  .wrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+  th,td{border:1px solid var(--border);padding:.45rem .6rem;text-align:left;vertical-align:top}
+  th{background:var(--code-bg)}
+  .meta{color:var(--muted);font-size:.92rem}
+  .pill{display:inline-block;font-size:.75rem;font-weight:600;padding:.1rem .5rem;
+    border-radius:999px;border:1px solid var(--border);white-space:nowrap}
+  .p-ok{background:var(--ok-bg);color:var(--ok)}
+  .p-warn{background:var(--warn-bg);color:var(--warn)}
+  .p-off{background:var(--off-bg);color:var(--off)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin:1.25rem 0}
+  .stat{border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem}
+  .stat b{display:block;font-size:1.5rem;line-height:1.2}
+  .stat span{color:var(--muted);font-size:.85rem}
+  ul.tight li{margin:.25rem 0}
+  hr{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Bluetooth Spec Q&amp;A Agent — Implementation Progress</h1>
+<p class="meta">Status as of 2026-07-29 · v0.1 (Phase 1 vertical slice) · branch
+<code>claude/bluetooth-spec-wiki-FikPs</code> · HEAD <code>7bd945d</code></p>
+
+<div class="callout">
+  <strong>Where things stand:</strong> the whole path from raw spec markdown to a
+  verified Tool response is built, tested and committed. Nothing has yet run against
+  the real company endpoint — every LLM and embedding call in the test suite is faked.
+  The first live run is <code>python scripts/qa_ingest.py --version 6.0</code>.
+</div>
+
+<p><strong>Source design:</strong> <code>docs/superpowers/plans/Bluetooth_Spec_QA_Agent_Design.md</code> (Draft v0.1)<br>
+<strong>Implementation plan:</strong> <code>docs/superpowers/plans/2026-07-29-bt-spec-qa-agent.html</code> — all 10 tasks complete</p>
+
+<div class="grid">
+  <div class="stat"><b>12</b><span>commits</span></div>
+  <div class="stat"><b>2,546</b><span>lines of implementation</span></div>
+  <div class="stat"><b>96</b><span>tests passing (80 new)</span></div>
+  <div class="stat"><b>0</b><span>new dependencies</span></div>
+</div>
+
+<h2>What exists</h2>
+
+<p>A new self-contained <code>qa/</code> package. It does not import <code>agent/</code> or
+<code>search/</code>, and they do not import it — verified by grep, so the existing
+LLM-Wiki agent is untouched and keeps working.</p>
+
+<div class="wrap">
+<table>
+<tr><th>Design §</th><th>Concern</th><th>File</th><th>LOC</th><th>Status</th></tr>
+<tr><td>§5.1</td><td>Structure parsing → sections / tables / figures / cross-refs</td><td><code>qa/ingest/structure.py</code></td><td>218</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§5.2</td><td>Ontology: fixed entity + relation types</td><td><code>qa/ontology.py</code></td><td>90</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§5.3</td><td>Constrained extraction (schema-validated, retrying)</td><td><code>qa/llm.py</code>, <code>qa/ingest/extract.py</code></td><td>148 / 131</td><td><span class="pill p-warn">built, unrun</span></td></tr>
+<tr><td>§5.4</td><td>Figure descriptions (Vision)</td><td><code>qa/ingest/extract.py</code></td><td>—</td><td><span class="pill p-warn">built, unrun</span></td></tr>
+<tr><td>§5.5 / §10</td><td>Incremental re-ingest by section content hash</td><td><code>qa/ingest/pipeline.py</code></td><td>237</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§6.1</td><td>Vector store (protocol + local backend)</td><td><code>qa/store/vector_local.py</code></td><td>106</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§6.2</td><td>Graph store (protocol + SQLite backend)</td><td><code>qa/store/graph_sqlite.py</code></td><td>164</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§7.0</td><td>Out-of-scope pre-filter + scope hint</td><td><code>qa/prefilter.py</code></td><td>188</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§7.1</td><td>Six retrieval actions</td><td><code>qa/retrieval/actions.py</code></td><td>391</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§7.2 / §7.3</td><td>Agentic loop, budget, model role split</td><td><code>qa/loop.py</code>, <code>qa/prompts.py</code></td><td>217 / 55</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§7.4</td><td>Citation ↔ observed-evidence verification</td><td><code>qa/verify.py</code></td><td>46</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§8</td><td>Frozen Tool contract</td><td><code>qa/service.py</code></td><td>105</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§1.2</td><td>HTTP + MCP exposure</td><td><code>server/qa_http.py</code>, <code>server/qa_mcp.py</code></td><td>75 / 114</td><td><span class="pill p-warn">MCP unverified</span></td></tr>
+<tr><td>§14.2</td><td>Traverse node cap per call</td><td><code>graph_sqlite.py</code>, <code>actions.py</code></td><td>—</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§14.8</td><td>Context accumulation limits</td><td><code>qa/loop.py</code></td><td>—</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§14.11</td><td>Errata precedence (<code>amends</code>)</td><td><code>qa/retrieval/actions.py</code></td><td>—</td><td><span class="pill p-ok">done</span></td></tr>
+<tr><td>§14.12</td><td>Tables as their own chunks + <code>get_table</code></td><td><code>pipeline.py</code>, <code>actions.py</code></td><td>—</td><td><span class="pill p-ok">done</span></td></tr>
+</table>
+</div>
+
+<h3>Commits</h3>
+<pre><code>d2a0995  feat(qa): config + LLM layer with schema-validated structured calls
+171f555  feat(qa): ontology schema for constrained entity/relation extraction
+b1ceb10  feat(qa): deterministic markdown structure parser
+b6047bc  feat(qa): store protocols + dependency-free local vector backend
+074353c  feat(qa): SQLite graph store with alias lookup and bounded traversal
+2bd090a  feat(qa): ingestion pipeline with incremental re-embedding
+0a72e2d  feat(qa): six retrieval actions over vector+graph with evidence tracking
+709739a  feat(qa): out-of-scope pre-filter with lexical gate and LLM fallback
+6f21225  feat(qa): agentic retrieval loop with budget control and citation verification
+7e3080b  feat(qa): SpecQAService facade with HTTP + MCP exposure and ingest CLI
+5d70702  test(qa): end-to-end composition check from ingest through the Tool response
+7bd945d  docs: Spec Q&amp;A Agent design doc + v0.1 implementation plan</code></pre>
+
+<h2>What is actually verified</h2>
+
+<p>Worth separating from "what is written", because they are not the same thing.</p>
+
+<h3>Verified</h3>
+<ul class="tight">
+  <li><strong>96 tests pass</strong> (<code>python -m pytest tests -q</code>) — 80 new under
+      <code>tests/qa/</code>, plus the 16 pre-existing tests still green. No network, no endpoint.</li>
+  <li><strong>Real-corpus parse.</strong> <code>scripts/qa_ingest.py --version 6.0 --dry-run</code>
+      over <code>sources/specs/6.0/Core_v6.0.md</code>:
+      <code>5095 sections | 3612 tables | 841 figures | 3685 xrefs → 9549 graph nodes /
+      11634 edges / 7282 chunks (3612 table chunks)</code>.
+      Node count reconciles exactly: 1 document + 5095 + 3612 + 841 = 9549.</li>
+  <li><strong>End-to-end composition</strong> (<code>tests/qa/test_end_to_end.py</code>) — real
+      pipeline, stores, actions, loop and service wired together with only the LLM faked.
+      Proves retrieved spec text reaches the model, a genuine citation survives verification
+      with a resolvable path, and a fabricated one is stripped with confidence downgraded.</li>
+  <li><strong>Full write path at real corpus scale</strong> — a complete ingest of
+      <code>Core_v6.0.md</code> with a stub embedder (endpoint excluded, everything else real):
+      <ul class="tight">
+        <li>Pass 1: 5095 sections → 7282 chunks, 11634 edges, <strong>1.3 s</strong> excluding embedding.</li>
+        <li>Pass 2 on unchanged input: <code>changed=0, skipped=3164</code> — the §5.5
+            incremental gate holds at scale, so a re-ingest costs no endpoint calls.</li>
+        <li>On disk: <code>graph.db</code> 7.1 MB, <code>vectors.npy</code> 1.9 MB,
+            <code>records.json</code> 9.6 MB, <code>manifest.json</code> 0.2 MB.</li>
+        <li>Reload from disk round-trips all 7282 vectors; <code>vector_search</code> across
+            them takes <strong>10 ms</strong>, which is what justifies the brute-force numpy
+            backend at Phase 1 volume.</li>
+        <li><code>get_section_text</code> returns 2492 chars of real spec text;
+            <code>get_table</code> returns a real table with its pipe structure intact and an
+            evidence path that resolves. <code>graph_lookup("CONNECTION STATE")</code> returns
+            3 distinct nodes — the repeated-name-across-Volumes case, now correctly separate
+            rather than collapsed.</li>
+      </ul></li>
+  <li><strong>Isolation.</strong> No import edge between <code>qa/</code> and
+      <code>agent/</code> / <code>search/</code> in either direction.</li>
+  <li><strong>No new dependencies.</strong> Imports resolve to stdlib, <code>numpy</code>,
+      <code>openai</code>, <code>fastapi</code>/<code>pydantic</code>/<code>uvicorn</code>,
+      <code>mcp</code> — all already declared in <code>pyproject.toml</code>.</li>
+  <li><strong>Cold start.</strong> <code>SpecQAService.from_index()</code> against an empty index
+      directory returns <code>{"status": "empty", "vector_count": 0}</code> instead of crashing.</li>
+</ul>
+
+<h3>Not verified</h3>
+<div class="warnbox">
+<ul class="tight">
+  <li><strong>No live endpoint run.</strong> Every embedding and chat call is faked; there is
+      no <code>.env</code> in the working tree and <code>OPENAI_BASE_URL</code> is empty. Real
+      embedding dimensionality, latency, batch limits, quota behaviour and tool-calling
+      stability are all unmeasured. The §5.3 extraction and §5.4 figure stages have never
+      executed against a model.</li>
+  <li><strong>Table caption extraction is partial.</strong> The caption regex expects
+      <code>Table X.Y: …</code>; conversions that render a caption differently fall back to a
+      positional <code>Table N</code> label. The table content and structure are intact — only
+      the human-readable caption degrades — but it will weaken lexical matching on
+      caption-targeted queries.</li>
+  <li><strong>MCP server untested at runtime</strong> — the <code>mcp</code> package is not
+      installed in this environment. <code>server/qa_mcp.py</code> defers its MCP imports so the
+      module imports cleanly, but <code>bluetooth-spec-qa-mcp</code> has not been launched.</li>
+  <li><strong>No retrieval-quality measurement.</strong> Nothing yet says whether the hybrid
+      retriever answers better than the existing wiki agent. §9's eval sets do not exist for
+      this system.</li>
+  <li><strong>Pre-existing, unrelated:</strong> the console script
+      <code>bluetooth-wiki-agent-mcp = "server.mcp:main"</code> points at a
+      <code>server/mcp.py</code> that does not exist. Not introduced here and not touched.</li>
+</ul>
+</div>
+
+<h2>Two real bugs the work surfaced</h2>
+
+<p>Both were found by running the code against the actual Core spec rather than by review.</p>
+
+<h3>1. Section parentage from heading depth was wrong</h3>
+<p>Converted Core specs render <code>4.5</code> and <code>4.5.2</code> both as <code>###</code>,
+so a markdown level stack makes them siblings. Parentage now comes from the dotted section
+number, with the level stack as the fallback for unnumbered headings.
+Caught by <code>test_headings_become_a_parent_linked_section_tree</code>.</p>
+
+<h3>2. Section ids collided across Volumes</h3>
+<p>Core specs restart section numbering in every Volume/Part, so <code>core-6.0#4.5</code>
+occurred dozens of times in one document. The first real dry run showed the symptom
+plainly: <strong>3612 tables producing 13112 table chunks</strong>. Colliding ids meant graph
+nodes overwrote each other, distinct chunks collapsed onto one id, and citations would have
+pointed at the wrong Volume. Ids are now disambiguated by line number, and the counts
+reconcile (7282 chunks, 3612 table chunks).</p>
+<p class="meta">This invariant is recorded in <code>CLAUDE.md</code> §4.5 so it does not get
+refactored away.</p>
+
+<h2>Decisions taken on the design doc's open issues (§12)</h2>
+
+<p>None of these close the question — each is isolated so the real decision stays a swap.</p>
+
+<div class="wrap">
+<table>
+<tr><th>§12 open issue</th><th>v0.1 decision</th><th>Where the real decision lands</th></tr>
+<tr>
+  <td>Vector/Graph DB: server (Qdrant+Neo4j) vs embedded (Chroma+KuzuDB)</td>
+  <td>Neither. <code>VectorStore</code>/<code>GraphStore</code> protocols with numpy and
+      SQLite backends — zero dependencies, adequate at Phase 1 volume.</td>
+  <td>A new class against <code>qa/store/base.py</code>. Nothing above the protocol changes.</td>
+</tr>
+<tr>
+  <td>Which of the three candidate models</td>
+  <td>Deferred to env. §7.3's role split is wired as two separate ids.</td>
+  <td><code>BT_QA_MODEL</code> / <code>BT_QA_ACTION_MODEL</code></td>
+</tr>
+<tr>
+  <td>Grammar-based constrained decoding available?</td>
+  <td>Assume not. Fallback (b) is implemented unconditionally: schema validation plus a
+      bounded repair loop that feeds the validator's complaint back to the model.</td>
+  <td>One extra kwarg in <code>qa/llm.py::structured_call</code> if guided JSON appears.</td>
+</tr>
+<tr>
+  <td>Response-time SLA (p95)</td>
+  <td>Budget is explicit and enforced three ways — iteration count, tool-call count, and a
+      wall-clock deadline.</td>
+  <td><code>BT_QA_DEADLINE_MS</code></td>
+</tr>
+<tr>
+  <td>Pre-filter: classifier vs LLM prompt</td>
+  <td>Both, cheapest first. Explicit scope → Bluetooth vocabulary → off-domain markers →
+      LLM only for the ambiguous middle. Fails open on error.</td>
+  <td><code>qa/prefilter.py</code></td>
+</tr>
+<tr>
+  <td>Indexing cost / quota (§14.7)</td>
+  <td>Extraction and figure stages are opt-in flags, so the cheap deterministic skeleton can
+      be built first and costed separately.</td>
+  <td><code>--extract</code> / <code>--figures</code> on the ingest CLI</td>
+</tr>
+</table>
+</div>
+
+<h3>Deliberately out of v0.1</h3>
+<ul class="tight">
+  <li><strong>§14.1</strong> — entity resolution stops at exact/alias/prefix matching; no
+      embedding-similarity clustering, no human review path.</li>
+  <li><strong>§14.5</strong> — no observability: no hit-rate tracking, no staleness monitoring,
+      no per-team usage metrics.</li>
+  <li><strong>§14.6</strong> — no per-caller access control or filtering.</li>
+  <li><strong>§14.9</strong> — no backup or rollback for a corrupted graph.</li>
+  <li><strong>§14.13</strong> — the existing wiki corpus is untouched; no decision made on
+      keeping it as a curation layer.</li>
+  <li><strong>§14.14</strong> — no response caching, exact or semantic.</li>
+  <li><strong>§14.10</strong> — cross-lingual has a hook but no Phase 0 measurement. Korean
+      queries against English chunks are <em>unvalidated</em>, and the design doc calls this
+      out as must-verify.</li>
+</ul>
+
+<h2>How to run what exists</h2>
+
+<pre><code># parse only — no endpoint calls, reports what would be indexed
+python scripts/qa_ingest.py --version 6.0 --dry-run
+
+# build the index (needs OPENAI_BASE_URL + an embedding model)
+python scripts/qa_ingest.py --version 6.0
+python scripts/qa_ingest.py --version 6.0 --extract --figures   # + LLM stages
+
+# serve
+bluetooth-spec-qa-http      # POST /qa/ask, GET /qa/health  (port 8090)
+bluetooth-spec-qa-mcp       # MCP stdio, tool: bluetooth_spec_qa
+
+# tests
+python -m pytest tests -q</code></pre>
+
+<p>Config is the <code>BT_QA_*</code> block in <code>.env.example</code>. The index is written
+to <code>qa/index/</code> (gitignored): <code>vectors/</code>, <code>graph.db</code>,
+<code>manifest.json</code>, <code>registry.json</code>.</p>
+
+<h2>Suggested next steps</h2>
+
+<p>Ordered by what unblocks the most. The first item is a prerequisite for judging anything else.</p>
+
+<ol>
+  <li><strong>Run Phase 0 against the real endpoint.</strong> Start with
+      <code>--version 6.0</code> and no enrichment flags: it exercises the embedding API 7282
+      times and will surface dimensionality, batch limits, throughput and quota reality.
+      Then a single <code>/qa/ask</code> call to see the loop and tool-calling behave.</li>
+  <li><strong>Measure cross-lingual retrieval (§14.10).</strong> Korean question, English
+      chunks. The design doc flags this as must-verify and the answer changes the ingest
+      design (query pre-translation vs bilingual chunk text vs a different embedding model).</li>
+  <li><strong>Check tool-calling stability across the three candidate models (§7.3).</strong>
+      The loop assumes reliable function calling; a model that emits malformed tool calls
+      burns the whole budget. The loop already surfaces malformed arguments as an error result
+      rather than crashing, so this is measurable.</li>
+  <li><strong>Build the eval set (§9).</strong> The existing 42-question
+      <code>eval/dataset.json</code> is the natural starting corpus, but it needs the
+      per-type split the design doc asks for — lookup / multi-hop / version-comparison /
+      figure-dependent / out-of-scope negatives — plus the loop metrics (iterations per query,
+      budget-exhaustion rate, p50/p95 latency, tokens per query).</li>
+  <li><strong>Then decide §12's DB question</strong> with real numbers instead of guesses.
+      The protocols mean this can wait until the traffic and re-indexing patterns are known.</li>
+</ol>
+
+<div class="callout">
+  <strong>One caution for whoever picks this up:</strong> the retrieval quality claim is
+  entirely unproven. What is proven is that the plumbing is correct and the guardrails work —
+  citations are checked against real evidence, thin answers report themselves as thin, and
+  out-of-scope questions cost nothing. Whether Vector+Graph actually beats the existing wiki
+  agent on real questions is exactly what step 4 is for, and the design doc's own ablation
+  plan (vector-only / graph-only / hybrid) is the honest way to justify the graph's build cost.
+</div>
+
+</main>
+</body>
+</html>
